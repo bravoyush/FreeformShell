@@ -1,0 +1,12 @@
+# Android Gitignore
+.gradle/
+.kotlin/
+.idea/
+build/
+app/build/
+local.properties
+*.iml
+
+# Text files / dumps
+*.txt
+*.log

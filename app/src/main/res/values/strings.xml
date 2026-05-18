@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">FreeformShell</string>
+    <string name="accessibility_service_description">Required to display window controls over freeform apps.</string>
+</resources>
