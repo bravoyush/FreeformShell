@@ -26,7 +26,7 @@ object WorkspaceManager {
         val apps = tasks.filter { task ->
             task.isFreeform &&
             !baseBlacklist.any { task.packageName.lowercase().contains(it) } &&
-            !FreeformOverlayService.isBlacklisted(task.packageName)
+            !FreeformOverlayService.isBlacklisted(context, task.packageName)
         }.mapNotNull { task ->
             val bounds = boundsMap[task.taskId]?.bounds ?: return@mapNotNull null
             WorkspaceApp(task.packageName, task.activityName, bounds)

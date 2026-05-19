@@ -37,6 +37,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.graphics.drawable.toBitmap
@@ -200,6 +205,23 @@ fun MainScreen(
         mutableStateOf(isShizukuAvailable && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED) 
     }
     
+    DisposableEffect(Unit) {
+        val callback = object : ShizukuLifecycleManager.ConnectionCallback {
+            override fun onConnected() {
+                isShizukuAvailable = true
+                hasShizukuPermission = Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+            override fun onDisconnected() {
+                isShizukuAvailable = false
+                hasShizukuPermission = false
+            }
+        }
+        ShizukuLifecycleManager.register(callback)
+        onDispose {
+            ShizukuLifecycleManager.unregister(callback)
+        }
+    }
+    
     var tasks by remember { mutableStateOf<List<AppTask>>(emptyList()) }
     var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var filteredApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
@@ -298,7 +320,7 @@ fun MainScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") })
-                NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Theme") })
+                NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") })
                 NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.Security, null) }, label = { Text("Safe Area") })
                 NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") })
                 NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
@@ -381,7 +403,7 @@ fun MainScreen(
             1 -> CustomizationScreen(padding)
             2 -> SafeAreaScreen(padding, availableDisplays)
             3 -> BlacklistScreen(padding)
-            4 -> AppSettingsScreen(padding)
+            4 -> AppSettingsScreen(padding, availableDisplays)
         }
 
         if (showLogDialog) {
@@ -630,6 +652,17 @@ fun DashboardScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    val enabledDisplays = availableDisplays.filter { display ->
+        ThemeManager.isDisplayShellEnabled(context, display.id)
+    }.ifEmpty { availableDisplays }
+    
+    LaunchedEffect(enabledDisplays) {
+        if (enabledDisplays.none { it.id == selectedDisplayId }) {
+            val fallbackId = enabledDisplays.firstOrNull()?.id ?: 0
+            onSelectDisplay(fallbackId)
+        }
+    }
+    
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
             "Freeform Console", 
@@ -649,9 +682,9 @@ fun DashboardScreen(
             StatusChip(label = "Shizuku", color = if (isShizukuAvailable) Color(0xFF4CAF50) else Color(0xFFF44336))
             StatusChip(label = "Overlay", color = if (hasOverlayPermission) Color(0xFF4CAF50) else Color(0xFFF44336))
         }
-
+ 
         Spacer(modifier = Modifier.height(16.dp))
-
+ 
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
@@ -660,7 +693,7 @@ fun DashboardScreen(
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("Target Display", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
-                availableDisplays.forEach { display ->
+                enabledDisplays.forEach { display ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -702,7 +735,7 @@ fun DashboardScreen(
                             Divider(modifier = Modifier.padding(vertical = 12.dp))
                             
                             Text("Target Display:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                            availableDisplays.forEach { display ->
+                            enabledDisplays.forEach { display ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth().clickable { onSelectDisplay(display.id) }.padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -713,13 +746,13 @@ fun DashboardScreen(
                                     Text("${display.width}x${display.height}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 }
                             }
-
+ 
                             Spacer(Modifier.height(16.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = onLaunchQueue, modifier = Modifier.weight(1f)) {
                                     Icon(Icons.Default.RocketLaunch, null)
                                     Spacer(Modifier.width(8.dp))
-                                    val targetName = availableDisplays.find { it.id == selectedDisplayId }?.name ?: "Display"
+                                    val targetName = enabledDisplays.find { it.id == selectedDisplayId }?.name ?: "Display"
                                     Text("Launch All on $targetName")
                                 }
                                 OutlinedButton(onClick = onClearQueue) {
@@ -781,9 +814,9 @@ fun DashboardScreen(
                                     }) { 
                                         Text("Close", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) 
                                     }
-                                    val isBlacklisted = FreeformOverlayService.isBlacklisted(task.packageName)
+                                    val isBlacklisted = FreeformOverlayService.isBlacklisted(context, task.packageName)
                                     IconButton(onClick = { 
-                                        FreeformOverlayService.toggleBlacklist(task.packageName)
+                                        FreeformOverlayService.toggleBlacklist(context, task.packageName)
                                     }) {
                                         Icon(if (isBlacklisted) Icons.Default.Block else Icons.Default.AddCircleOutline, null, 
                                             tint = if (isBlacklisted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
@@ -1067,17 +1100,19 @@ fun DisplayShapeIcon(display: DisplayInfo) {
 @Composable
 fun CustomizationScreen(padding: PaddingValues) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE) }
     var mode by remember { mutableStateOf(ThemeManager.getThemeMode(context)) }
     var roundness by remember { mutableStateOf(ThemeManager.getRoundness(context)) }
     var opacity by remember { mutableStateOf(ThemeManager.getOpacity(context).toFloat()) }
     var borderWidth by remember { mutableStateOf(ThemeManager.getBorderWidth(context)) }
+    var titleBarOpacity by remember { mutableStateOf(ThemeManager.getTitleBarOpacity(context).toFloat()) }
     
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Appearance", style = MaterialTheme.typography.headlineSmall)
         
         val isSystemDark = isSystemInDarkTheme()
         val isPreviewDark = when(mode) { 1 -> false; 2 -> true; else -> isSystemDark }
-        WindowPreview(roundness, opacity, borderWidth, isPreviewDark)
+        WindowPreview(roundness, opacity, borderWidth, titleBarOpacity, isPreviewDark)
         
         Spacer(Modifier.height(16.dp))
         
@@ -1094,8 +1129,117 @@ fun CustomizationScreen(padding: PaddingValues) {
         Text("Window Opacity: ${opacity.toInt()}/255", style = MaterialTheme.typography.titleMedium)
         Slider(value = opacity, onValueChange = { opacity = it; ThemeManager.setOpacity(context, it.toInt()) }, valueRange = 50f..255f)
         
+        Text("Normal Title Bar Opacity: ${titleBarOpacity.toInt()}%", style = MaterialTheme.typography.titleMedium)
+        Slider(value = titleBarOpacity, onValueChange = { titleBarOpacity = it; ThemeManager.setTitleBarOpacity(context, it.toInt()) }, valueRange = 30f..100f)
+        
         Text("Border Width: ${borderWidth.toInt()}dp", style = MaterialTheme.typography.titleMedium)
         Slider(value = borderWidth, onValueChange = { borderWidth = it; ThemeManager.setBorderWidth(context, it) }, valueRange = 0f..12f)
+        
+        Spacer(Modifier.height(16.dp))
+        
+        var isDragTintEnabled by remember { mutableStateOf(ThemeManager.isDragTintEnabled(context)) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Drag & Resize Tint Overlay", style = MaterialTheme.typography.titleMedium)
+                Text("Show a semi-transparent colored tint overlay covering the window during gestures.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+            Switch(checked = isDragTintEnabled, onCheckedChange = { 
+                isDragTintEnabled = it
+                ThemeManager.setDragTintEnabled(context, it)
+            })
+        }
+
+        Spacer(Modifier.height(24.dp))
+        
+        // Pill Auto-Shrink & Scale Toggle
+        var isPillAutoShrinkGlobalEnabled by remember { 
+            mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", true)) 
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Pill Auto-Shrink & Scale", style = MaterialTheme.typography.titleMedium)
+                Text("Automatically scale down the window title pill when inactive to save space.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+            Switch(checked = isPillAutoShrinkGlobalEnabled, onCheckedChange = { 
+                isPillAutoShrinkGlobalEnabled = it
+                prefs.edit().putBoolean("pill_auto_shrink_global", it).apply()
+            })
+        }
+
+        if (isPillAutoShrinkGlobalEnabled) {
+            Spacer(Modifier.height(12.dp))
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                    displayManager.displays.forEach { d ->
+                        Text("Configure: ${d.name} (ID: ${d.displayId})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(4.dp))
+                        
+                        var shrinkEnabled by remember(d.displayId) { 
+                            mutableStateOf(ThemeManager.getPillAutoShrink(context, d.displayId)) 
+                        }
+                        var scalePercent by remember(d.displayId) { 
+                            mutableStateOf(ThemeManager.getPillInactiveScale(context, d.displayId).toFloat()) 
+                        }
+                        
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Enable Auto-Shrink", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Switch(checked = shrinkEnabled, onCheckedChange = {
+                                shrinkEnabled = it
+                                ThemeManager.setPillAutoShrink(context, d.displayId, it)
+                            })
+                        }
+                        
+                        if (shrinkEnabled) {
+                            Spacer(Modifier.height(4.dp))
+                            Text("Inactive Scale: ${scalePercent.toInt()}%", style = MaterialTheme.typography.bodySmall)
+                            Slider(
+                                value = scalePercent,
+                                onValueChange = { scalePercent = it },
+                                onValueChangeFinished = {
+                                    ThemeManager.setPillInactiveScale(context, d.displayId, scalePercent.toInt())
+                                },
+                                valueRange = 30f..90f,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("Shrink Style", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Choose styling for inactive/shrunk pill layout.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    
+                    var shrinkStyle by remember { mutableStateOf(ThemeManager.getPillShrinkStyle(context)) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Scale Transform", "Handle/Bar Resizing").forEachIndexed { index, label ->
+                            FilterChip(
+                                selected = shrinkStyle == index,
+                                onClick = { 
+                                    shrinkStyle = index
+                                    ThemeManager.setPillShrinkStyle(context, index)
+                                },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(8.dp))
+                    PillPreviewCard(shrinkStyle)
+                }
+            }
+        }
 
         Spacer(Modifier.height(32.dp))
         
@@ -1119,7 +1263,7 @@ fun CustomizationScreen(padding: PaddingValues) {
 }
 
 @Composable
-fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, isDark: Boolean) {
+fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, titleBarOpacity: Float, isDark: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1160,7 +1304,7 @@ fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, isDark: 
                         .fillMaxWidth()
                         .height(24.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = titleBarOpacity / 100f),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(
                                 topStart = roundness.dp, 
                                 topEnd = roundness.dp
@@ -1302,7 +1446,7 @@ fun SafeAreaScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 }
 
 @Composable
-fun AppSettingsScreen(padding: PaddingValues) {
+fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     val context = LocalContext.current
     var launchMode by remember { mutableStateOf(ThemeManager.getAppLaunchDisplay(context)) }
     
@@ -1312,6 +1456,65 @@ fun AppSettingsScreen(padding: PaddingValues) {
     
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("App Settings", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+
+        Text("Active Shell Displays", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Select which screens should have active Freeform Shell controls. Disabling a screen completely turns off overlays and title bars on that display, hiding it from target display picker list.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                val activeDisplaysForShell = if (displays.isEmpty()) {
+                    listOf(DisplayInfo(0, "Primary Display", 1080, 2400))
+                } else {
+                    displays
+                }
+                
+                activeDisplaysForShell.forEachIndexed { idx, display ->
+                    var isEnabled by remember(display.id) {
+                        mutableStateOf(ThemeManager.isDisplayShellEnabled(context, display.id))
+                    }
+                    if (idx > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = display.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Display ID: ${display.id} • ${display.width}x${display.height}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(
+                            checked = isEnabled,
+                            onCheckedChange = {
+                                isEnabled = it
+                                ThemeManager.setDisplayShellEnabled(context, display.id, it)
+                                val intent = Intent(context, FreeformOverlayService::class.java).apply {
+                                    putExtra("force_relayer", true)
+                                }
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    context.startForegroundService(intent)
+                                } else {
+                                    context.startService(intent)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        
         Spacer(Modifier.height(16.dp))
 
         Text("Appearance", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
@@ -1365,6 +1568,62 @@ fun AppSettingsScreen(padding: PaddingValues) {
                         ThemeManager.setWorkspaceAutoSnap(context, it)
                     })
                 }
+
+                if (workspaceAutoSnap) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Snapping Sensitivity per Display", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(4.dp))
+                    
+                    val activeDisplays = if (displays.isEmpty()) {
+                        listOf(DisplayInfo(0, "Primary Display", 1080, 2400))
+                    } else {
+                        displays
+                    }
+                    
+                    activeDisplays.forEach { display ->
+                        var sensitivity by remember(display.id) { 
+                            mutableStateOf(ThemeManager.getSnapSensitivity(context, display.id).toFloat()) 
+                        }
+                        
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Text(
+                                text = "${display.name} (ID: ${display.id})", 
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Slider(
+                                    value = sensitivity,
+                                    onValueChange = {
+                                        sensitivity = it
+                                        ThemeManager.setSnapSensitivity(context, display.id, it.toInt())
+                                        FreeformOverlayService.showSensitivityGuide(display.id, it.toInt())
+                                    },
+                                    onValueChangeFinished = {
+                                        FreeformOverlayService.hideSensitivityGuide()
+                                    },
+                                    valueRange = 20f..150f,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "${sensitivity.toInt()} dp", 
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(start = 12.dp),
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = "Tip: Adjust slider to see the snap trigger zone boundaries overlay on the display.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         }
 
@@ -1414,6 +1673,20 @@ fun AppSettingsScreen(padding: PaddingValues) {
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
+                var instantResizeNoAnim by remember { mutableStateOf(ThemeManager.instantResizeNoAnim(context)) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Instant Shell Resizing", style = MaterialTheme.typography.bodyLarge)
+                        Text("Completely disables OS window resize transition animations for 100% instant and jitter-free workspace updates.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Switch(checked = instantResizeNoAnim, onCheckedChange = { 
+                        instantResizeNoAnim = it
+                        ThemeManager.setInstantResizeNoAnim(context, it)
+                    })
+                }
+                
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                
                 // Bubble Mode Toggle
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -1428,22 +1701,22 @@ fun AppSettingsScreen(padding: PaddingValues) {
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                // Pill Auto-Shrink & Scale Toggle
-                var isPillAutoShrinkGlobalEnabled by remember { 
-                    mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", false)) 
+                // Paired Group Resizing Toggle
+                var isPairedResizingGlobalEnabled by remember { 
+                    mutableStateOf(ThemeManager.getPairedScalingGlobal(context)) 
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Pill Auto-Shrink & Scale", style = MaterialTheme.typography.bodyLarge)
-                        Text("Automatically scale down the window title pill when inactive to save space.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text("Paired Group Resizing", style = MaterialTheme.typography.bodyLarge)
+                        Text("Scale paired split-screen groups together in perfect unison by resizing their outer edges/corners.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
-                    Switch(checked = isPillAutoShrinkGlobalEnabled, onCheckedChange = { 
-                        isPillAutoShrinkGlobalEnabled = it
-                        prefs.edit().putBoolean("pill_auto_shrink_global", it).apply()
+                    Switch(checked = isPairedResizingGlobalEnabled, onCheckedChange = { 
+                        isPairedResizingGlobalEnabled = it
+                        ThemeManager.setPairedScalingGlobal(context, it)
                     })
                 }
 
-                if (isPillAutoShrinkGlobalEnabled) {
+                if (isPairedResizingGlobalEnabled) {
                     Spacer(Modifier.height(12.dp))
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
@@ -1455,35 +1728,217 @@ fun AppSettingsScreen(padding: PaddingValues) {
                                 Text("Configure: ${d.name} (ID: ${d.displayId})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.height(4.dp))
                                 
-                                var shrinkEnabled by remember(d.displayId) { 
-                                    mutableStateOf(ThemeManager.getPillAutoShrink(context, d.displayId)) 
-                                }
-                                var scalePercent by remember(d.displayId) { 
-                                    mutableStateOf(ThemeManager.getPillInactiveScale(context, d.displayId).toFloat()) 
+                                var scalingEnabled by remember(d.displayId) { 
+                                    mutableStateOf(ThemeManager.getPairedScaling(context, d.displayId)) 
                                 }
                                 
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Enable Auto-Shrink", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                                    Switch(checked = shrinkEnabled, onCheckedChange = {
-                                        shrinkEnabled = it
-                                        ThemeManager.setPillAutoShrink(context, d.displayId, it)
+                                    Text("Enable Group Resizing", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Switch(checked = scalingEnabled, onCheckedChange = {
+                                        scalingEnabled = it
+                                        ThemeManager.setPairedScaling(context, d.displayId, it)
                                     })
                                 }
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        }
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                var isTiledSwapGlobalEnabled by remember { 
+                    mutableStateOf(ThemeManager.getTiledSwapGlobal(context)) 
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Tiled Layout Swap", style = MaterialTheme.typography.bodyLarge)
+                        Text("Exchange positions of tiled snapped windows by tapping their bounds switcher representations.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Switch(checked = isTiledSwapGlobalEnabled, onCheckedChange = { 
+                        isTiledSwapGlobalEnabled = it
+                        ThemeManager.setTiledSwapGlobal(context, it)
+                    })
+                }
+
+                if (isTiledSwapGlobalEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                            displayManager.displays.forEach { d ->
+                                Text("Configure: ${d.name} (ID: ${d.displayId})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.height(4.dp))
                                 
-                                if (shrinkEnabled) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text("Inactive Scale: ${scalePercent.toInt()}%", style = MaterialTheme.typography.bodySmall)
-                                    Slider(
-                                        value = scalePercent,
-                                        onValueChange = { scalePercent = it },
-                                        onValueChangeFinished = {
-                                            ThemeManager.setPillInactiveScale(context, d.displayId, scalePercent.toInt())
-                                        },
-                                        valueRange = 30f..90f,
-                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                    )
+                                var swapEnabled by remember(d.displayId) { 
+                                    mutableStateOf(ThemeManager.getTiledSwap(context, d.displayId)) 
+                                }
+                                
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Enable Layout Swap", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Switch(checked = swapEnabled, onCheckedChange = {
+                                        swapEnabled = it
+                                        ThemeManager.setTiledSwap(context, d.displayId, it)
+                                    })
                                 }
                                 Spacer(Modifier.height(12.dp))
+                            }
+                        }
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                var hideOnLauncherActive by remember { mutableStateOf(ThemeManager.getHideOnLauncherActive(context)) }
+                var selectedLauncherPackage by remember { mutableStateOf(ThemeManager.getDockLauncherPackage(context)) }
+                
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Launcher & Dock Avoidance", style = MaterialTheme.typography.bodyLarge)
+                        Text("Dims window title bars to 15% opacity when the selected launcher/dock start menu is open to preserve immersion.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Switch(checked = hideOnLauncherActive, onCheckedChange = { 
+                        hideOnLauncherActive = it
+                        ThemeManager.setHideOnLauncherActive(context, it)
+                    })
+                }
+
+                if (hideOnLauncherActive) {
+                    Spacer(Modifier.height(12.dp))
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Select Active Launcher / Dock", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(8.dp))
+
+                            // 1. Detect all home launchers and merge with common docks
+                            val pm = context.packageManager
+                            val detectedLaunchers = remember {
+                                val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+                                val homeApps = pm.queryIntentActivities(intent, 0)
+                                val list = homeApps.map {
+                                    val label = it.activityInfo.loadLabel(pm).toString()
+                                    val pkg = it.activityInfo.packageName
+                                    Pair(label, pkg)
+                                }.toMutableList()
+                                
+                                // Add farmerbb Taskbar
+                                val taskbarPkg = "com.farmerbb.taskbar"
+                                val isTaskbarInstalled = try { pm.getPackageInfo(taskbarPkg, 0); true } catch (e: Exception) { false }
+                                if (isTaskbarInstalled) {
+                                    list.add(Pair("Taskbar (Farmerbb)", taskbarPkg))
+                                } else {
+                                    list.add(Pair("Taskbar (Common Dock)", taskbarPkg))
+                                }
+                                list.distinctBy { it.second }
+                            }
+
+                            var showCustomLauncherPicker by remember { mutableStateOf(false) }
+                            
+                            // Find the currently selected launcher label
+                            val currentLauncherLabel = detectedLaunchers.find { it.second == selectedLauncherPackage }?.first 
+                                ?: if (selectedLauncherPackage.isNotEmpty()) selectedLauncherPackage else "None Selected"
+
+                            Text("Active Bind: $currentLauncherLabel", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(8.dp))
+
+                            // Show quick list of detected launchers
+                            detectedLaunchers.forEach { launcher ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedLauncherPackage = launcher.second
+                                            ThemeManager.setDockLauncherPackage(context, launcher.second)
+                                        }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = (selectedLauncherPackage == launcher.second),
+                                        onClick = {
+                                            selectedLauncherPackage = launcher.second
+                                            ThemeManager.setDockLauncherPackage(context, launcher.second)
+                                        }
+                                    )
+                                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                                        Text(launcher.first, style = MaterialTheme.typography.bodyMedium)
+                                        Text(launcher.second, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = { showCustomLauncherPicker = true },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Search other apps...")
+                            }
+
+                            if (showCustomLauncherPicker) {
+                                var customSearchQuery by remember { mutableStateOf("") }
+                                var customApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+                                var filteredCustomApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+                                
+                                LaunchedEffect(Unit) {
+                                    withContext(Dispatchers.IO) {
+                                        val apps = pm.getInstalledApplications(0)
+                                            .map { AppInfo(it.loadLabel(pm).toString(), it.packageName, null) }
+                                            .sortedBy { it.label }
+                                        withContext(Dispatchers.Main) {
+                                            customApps = apps
+                                            filteredCustomApps = apps
+                                        }
+                                    }
+                                }
+
+                                AlertDialog(
+                                    onDismissRequest = { showCustomLauncherPicker = false },
+                                    title = { Text("Select Custom Launcher / Dock") },
+                                    text = {
+                                        Column {
+                                            OutlinedTextField(
+                                                value = customSearchQuery,
+                                                onValueChange = { query ->
+                                                    customSearchQuery = query
+                                                    filteredCustomApps = customApps.filter { app ->
+                                                        app.label.contains(query, ignoreCase = true) ||
+                                                        app.packageName.contains(query, ignoreCase = true)
+                                                    }
+                                                },
+                                                label = { Text("Search installed apps") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                leadingIcon = { Icon(Icons.Default.Search, null) }
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            LazyColumn(modifier = Modifier.height(300.dp)) {
+                                                items(filteredCustomApps, key = { it.packageName }) { app ->
+                                                    ListItem(
+                                                        leadingContent = { AppIcon(app.packageName) },
+                                                        headlineContent = { Text(app.label) },
+                                                        supportingContent = { Text(app.packageName) },
+                                                        modifier = Modifier.clickable {
+                                                            selectedLauncherPackage = app.packageName
+                                                            ThemeManager.setDockLauncherPackage(context, app.packageName)
+                                                            showCustomLauncherPicker = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = { showCustomLauncherPicker = false }) {
+                                            Text("Cancel")
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
@@ -1530,7 +1985,7 @@ fun BlacklistScreen(padding: PaddingValues) {
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(filtered, key = { it.packageName }) { app ->
                 val isBlacklisted = remember(app.packageName, refreshKey) { 
-                    FreeformOverlayService.isBlacklisted(app.packageName) 
+                    FreeformOverlayService.isBlacklisted(context, app.packageName) 
                 }
                 ListItem(
                     headlineContent = { Text(app.label) },
@@ -1538,13 +1993,124 @@ fun BlacklistScreen(padding: PaddingValues) {
                     leadingContent = { AppIcon(app.packageName, modifier = Modifier.size(32.dp)) },
                     trailingContent = {
                         Switch(checked = isBlacklisted, onCheckedChange = { 
-                            FreeformOverlayService.toggleBlacklist(app.packageName)
+                            FreeformOverlayService.toggleBlacklist(context, app.packageName)
                             refreshKey++
                         })
                     }
                 )
                 Divider()
             }
+        }
+    }
+}
+
+@Composable
+fun PillPreviewCard(shrinkStyle: Int) {
+    var isShrunk by remember { mutableStateOf(false) }
+    
+    // Periodically toggle the shrink state to show the animation preview
+    LaunchedEffect(shrinkStyle) {
+        while (true) {
+            delay(2000)
+            isShrunk = !isShrunk
+        }
+    }
+    
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Style Animation Preview", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+            Spacer(Modifier.height(16.dp))
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium),
+                contentAlignment = Alignment.Center
+            ) {
+                // Style 0: Scale Transform (Old method)
+                if (shrinkStyle == 0) {
+                    val scale by animateFloatAsState(
+                        targetValue = if (isShrunk) 0.7f else 1.0f,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                        label = "scale"
+                    )
+                    val alpha by animateFloatAsState(
+                        targetValue = if (isShrunk) 0.4f else 1.0f,
+                        animationSpec = tween(durationMillis = 400),
+                        label = "alpha"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                alpha = alpha
+                            )
+                            .width(160.dp)
+                            .height(40.dp)
+                            .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(16.dp).background(Color.White.copy(0.7f), androidx.compose.foundation.shape.CircleShape))
+                            Spacer(Modifier.width(8.dp))
+                            Box(Modifier.width(60.dp).height(6.dp).background(Color.White.copy(0.5f)))
+                        }
+                    }
+                } 
+                // Style 1: Handle/Bar Resizing (New method)
+                else {
+                    val width by animateDpAsState(
+                        targetValue = if (isShrunk) 60.dp else 160.dp,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                        label = "width"
+                    )
+                    val height by animateDpAsState(
+                        targetValue = if (isShrunk) 8.dp else 40.dp,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                        label = "height"
+                    )
+                    val cornerRadius by animateDpAsState(
+                        targetValue = if (isShrunk) 4.dp else 20.dp,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                        label = "corners"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .width(width)
+                            .height(height)
+                            .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius))
+                            .padding(horizontal = if (isShrunk) 0.dp else 12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        // Only show text/icons when expanded (i.e. width > 100.dp)
+                        if (width > 100.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(16.dp).background(Color.White.copy(0.7f), androidx.compose.foundation.shape.CircleShape))
+                                Spacer(Modifier.width(8.dp))
+                                Box(Modifier.width(60.dp).height(6.dp).background(Color.White.copy(0.5f)))
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = if (isShrunk) "State: Shrunk (Inactive)" else "State: Expanded (Active/Hovered)",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
         }
     }
 }

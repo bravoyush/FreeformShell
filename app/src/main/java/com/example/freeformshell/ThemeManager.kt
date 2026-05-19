@@ -91,6 +91,18 @@ object ThemeManager {
     fun setOpacity(context: Context, value: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_OPACITY, value).apply()
 
+    fun getTitleBarOpacity(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("title_bar_opacity", 100)
+
+    fun setTitleBarOpacity(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("title_bar_opacity", value).apply()
+
+    fun isDragTintEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("drag_tint_enabled", true)
+
+    fun setDragTintEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("drag_tint_enabled", value).apply()
+
     fun getBorderWidth(context: Context): Float =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat(KEY_BORDER_WIDTH, 4f)
 
@@ -109,8 +121,14 @@ object ThemeManager {
     fun setDockSize(context: Context, displayId: Int, value: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_DOCK_SIZE_PREFIX + displayId, value).apply()
 
+    fun getSnapSensitivity(context: Context, displayId: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("snap_sensitivity_" + displayId, 100) // Default to 100dp
+
+    fun setSnapSensitivity(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("snap_sensitivity_" + displayId, value).apply()
+
     fun usePillForSnapped(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PILL_FOR_SNAPPED, false)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PILL_FOR_SNAPPED, true)
 
     fun setPillForSnapped(context: Context, value: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_PILL_FOR_SNAPPED, value).apply()
@@ -145,8 +163,25 @@ object ThemeManager {
     fun setRealtimeResize(context: Context, value: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("realtime_resize", value).apply()
 
+    fun instantResizeNoAnim(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("instant_resize_no_anim", false)
+
+    fun setInstantResizeNoAnim(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("instant_resize_no_anim", value).apply()
+        Thread {
+            try {
+                val scale = if (value) "0" else "1"
+                ShellExecutor.executeCommand("settings put global window_animation_scale $scale")
+                ShellExecutor.executeCommand("settings put global transition_animation_scale $scale")
+                ShellExecutor.executeCommand("settings put global animator_duration_scale $scale")
+            } catch (e: Exception) {
+                android.util.Log.e("ThemeManager", "Failed to update animation settings", e)
+            }
+        }.start()
+    }
+
     fun getPillAutoShrink(context: Context, displayId: Int): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("pill_auto_shrink_d$displayId", false)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("pill_auto_shrink_d$displayId", true)
 
     fun setPillAutoShrink(context: Context, displayId: Int, value: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("pill_auto_shrink_d$displayId", value).apply()
@@ -162,4 +197,52 @@ object ThemeManager {
 
     fun setWorkspaceAutoSnap(context: Context, value: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("workspace_auto_snap", value).apply()
+
+    fun getPairedScalingGlobal(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("paired_group_resizing_global", false)
+
+    fun setPairedScalingGlobal(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("paired_group_resizing_global", value).apply()
+
+    fun getPairedScaling(context: Context, displayId: Int): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("paired_group_resizing_d$displayId", true)
+
+    fun setPairedScaling(context: Context, displayId: Int, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("paired_group_resizing_d$displayId", value).apply()
+
+    fun getHideOnLauncherActive(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("hide_on_launcher_active", false)
+
+    fun setHideOnLauncherActive(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("hide_on_launcher_active", value).apply()
+
+    fun getDockLauncherPackage(context: Context): String =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("dock_launcher_package", "") ?: ""
+
+    fun setDockLauncherPackage(context: Context, value: String) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("dock_launcher_package", value).apply()
+
+    fun getTiledSwapGlobal(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("tiled_swap_enabled_global", true)
+
+    fun setTiledSwapGlobal(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("tiled_swap_enabled_global", value).apply()
+
+    fun getTiledSwap(context: Context, displayId: Int): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("tiled_swap_enabled_d$displayId", true)
+
+    fun setTiledSwap(context: Context, displayId: Int, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("tiled_swap_enabled_d$displayId", value).apply()
+
+    fun getPillShrinkStyle(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("pill_shrink_style", 1) // Default to physical resizing style
+
+    fun setPillShrinkStyle(context: Context, style: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("pill_shrink_style", style).apply()
+
+    fun isDisplayShellEnabled(context: Context, displayId: Int): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("display_shell_enabled_$displayId", true)
+
+    fun setDisplayShellEnabled(context: Context, displayId: Int, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("display_shell_enabled_$displayId", enabled).apply()
 }
