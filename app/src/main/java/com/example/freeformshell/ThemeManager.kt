@@ -245,4 +245,36 @@ object ThemeManager {
 
     fun setDisplayShellEnabled(context: Context, displayId: Int, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("display_shell_enabled_$displayId", enabled).apply()
+
+    fun getVisualCornerHandlesGlobal(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("visual_corner_handles_global", true)
+
+    fun setVisualCornerHandlesGlobal(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("visual_corner_handles_global", value).apply()
+
+    fun getVisualCornerHandles(context: Context, displayId: Int): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("visual_corner_handles_d$displayId", true)
+
+    fun setVisualCornerHandles(context: Context, displayId: Int, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("visual_corner_handles_d$displayId", enabled).apply()
+
+    // ── Compatibility Fix Helpers ───────────────────────────────────────────
+    // Each fix is stored as "compat_<fixId>" in the main prefs file.
+    // `defaultOn` is only used as fallback when no value has been saved yet.
+
+    fun getCompFix(context: Context, fixId: String, defaultOn: Boolean): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean("compat_$fixId", defaultOn)
+
+    fun setCompFix(context: Context, fixId: String, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean("compat_$fixId", value).apply()
+
+    /** Removes all compat_* keys so every fix reverts to its smart default on next read. */
+    fun resetCompFixes(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith("compat_") }.forEach { editor.remove(it) }
+        editor.apply()
+    }
 }

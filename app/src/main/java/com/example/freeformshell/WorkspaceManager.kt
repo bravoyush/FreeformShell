@@ -14,15 +14,7 @@ object WorkspaceManager {
     private const val KEY_FAVORITE = "favorite"
 
     fun saveCurrentToHistory(context: Context, displayId: Int, tasks: List<AppTask>, boundsMap: Map<Int, TaskBounds>) {
-        val baseBlacklist = setOf(
-            "fallback",
-            "taskbar",
-            "launcher",
-            "systemui",
-            "freeformshell",
-            "documentsui",
-            "externalstorage"
-        )
+        val baseBlacklist = emptySet<String>()
         val apps = tasks.filter { task ->
             task.isFreeform &&
             !baseBlacklist.any { task.packageName.lowercase().contains(it) } &&

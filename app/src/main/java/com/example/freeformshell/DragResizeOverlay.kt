@@ -105,6 +105,8 @@ class DragResizeOverlay(
     private var cornerDetectStartTime: Long = 0L
     private var currentEdgeZone: String? = null
     private var edgeHoldStartTime: Long = 0L
+    private var pendingEdgeZone: String? = null
+    private var pendingEdgeZoneStartTime: Long = 0L
     private var snapTargetRect: Rect? = null
 
     fun setActivityName(name: String?) {
@@ -117,17 +119,18 @@ class DragResizeOverlay(
     internal var winW = 800
     internal var winH = 1000
 
+    private var resizeJob: Job? = null
+    private var lastShellTime = 0L
     internal val density = displayContext.resources.displayMetrics.density
     internal val titleBarHeight = (40 * density).toInt()
     private val borderWidth = (4 * density).toInt()
     private val touchStripWidth = (16 * density).toInt()
-
-    private var resizeJob: Job? = null
-    private var lastShellTime = 0L
     private var lastManualResizeTime = 0L
     private var activeResizeLeft = false
     private var activeResizeRight = false
     private var activeResizeBottom = false
+    private var isLeftHandleHovered = false
+    private var isRightHandleHovered = false
     private var rLx = 0f
     private var rLy = 0f
     
@@ -137,6 +140,8 @@ class DragResizeOverlay(
     private var leftStrip: View? = null
     private var rightStrip: View? = null
     private var bottomStrip: View? = null
+    private var bottomLeftHandle: View? = null
+    private var bottomRightHandle: View? = null
     private val previewDrawable = android.graphics.drawable.GradientDrawable()
     
     internal var lastInteractionTime = 0L
@@ -351,13 +356,24 @@ class DragResizeOverlay(
         val hH = safe.top + safe.height() / 2
         val snapTop = safe.top
         
+        val targetRect = when (side) {
+            "Left" -> Rect(safe.left, snapTop, hW - gap, safe.bottom)
+            "Right" -> Rect(hW + gap, snapTop, safe.right, safe.bottom)
+            "Top" -> Rect(safe.left, snapTop, safe.right, hH - gap)
+            "Bottom" -> Rect(safe.left, hH + gap, safe.right, safe.bottom)
+            else -> null
+        }
+        if (targetRect != null) {
+            winL = targetRect.left
+            winT = targetRect.top
+            winW = targetRect.width()
+            winH = targetRect.height()
+        }
+        
         isMaximized = false; savePreDockedRect(); setDockMode(true)
         CoroutineScope(Dispatchers.IO).launch {
-            when (side) {
-                "Left" -> ShellExecutor.resizeTask(taskId, safe.left, snapTop, hW - gap, safe.bottom)
-                "Right" -> ShellExecutor.resizeTask(taskId, hW + gap, snapTop, safe.right, safe.bottom)
-                "Top" -> ShellExecutor.resizeTask(taskId, safe.left, snapTop, safe.right, hH - gap)
-                "Bottom" -> ShellExecutor.resizeTask(taskId, safe.left, hH + gap, safe.right, safe.bottom)
+            if (targetRect != null) {
+                ShellExecutor.resizeTask(taskId, targetRect.left, targetRect.top, targetRect.right, targetRect.bottom)
             }
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 FreeformOverlayService.getInstance()?.triggerFastPollingSequence()
@@ -599,10 +615,18 @@ class DragResizeOverlay(
             if (bottomStrip?.parent == null) 
                 windowManager.addView(bottomStrip, createParams(winW, touchStripWidth, winL, winT + winH - touchStripWidth/2, true))
             
+            val handleTouchSize = (48 * density).toInt()
+            if (bottomLeftHandle?.parent == null) 
+                windowManager.addView(bottomLeftHandle, createParams(handleTouchSize, handleTouchSize, winL - handleTouchSize/2, winT + winH - handleTouchSize/2, true))
+            if (bottomRightHandle?.parent == null) 
+                windowManager.addView(bottomRightHandle, createParams(handleTouchSize, handleTouchSize, winL + winW - handleTouchSize/2, winT + winH - handleTouchSize/2, true))
+            
             titleBarView?.let { setupTouchRegionHelper(it) }
             leftStrip?.let { setupTouchRegionHelper(it) }
             rightStrip?.let { setupTouchRegionHelper(it) }
             bottomStrip?.let { setupTouchRegionHelper(it) }
+            bottomLeftHandle?.let { setupTouchRegionHelper(it) }
+            bottomRightHandle?.let { setupTouchRegionHelper(it) }
             
             updatePillShrink(true)
         } catch (e: Exception) {
@@ -613,7 +637,7 @@ class DragResizeOverlay(
     fun bringToFront() {
         if (isInteracting) return
         
-        val views = listOfNotNull(frameView, titleBarView, leftStrip, rightStrip, bottomStrip)
+        val views = listOfNotNull(frameView, titleBarView, leftStrip, rightStrip, bottomStrip, bottomLeftHandle, bottomRightHandle)
         for (v in views) {
             if (v.parent != null) {
                 try {
@@ -635,7 +659,7 @@ class DragResizeOverlay(
     }
 
     fun pushToFrontWithoutRecreation() {
-        val views = listOfNotNull(frameView, titleBarView, leftStrip, rightStrip, bottomStrip)
+        val views = listOfNotNull(frameView, titleBarView, leftStrip, rightStrip, bottomStrip, bottomLeftHandle, bottomRightHandle)
         for (v in views) {
             if (v.parent != null) {
                 try {
@@ -657,6 +681,8 @@ class DragResizeOverlay(
                 leftStrip?.let { if (it.parent != null) windowManager.removeView(it) }
                 rightStrip?.let { if (it.parent != null) windowManager.removeView(it) }
                 bottomStrip?.let { if (it.parent != null) windowManager.removeView(it) }
+                bottomLeftHandle?.let { if (it.parent != null) windowManager.removeView(it) }
+                bottomRightHandle?.let { if (it.parent != null) windowManager.removeView(it) }
             } catch (e: Exception) {}
         }
     }
@@ -707,8 +733,13 @@ class DragResizeOverlay(
             }
             lastShouldShowPill = shouldShowPill
             
+            val useL = winL
+            val useT = winT
+            val useW = winW
+            val useH = winH
+            
             val safe = getSafeAreaRect()
-            val decorY = (winT - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
+            val decorY = (useT - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
             
             // Requirement: If resizing, draw the translucent boundary guide dynamically, but keep the headers and input handlers completely stationary to avoid input dropouts or glitchy visual jumps!
             if (isInteracting && isResizing) {
@@ -757,6 +788,8 @@ class DragResizeOverlay(
                     leftStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     rightStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     bottomStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    bottomLeftHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                 } else {
                     val preDecorY = (preInteractT - titleBarHeight).coerceIn(safe.top, safe.bottom - titleBarHeight)
                     titleBarView?.let { updateWindow(it, preInteractW, titleBarHeight, preInteractL, preDecorY, true) }
@@ -764,6 +797,10 @@ class DragResizeOverlay(
                     leftStrip?.let { updateWindow(it, touchStripWidth, preInteractH, preInteractL - touchStripWidth/2, preInteractT, true) }
                     rightStrip?.let { updateWindow(it, touchStripWidth, preInteractH, preInteractL + preInteractW - touchStripWidth/2, preInteractT, true) }
                     bottomStrip?.let { updateWindow(it, preInteractW, touchStripWidth, preInteractL, preInteractT + preInteractH - touchStripWidth/2, true) }
+                    
+                    val handleTouchSize = (48 * density).toInt()
+                    bottomLeftHandle?.let { updateWindow(it, handleTouchSize, handleTouchSize, preInteractL - handleTouchSize/2, preInteractT + preInteractH - handleTouchSize/2, true) }
+                    bottomRightHandle?.let { updateWindow(it, handleTouchSize, handleTouchSize, preInteractL + preInteractW - handleTouchSize/2, preInteractT + preInteractH - handleTouchSize/2, true) }
                 }
                 
                 if (updateVisuals) updateColors()
@@ -775,9 +812,9 @@ class DragResizeOverlay(
                     val tv = v.findViewById<TextView>(textViewId)
                     val isPhoneScreen = displayId == 0
                     val hideText = if (isPhoneScreen) {
-                        winW < (130 * density).toInt()
+                        useW < (130 * density).toInt()
                     } else {
-                        winW < (250 * density).toInt()
+                        useW < (250 * density).toInt()
                     }
                     
                     val label = tv?.text?.toString() ?: ""
@@ -788,9 +825,9 @@ class DragResizeOverlay(
                     val buttonsW = (80 * density).toInt() 
                     val contentW = textW + buttonsW + (24 * density).toInt()
                     
-                    val isQuarterSnap = isDocked && winW < (realMetrics.widthPixels * 0.6f)
+                    val isQuarterSnap = isDocked && useW < (realMetrics.widthPixels * 0.6f)
                     val maxRatio = if (isPhoneScreen) 0.9f else (if (isQuarterSnap) 0.7f else 0.4f)
-                    val maxW = (winW * maxRatio).toInt()
+                    val maxW = (useW * maxRatio).toInt()
                     val minW = if (hideText) (72 * density).toInt() else (110 * density).toInt()
                     val pillW = contentW.coerceIn(minW, Math.max(minW, maxW))
                     
@@ -801,8 +838,8 @@ class DragResizeOverlay(
                     val finalW = if (style == 1 && isShrunk) (60 * density).toInt() else pillW
                     val finalH = if (style == 1 && isShrunk) (8 * density).toInt() else pillH
                     
-                    val pillX = winL + (winW - finalW) / 2
-                    val pillY = (winT + (4 * density).toInt()).coerceIn(safe.top + (4 * density).toInt(), safe.bottom - finalH)
+                    val pillX = useL + (useW - finalW) / 2
+                    val pillY = (useT + (4 * density).toInt()).coerceIn(safe.top + (4 * density).toInt(), safe.bottom - finalH)
                     
                     val vg = v as android.view.ViewGroup
                     // Show/hide subviews smoothly
@@ -827,22 +864,24 @@ class DragResizeOverlay(
                 frameView?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                 val showExternalHandles = (ThemeManager.getPairedScalingGlobal(displayContext) || ThemeManager.getPairedScaling(displayContext, displayId)) && !isInteracting
                 if (showExternalHandles) {
-                    leftStrip?.let { updateWindow(it, touchStripWidth, winH, winL - touchStripWidth/2, winT, true) }
-                    rightStrip?.let { updateWindow(it, touchStripWidth, winH, winL + winW - touchStripWidth/2, winT, true) }
-                    bottomStrip?.let { updateWindow(it, winW, touchStripWidth, winL, winT + winH - touchStripWidth/2, true) }
+                    leftStrip?.let { updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) }
+                    rightStrip?.let { updateWindow(it, touchStripWidth, useH, useL + useW - touchStripWidth/2, useT, true) }
+                    bottomStrip?.let { updateWindow(it, useW, touchStripWidth, useL, useT + useH - touchStripWidth/2, true) }
                 } else {
                     leftStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     rightStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     bottomStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                 }
+                bottomLeftHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
             } else {
                 // STANDARD MODE: Show full title bar and frame
                 if (isInteracting) {
                     // PERFORMANCE FIX: Skip updating secondary strips during active dragging, but keep border visible!
                     frameView?.let {
-                        val fw = winW + (borderWidth * 2)
-                        val fh = winH + titleBarHeight + borderWidth
-                        val fx = winL - borderWidth
+                        val fw = useW + (borderWidth * 2)
+                        val fh = useH + titleBarHeight + borderWidth
+                        val fx = useL - borderWidth
                         val fy = decorY - borderWidth
                         updateWindow(it, fw, fh, fx, fy, false)
                         it.invalidate()
@@ -850,14 +889,16 @@ class DragResizeOverlay(
                     leftStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     rightStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                     bottomStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    bottomLeftHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
                 } else {
                     frameView?.let { 
                         if (isDocked) {
                             updateWindow(it, 0, 0, -1000, -1000, false)
                         } else {
-                            val fw = winW + (borderWidth * 2)
-                            val fh = winH + titleBarHeight + borderWidth
-                            val fx = winL - borderWidth
+                            val fw = useW + (borderWidth * 2)
+                            val fh = useH + titleBarHeight + borderWidth
+                            val fx = useL - borderWidth
                             val fy = decorY - borderWidth
                             updateWindow(it, fw, fh, fx, fy, false)
                             it.invalidate() // Force redraw of the border
@@ -868,19 +909,29 @@ class DragResizeOverlay(
                     val showBottom = !isResizing || activeResizeBottom
                     
                     leftStrip?.let { 
-                        if (showLeft) updateWindow(it, touchStripWidth, winH, winL - touchStripWidth/2, winT, true) 
+                        if (showLeft) updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) 
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                     rightStrip?.let { 
-                        if (showRight) updateWindow(it, touchStripWidth, winH, winL + winW - touchStripWidth/2, winT, true) 
+                        if (showRight) updateWindow(it, touchStripWidth, useH, useL + useW - touchStripWidth/2, useT, true) 
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                     bottomStrip?.let { 
-                        if (showBottom) updateWindow(it, winW, touchStripWidth, winL, winT + winH - touchStripWidth/2, true) 
+                        if (showBottom) updateWindow(it, useW, touchStripWidth, useL, useT + useH - touchStripWidth/2, true) 
+                        else updateWindow(it, 0, 0, -1000, -1000, false)
+                    }
+                    
+                    val handleTouchSize = (48 * density).toInt()
+                    bottomLeftHandle?.let { 
+                        if (showLeft || showBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
+                        else updateWindow(it, 0, 0, -1000, -1000, false)
+                    }
+                    bottomRightHandle?.let { 
+                        if (showRight || showBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL + useW - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                 }
-                titleBarView?.let { updateWindow(it, winW, titleBarHeight, winL, decorY, true) }
+                titleBarView?.let { updateWindow(it, useW, titleBarHeight, useL, decorY, true) }
             }
             
             // Ensure snap menu stays on top if it's showing for this specific task
@@ -949,10 +1000,18 @@ class DragResizeOverlay(
                 1.0f
             }
             
+            val isHandle = v == bottomLeftHandle || v == bottomRightHandle
+            val isThisHandleHovered = (v == bottomLeftHandle && isLeftHandleHovered) || (v == bottomRightHandle && isRightHandleHovered)
+            val isThisHandleActive = (v == bottomLeftHandle && activeResizeLeft && activeResizeBottom) || 
+                                     (v == bottomRightHandle && activeResizeRight && activeResizeBottom)
+            
             val targetAlpha = if (isTitle && !shouldShowPill) {
                 if (isAnyOtherOverlayDragging()) 0.40f else baseAlpha
             } else if (isImmersion) {
                 0.15f
+            } else if (isHandle) {
+                // Show full opacity if hovered or active, otherwise semi-transparent
+                if (isThisHandleActive || isThisHandleHovered) 1.0f else 0.35f
             } else if (isInteracting) {
                 0.40f
             } else if (isAnyOtherOverlayDragging()) {
@@ -1007,8 +1066,6 @@ class DragResizeOverlay(
 
     internal fun applyBounds(force: Boolean = false) {
         val now = System.currentTimeMillis()
-        // Reduced throttle to 16ms for move/resize (60 FPS shell updates)
-        // Movement feels much more fluid on Android 11+ targets.
         if (!force && now - lastShellTime < 16) return
         lastShellTime = now
         
@@ -1096,7 +1153,6 @@ class DragResizeOverlay(
             }
             setOnClickListener { 
                 triggerPillInteraction()
-                ShellExecutor.forceStopApp(packageName, taskId)
                 onClose()
             }
         }
@@ -1112,7 +1168,13 @@ class DragResizeOverlay(
         
         root.setOnTouchListener { _, event ->
             triggerPillInteraction(extendTimer = false)
-            when (event.action) {
+            val action = event.action
+            val toolType = event.getToolType(0)
+            val isTouch = toolType == MotionEvent.TOOL_TYPE_FINGER
+            
+            Log.d("DragResizeOverlayTouch", "titleBarTouch: taskId=$taskId, action=${MotionEvent.actionToString(action)}, rawX=${event.rawX}, rawY=${event.rawY}, toolType=$toolType")
+            
+            when (action) {
                 MotionEvent.ACTION_DOWN -> { 
                     isInteracting = true
                     hasMovedThreshold = false
@@ -1128,7 +1190,12 @@ class DragResizeOverlay(
                     val usePillForSnapped = ThemeManager.usePillForSnapped(displayContext)
                     preShouldShowPill = isMaximized || (isDocked && usePillForSnapped)
                     
-                    ShellExecutor.moveTaskToFront(taskId)
+                    // Finger Defer Fix: if enabled via CompatibilityManager, skip moveTaskToFront on
+                    // finger ACTION_DOWN to prevent InputDispatcher ACTION_CANCEL killing the drag.
+                    val deferFocusForTouch = CompatibilityManager.isFingerDeferFocusEnabled(displayContext)
+                    if (!isTouch || !deferFocusForTouch) {
+                        ShellExecutor.moveTaskToFront(taskId)
+                    }
                     FreeformOverlayService.requestRefresh()
                     
                     dismissActiveSnapMenu(windowManager)
@@ -1137,12 +1204,6 @@ class DragResizeOverlay(
                     startX = event.rawX; startY = event.rawY
                     updateLayouts()
                     updateColors()
-                    
-                    val tapX = winL + winW / 2
-                    val tapY = winT + (5 * density).toInt().coerceAtLeast(5)
-                    CoroutineScope(Dispatchers.IO).launch {
-                        ShellExecutor.injectTap(tapX, tapY)
-                    }
                     
                     true 
                 }
@@ -1262,15 +1323,20 @@ class DragResizeOverlay(
 
                     // Untouched borders use a very generous threshold for immediate and natural snap triggering.
                     // Already occupied/touched borders use a small threshold to avoid accidental overlaps.
+                    
                     val leftThresh = if (isLeftBorderTouched) occupiedThresh else generousThresh
                     val rightThresh = if (isRightBorderTouched) occupiedThresh else generousThresh
                     val topThresh = if (isTopBorderTouched) occupiedThresh else generousThresh
                     val bottomThresh = if (isBottomBorderTouched) occupiedThresh else generousThresh
 
-                    val isNearTop = event.rawY < safe.top + cornerThresh
-                    val isNearBottom = event.rawY > safe.bottom - cornerThresh
-                    val isNearLeft = event.rawX < safe.left + cornerThresh
-                    val isNearRight = event.rawX > safe.right - cornerThresh
+                    val isLandscape = safe.width() >= safe.height()
+                    val cornerThreshX = generousThresh
+                    val cornerThreshY = if (isLandscape) generousThresh else (40f * density)
+
+                    val isNearTop = event.rawY < safe.top + cornerThreshY
+                    val isNearBottom = event.rawY > safe.bottom - cornerThreshY || (winT + winH) >= safe.bottom - (20 * density).toInt()
+                    val isNearLeft = event.rawX < safe.left + cornerThreshX
+                    val isNearRight = event.rawX > safe.right - cornerThreshX
 
                     var detectedCorner: String? = null
                     if (isNearTop && isNearLeft) detectedCorner = "TopLeft"
@@ -1279,7 +1345,7 @@ class DragResizeOverlay(
                     else if (isNearBottom && isNearRight) detectedCorner = "BottomRight"
 
                     // Determine the candidate boundary edge or corner zone
-                    val candidateZone = if (detectedCorner != null) {
+                    val rawCandidateZone = if (detectedCorner != null) {
                         detectedCorner
                     } else if (event.rawY < safe.top + topThresh) {
                         "Top"
@@ -1287,33 +1353,51 @@ class DragResizeOverlay(
                         "Left"
                     } else if (event.rawX > safe.right - rightThresh) {
                         "Right"
-                    } else if (event.rawY > safe.bottom - bottomThresh) {
+                    } else if (event.rawY > safe.bottom - bottomThresh || (winT + winH) >= safe.bottom - bottomThresh) {
                         "Bottom"
                     } else {
                         null
                     }
 
-                    // Track active edge boundary/corner hold times
-                    if (candidateZone != null) {
-                        if (candidateZone == currentEdgeZone) {
-                            // Keep counting time
-                        } else {
-                            currentEdgeZone = candidateZone
-                            edgeHoldStartTime = System.currentTimeMillis()
-                        }
+                    // --- DEBOUNCE / HYSTERESIS FILTER ---
+                    val now = System.currentTimeMillis()
+                    if (rawCandidateZone == currentEdgeZone) {
+                        // Stable in current zone, clear pending
+                        pendingEdgeZone = null
+                        pendingEdgeZoneStartTime = 0L
                     } else {
-                        currentEdgeZone = null
-                        edgeHoldStartTime = 0L
+                        if (currentEdgeZone == null) {
+                            // Switch to new zone instantly if we had no active zone
+                            currentEdgeZone = rawCandidateZone
+                            edgeHoldStartTime = now
+                            pendingEdgeZone = null
+                            pendingEdgeZoneStartTime = 0L
+                        } else {
+                            // We have an active zone. Check if the raw candidate zone is already pending
+                            if (rawCandidateZone == pendingEdgeZone) {
+                                if (now - pendingEdgeZoneStartTime >= 120) { // 120ms stable window
+                                    currentEdgeZone = rawCandidateZone
+                                    edgeHoldStartTime = pendingEdgeZoneStartTime
+                                    pendingEdgeZone = null
+                                    pendingEdgeZoneStartTime = 0L
+                                }
+                            } else {
+                                // Start tracking new pending zone
+                                pendingEdgeZone = rawCandidateZone
+                                pendingEdgeZoneStartTime = now
+                            }
+                        }
                     }
 
                     val elapsedEdgeTime = if (edgeHoldStartTime > 0L) System.currentTimeMillis() - edgeHoldStartTime else 0L
 
-                    if (candidateZone != null) {
+                    if (currentEdgeZone != null) {
+                        val activeZone = currentEdgeZone!!
                         // --- CASE 1: CURSOR IS NEAR A CORNER (1/4th SNAP) ---
-                        if (candidateZone == "TopLeft" || candidateZone == "TopRight" || 
-                            candidateZone == "BottomLeft" || candidateZone == "BottomRight") {
+                        if (activeZone == "TopLeft" || activeZone == "TopRight" || 
+                            activeZone == "BottomLeft" || activeZone == "BottomRight") {
                             // Show corner snap (1/4th screen) immediately!
-                            when (candidateZone) {
+                            when (activeZone) {
                                 "TopLeft" -> {
                                     snapTargetRect = Rect(safe.left, snapTop, hW - gap, hH - gap)
                                     targetSide = "CornerTopLeft"
@@ -1335,7 +1419,7 @@ class DragResizeOverlay(
                             // --- CASE 2: CURSOR IS NEAR AN EDGE (LEFT/RIGHT/TOP/BOTTOM) ---
                             if (!hasOtherDocked) {
                                 // If no other apps are snapped: trigger basic fullscreen/split immediately!
-                                when (candidateZone) {
+                                when (activeZone) {
                                     "Top" -> {
                                         snapTargetRect = Rect(safe.left, safe.top, safe.right, safe.bottom)
                                         targetSide = "TopFull"
@@ -1357,20 +1441,16 @@ class DragResizeOverlay(
                                 // Smart Tiling Grid Engine: Suggest exact, non-overlapping available gaps
                                 // calculated by getAvailableSnapGaps() to ensure ZERO overlap with existing docked windows!
                                 val gaps = getAvailableSnapGaps()
-                                val bestGap = if (gaps.isNotEmpty()) {
-                                    gaps.minByOrNull { gapRect ->
-                                        val dx = event.rawX - gapRect.centerX()
-                                        val dy = event.rawY - gapRect.centerY()
-                                        dx * dx + dy * dy
-                                    }
-                                } else {
-                                    null
-                                }
-
-                                when (candidateZone) {
+                                when (activeZone) {
                                     "Top" -> {
-                                        if (elapsedEdgeTime < 4000 && bestGap != null) {
-                                            snapTargetRect = bestGap
+                                        val topGaps = gaps.filter { it.centerY() < hH }
+                                        val bestTopGap = topGaps.minByOrNull { gapRect ->
+                                            val dx = event.rawX - gapRect.centerX()
+                                            val dy = event.rawY - gapRect.centerY()
+                                            dx * dx + dy * dy
+                                        }
+                                        if (elapsedEdgeTime < 4000 && bestTopGap != null) {
+                                            snapTargetRect = bestTopGap
                                             targetSide = "GapVertical"
                                         } else {
                                             // Transition into fullscreen size indication overlay after 4 seconds hold!
@@ -1379,8 +1459,14 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Left" -> {
-                                        if (elapsedEdgeTime < 4000 && bestGap != null) {
-                                            snapTargetRect = bestGap
+                                        val leftGaps = gaps.filter { it.centerX() < hW }
+                                        val bestLeftGap = leftGaps.minByOrNull { gapRect ->
+                                            val dx = event.rawX - gapRect.centerX()
+                                            val dy = event.rawY - gapRect.centerY()
+                                            dx * dx + dy * dy
+                                        }
+                                        if (elapsedEdgeTime < 4000 && bestLeftGap != null) {
+                                            snapTargetRect = bestLeftGap
                                             targetSide = "GapHorizontal"
                                         } else {
                                             // Transition into split left size indication overlay after 4 seconds hold!
@@ -1389,8 +1475,14 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Right" -> {
-                                        if (elapsedEdgeTime < 4000 && bestGap != null) {
-                                            snapTargetRect = bestGap
+                                        val rightGaps = gaps.filter { it.centerX() > hW }
+                                        val bestRightGap = rightGaps.minByOrNull { gapRect ->
+                                            val dx = event.rawX - gapRect.centerX()
+                                            val dy = event.rawY - gapRect.centerY()
+                                            dx * dx + dy * dy
+                                        }
+                                        if (elapsedEdgeTime < 4000 && bestRightGap != null) {
+                                            snapTargetRect = bestRightGap
                                             targetSide = "GapHorizontal"
                                         } else {
                                             // Transition into split right size indication overlay after 4 seconds hold!
@@ -1399,8 +1491,14 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Bottom" -> {
-                                        if (elapsedEdgeTime < 4000 && bestGap != null) {
-                                            snapTargetRect = bestGap
+                                        val bottomGaps = gaps.filter { it.centerY() > hH }
+                                        val bestBottomGap = bottomGaps.minByOrNull { gapRect ->
+                                            val dx = event.rawX - gapRect.centerX()
+                                            val dy = event.rawY - gapRect.centerY()
+                                            dx * dx + dy * dy
+                                        }
+                                        if (elapsedEdgeTime < 4000 && bestBottomGap != null) {
+                                            snapTargetRect = bestBottomGap
                                             targetSide = "GapVertical"
                                         } else {
                                             // Transition into basic bottom split overlay after 4 seconds hold!
@@ -1422,7 +1520,7 @@ class DragResizeOverlay(
                     }
                     
                     lx = event.rawX; ly = event.rawY
-                    updateLayouts(false) // PERFORMANCE GUARD: Move positions only, skip color recalculation
+                    updateLayouts(false)
                     applyBounds(false)
                     true
                 }
@@ -1434,6 +1532,8 @@ class DragResizeOverlay(
                     cornerDetectStartTime = 0L
                     currentEdgeZone = null
                     edgeHoldStartTime = 0L
+                    pendingEdgeZone = null
+                    pendingEdgeZoneStartTime = 0L
                     
                     if (wasDockedOnDown && !hasMovedThreshold) {
                         isInteracting = false
@@ -1492,6 +1592,8 @@ class DragResizeOverlay(
                         applyBounds(true)
                     }
                     
+                    // CRITICAL FIX: Trigger focused transition now that the active touchscreen finger gesture is complete,
+                    // or if it's a mouse click.
                     ShellExecutor.moveTaskToFront(taskId)
                     triggerPillInteraction(extendTimer = true, delayMs = 3000)
                     endInteraction()
@@ -1513,12 +1615,14 @@ class DragResizeOverlay(
                     }
                     MotionEvent.ACTION_HOVER_EXIT -> {
                         if (isHovered) {
-                            // Hover Exit Bug Fix: Check if mouse is still physically within the root view's bounds
-                            val location = IntArray(2)
-                            root.getLocationOnScreen(location)
-                            val rect = Rect(location[0], location[1], location[0] + root.width, location[1] + root.height)
-                            if (rect.contains(event.rawX.toInt(), event.rawY.toInt())) {
-                                return@setOnHoverListener true
+                            // Hover Phantom Exit Fix: validate pointer is really outside before accepting exit.
+                            if (CompatibilityManager.isHoverPhantomExitCheckEnabled(displayContext)) {
+                                val location = IntArray(2)
+                                root.getLocationOnScreen(location)
+                                val rect = Rect(location[0], location[1], location[0] + root.width, location[1] + root.height)
+                                if (rect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                                    return@setOnHoverListener true
+                                }
                             }
                             
                             isHovered = false
@@ -1562,7 +1666,8 @@ class DragResizeOverlay(
                 val bWidth = ThemeManager.getBorderWidth(displayContext) * density
                 val strokeW = if (isDocked) (2 * density).toInt() else bWidth.toInt()
                 
-                val useFullscreenGuide = isInteracting && isResizing
+                // Self-correcting layout synchronization: check if view size indicates fullscreen guide mode
+                val useFullscreenGuide = width > winW + borderWidth * 3
                 val drawL: Float
                 val drawT: Float
                 val drawW: Float
@@ -1571,8 +1676,10 @@ class DragResizeOverlay(
                 if (useFullscreenGuide) {
                     val safe = getSafeAreaRect()
                     val decorY = (winT - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
-                    drawL = (winL - borderWidth).toFloat()
-                    drawT = (decorY - borderWidth).toFloat()
+                    val loc = IntArray(2)
+                    getLocationOnScreen(loc)
+                    drawL = (winL - borderWidth).toFloat() - loc[0]
+                    drawT = (decorY - borderWidth).toFloat() - loc[1]
                     drawW = (winW + borderWidth * 2).toFloat()
                     drawH = (winH + titleBarHeight + borderWidth).toFloat()
                 } else {
@@ -1680,10 +1787,103 @@ class DragResizeOverlay(
             setBackgroundColor(Color.argb(1, 0, 0, 0))
             setOnTouchListener { _, e -> handleResize(e, false, false, true) } 
         }
+
+        val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2f * density
+        }
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+        }
+        val handleStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 5f * density
+            color = Color.WHITE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            setShadowLayer(3f * density, 0f, 1f * density, Color.parseColor("#60000000"))
+        }
+
+        bottomLeftHandle = object : View(displayContext) {
+            override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val showVisual = ThemeManager.getVisualCornerHandlesGlobal(displayContext) && ThemeManager.getVisualCornerHandles(displayContext, displayId)
+                if (!showVisual) return
+                
+                val cx = width / 2f
+                val cy = height / 2f
+                val armLength = 20f * density
+                val r = 10f * density
+                
+                val path = Path().apply {
+                    moveTo(cx, cy - armLength)
+                    lineTo(cx, cy - r)
+                    arcTo(cx, cy - 2 * r, cx + 2 * r, cy, 180f, -90f, false)
+                    lineTo(cx + armLength, cy)
+                }
+                canvas.drawPath(path, handleStrokePaint)
+            }
+        }.apply { 
+            isClickable = true
+            isFocusable = true
+            setBackgroundColor(Color.argb(1, 0, 0, 0))
+            setOnTouchListener { _, e -> handleResize(e, true, false, true) } 
+            setOnHoverListener { _, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_HOVER_ENTER -> { isLeftHandleHovered = true; updateLayouts(false) }
+                    MotionEvent.ACTION_HOVER_EXIT -> { isLeftHandleHovered = false; updateLayouts(false) }
+                }
+                false
+            }
+        }
+
+        bottomRightHandle = object : View(displayContext) {
+            override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val showVisual = ThemeManager.getVisualCornerHandlesGlobal(displayContext) && ThemeManager.getVisualCornerHandles(displayContext, displayId)
+                if (!showVisual) return
+                
+                val cx = width / 2f
+                val cy = height / 2f
+                val armLength = 20f * density
+                val r = 10f * density
+                
+                val path = Path().apply {
+                    moveTo(cx, cy - armLength)
+                    lineTo(cx, cy - r)
+                    arcTo(cx - 2 * r, cy - 2 * r, cx, cy, 0f, 90f, false)
+                    lineTo(cx - armLength, cy)
+                }
+                canvas.drawPath(path, handleStrokePaint)
+            }
+        }.apply { 
+            isClickable = true
+            isFocusable = true
+            setBackgroundColor(Color.argb(1, 0, 0, 0))
+            setOnTouchListener { _, e -> handleResize(e, false, true, true) } 
+            setOnHoverListener { _, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_HOVER_ENTER -> { isRightHandleHovered = true; updateLayouts(false) }
+                    MotionEvent.ACTION_HOVER_EXIT -> { isRightHandleHovered = false; updateLayouts(false) }
+                }
+                false
+            }
+        }
     }
 
     private fun handleResize(event: MotionEvent, left: Boolean, right: Boolean, bottom: Boolean): Boolean {
-        return when (event.action) {
+        val action = event.action
+        val toolType = if (event.pointerCount > 0) event.getToolType(0) else MotionEvent.TOOL_TYPE_UNKNOWN
+        val isTouch = toolType == MotionEvent.TOOL_TYPE_FINGER
+        
+        Log.d("DragResizeOverlayTouch", "handleResizeTouch: taskId=$taskId, action=${MotionEvent.actionToString(action)}, left=$left, right=$right, bottom=$bottom, toolType=$toolType")
+        
+        return when (action) {
             MotionEvent.ACTION_DOWN -> { 
                 isInteracting = true
                 isResizing = true
@@ -1708,17 +1908,16 @@ class DragResizeOverlay(
                 if (!pairedEnabled) {
                     setDockMode(false) // Reset docked state immediately when manually resizing via borders
                 }
-                ShellExecutor.moveTaskToFront(taskId)
+                
+                // Finger Defer Fix: same guard as in the title bar drag handler.
+                val deferFocusForTouch = CompatibilityManager.isFingerDeferFocusEnabled(displayContext)
+                if (!isTouch || !deferFocusForTouch) {
+                    ShellExecutor.moveTaskToFront(taskId)
+                }
                 FreeformOverlayService.requestRefresh()
                 rLx = event.rawX; rLy = event.rawY
                 updateColors()
                 updateLayouts()
-                
-                val tapX = winL + winW / 2
-                val tapY = winT + (5 * density).toInt().coerceAtLeast(5)
-                CoroutineScope(Dispatchers.IO).launch {
-                    ShellExecutor.injectTap(tapX, tapY)
-                }
                 
                 true 
             }
@@ -1748,11 +1947,13 @@ class DragResizeOverlay(
                     }
                     
                     rLx = event.rawX; rLy = event.rawY
-                updateLayouts(false)
-                updateColors()
-                if (ThemeManager.realtimeResize(displayContext)) {
-                    applyBounds(false)
-                }
+                    if (ThemeManager.realtimeResize(displayContext)) {
+                        updateLayouts(false)
+                        applyBounds(false)
+                    } else {
+                        updateLayouts(false)
+                        updateColors()
+                    }
                 }
                 true
             }
@@ -1789,6 +1990,10 @@ class DragResizeOverlay(
                 updateLayouts()
                 updateColors()
                 applyBounds(true)
+                
+                // CRITICAL FIX: Trigger focused transition now that the active touchscreen finger gesture is complete,
+                // or if it's a mouse gesture.
+                ShellExecutor.moveTaskToFront(taskId)
                 endInteraction()
                 true
             }
@@ -2371,12 +2576,11 @@ class DragResizeOverlay(
             ) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     val insetsInfo = args[0]
-                    val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
-                    
-                    val rect = android.graphics.Rect(0, 0, view.width, view.height)
-                    val region = android.graphics.Region(rect)
-                    
                     if (!isFocused && occluders.isNotEmpty()) {
+                        val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
+                        val rect = android.graphics.Rect(0, 0, view.width, view.height)
+                        val region = android.graphics.Region(rect)
+                        
                         val loc = IntArray(2)
                         view.getLocationOnScreen(loc)
                         val viewX = loc[0]
@@ -2392,10 +2596,12 @@ class DragResizeOverlay(
                                 region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
                             }
                         }
+                        
+                        touchableRegion.set(region)
+                        setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
+                    } else {
+                        setTouchableInsetsMethod.invoke(insetsInfo, 0) // TOUCHABLE_INSETS_FRAME (whole window frame is touchable)
                     }
-                    
-                    touchableRegion.set(region)
-                    setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
                 }
                 null
             }
@@ -2424,7 +2630,9 @@ class DragResizeOverlay(
             Pair(titleBarView, true),
             Pair(leftStrip, true),
             Pair(rightStrip, true),
-            Pair(bottomStrip, true)
+            Pair(bottomStrip, true),
+            Pair(bottomLeftHandle, true),
+            Pair(bottomRightHandle, true)
         )
         
         for ((view, originallyTouchable) in views) {

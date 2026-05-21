@@ -10,6 +10,20 @@ import android.os.Looper
 object ShellExecutor {
     private const val TAG = "ShellExecutor"
 
+    private var cachedActivityTaskManager: Any? = null
+    private var cachedActivityManager: Any? = null
+    private val lock = Any()
+    
+    // Cached reflective Method objects
+    private var cachedResizeTaskMethod: java.lang.reflect.Method? = null
+    private var cachedMoveTaskToFrontMethod: java.lang.reflect.Method? = null
+    private var cachedStartActivityFromRecentsMethod: java.lang.reflect.Method? = null
+    private var cachedMoveTaskToBackMethod: java.lang.reflect.Method? = null
+    private var cachedRemoveTaskMethod: java.lang.reflect.Method? = null
+    private var cachedSetFocusedRootTaskMethod: java.lang.reflect.Method? = null
+    private var cachedSetFocusedTaskMethod: java.lang.reflect.Method? = null
+    private var cachedForceStopPackageMethod: java.lang.reflect.Method? = null
+
     init {
         bypassHiddenApiRestrictions()
         ShizukuLifecycleManager.register(object : ShizukuLifecycleManager.ConnectionCallback {
@@ -19,16 +33,77 @@ object ShellExecutor {
             override fun onDisconnected() {
                 Log.w(TAG, "Shizuku disconnected. Closing persistent shell.")
                 closePersistentShell()
+                clearAtmCache()
             }
         })
     }
 
+    private fun getActivityTaskManager(): Any? {
+        synchronized(lock) {
+            if (cachedActivityTaskManager != null) return cachedActivityTaskManager
+            try {
+                if (Shizuku.pingBinder()) {
+                    val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
+                    val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
+                    val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
+                    val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
+                    cachedActivityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    return cachedActivityTaskManager
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resolve IActivityTaskManager binder proxy", e)
+            }
+            return null
+        }
+    }
+
+    private fun getActivityManager(): Any? {
+        synchronized(lock) {
+            if (cachedActivityManager != null) return cachedActivityManager
+            try {
+                if (Shizuku.pingBinder()) {
+                    val amBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity")
+                    val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(amBinder)
+                    val stubClass = Class.forName("android.app.IActivityManager\$Stub")
+                    val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
+                    cachedActivityManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    return cachedActivityManager
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resolve IActivityManager binder proxy", e)
+            }
+            return null
+        }
+    }
+
+    private fun clearAtmCache() {
+        synchronized(lock) {
+            cachedActivityTaskManager = null
+            cachedActivityManager = null
+            cachedResizeTaskMethod = null
+            cachedMoveTaskToFrontMethod = null
+            cachedStartActivityFromRecentsMethod = null
+            cachedMoveTaskToBackMethod = null
+            cachedRemoveTaskMethod = null
+            cachedSetFocusedRootTaskMethod = null
+            cachedSetFocusedTaskMethod = null
+            cachedForceStopPackageMethod = null
+        }
+    }
+
     @JvmStatic
-    fun bypassHiddenApiRestrictions() {
+    fun bypassHiddenApiRestrictions(context: android.content.Context? = null) {
+        // When a context is provided, respect the user-controlled compat toggle.
+        // When called from init{} (no context yet), apply the bypass unconditionally
+        // since the default for this fix is ON and we cannot read prefs without a context.
+        if (context != null && !CompatibilityManager.isHiddenApiBypassEnabled(context)) {
+            Log.d(TAG, "Hidden API bypass is disabled via Compatibility Settings — skipping.")
+            return
+        }
         try {
             if (android.os.Build.VERSION.SDK_INT >= 28) {
                 org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("L")
-                Log.d(TAG, "Successfully bypassed Hidden API restrictions on Android 14 using LSPosed!")
+                Log.d(TAG, "Successfully bypassed Hidden API restrictions using LSPosed!")
             }
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to bypass Hidden API restrictions using LSPosed", e)
@@ -194,25 +269,26 @@ object ShellExecutor {
 
     fun resizeTask(taskId: Int, left: Int, top: Int, right: Int, bottom: Int) {
         try {
-            if (rikka.shizuku.Shizuku.pingBinder()) {
-                val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
-                val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
-                val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
-                val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
-                val activityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
-
-                val resizeTaskMethod = activityTaskManager.javaClass.getMethod(
-                    "resizeTask",
-                    Int::class.javaPrimitiveType,
-                    android.graphics.Rect::class.java,
-                    Int::class.javaPrimitiveType
-                )
+            val manager = getActivityTaskManager()
+            if (manager != null) {
+                val method = synchronized(lock) {
+                    if (cachedResizeTaskMethod == null) {
+                        cachedResizeTaskMethod = manager.javaClass.getMethod(
+                            "resizeTask",
+                            Int::class.javaPrimitiveType,
+                            android.graphics.Rect::class.java,
+                            Int::class.javaPrimitiveType
+                        )
+                    }
+                    cachedResizeTaskMethod!!
+                }
                 val bounds = android.graphics.Rect(left, top, right, bottom)
-                resizeTaskMethod.invoke(activityTaskManager, taskId, bounds, 1) // 1 = RESIZE_MODE_USER
+                method.invoke(manager, taskId, bounds, 1) // 1 = RESIZE_MODE_USER
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to resize task via direct Binder call, falling back to shell", e)
+            clearAtmCache()
         }
 
         triggerShellInteraction()
@@ -248,29 +324,30 @@ object ShellExecutor {
 
     fun moveTaskToFront(taskId: Int) {
         try {
-            if (rikka.shizuku.Shizuku.pingBinder()) {
-                val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
-                val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
-                val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
-                val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
-                val activityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
-
-                val moveTaskToFrontMethod = activityTaskManager.javaClass.getMethod(
-                    "moveTaskToFront",
-                    Class.forName("android.app.IApplicationThread"),
-                    String::class.java,
-                    Int::class.javaPrimitiveType,
-                    Int::class.javaPrimitiveType,
-                    android.os.Bundle::class.java
-                )
-                moveTaskToFrontMethod.invoke(activityTaskManager, null, "com.android.shell", taskId, 0, null)
+            val manager = getActivityTaskManager()
+            if (manager != null) {
+                val method = synchronized(lock) {
+                    if (cachedMoveTaskToFrontMethod == null) {
+                        cachedMoveTaskToFrontMethod = manager.javaClass.getMethod(
+                            "moveTaskToFront",
+                            Class.forName("android.app.IApplicationThread"),
+                            String::class.java,
+                            Int::class.javaPrimitiveType,
+                            Int::class.javaPrimitiveType,
+                            android.os.Bundle::class.java
+                        )
+                    }
+                    cachedMoveTaskToFrontMethod!!
+                }
+                method.invoke(manager, null, "com.android.shell", taskId, 0, null)
                 
                 // Direct focus injection for lag-free active focus transfer on Android 14
-                setFocusedRootTaskWithManager(activityTaskManager, taskId)
+                setFocusedRootTaskWithManager(manager, taskId)
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to move task to front via direct Binder call, falling back to shell", e)
+            clearAtmCache()
         }
 
         triggerShellInteraction()
@@ -293,19 +370,29 @@ object ShellExecutor {
     private fun setFocusedRootTaskWithManager(activityTaskManager: Any?, taskId: Int) {
         if (activityTaskManager == null) return
         try {
-            val setFocusedRootTaskMethod = activityTaskManager.javaClass.getMethod(
-                "setFocusedRootTask",
-                Int::class.javaPrimitiveType
-            )
-            setFocusedRootTaskMethod.invoke(activityTaskManager, taskId)
+            val method = synchronized(lock) {
+                if (cachedSetFocusedRootTaskMethod == null) {
+                    cachedSetFocusedRootTaskMethod = activityTaskManager.javaClass.getMethod(
+                        "setFocusedRootTask",
+                        Int::class.javaPrimitiveType
+                    )
+                }
+                cachedSetFocusedRootTaskMethod!!
+            }
+            method.invoke(activityTaskManager, taskId)
             Log.d(TAG, "Successfully focused root task $taskId via direct Binder call")
         } catch (e: NoSuchMethodException) {
             try {
-                val setFocusedTaskMethod = activityTaskManager.javaClass.getMethod(
-                    "setFocusedTask",
-                    Int::class.javaPrimitiveType
-                )
-                setFocusedTaskMethod.invoke(activityTaskManager, taskId)
+                val method = synchronized(lock) {
+                    if (cachedSetFocusedTaskMethod == null) {
+                        cachedSetFocusedTaskMethod = activityTaskManager.javaClass.getMethod(
+                            "setFocusedTask",
+                            Int::class.javaPrimitiveType
+                        )
+                    }
+                    cachedSetFocusedTaskMethod!!
+                }
+                method.invoke(activityTaskManager, taskId)
                 Log.d(TAG, "Successfully focused task $taskId via setFocusedTask")
             } catch (ex: Exception) {
                 Log.e(TAG, "Failed focusing task via both setFocusedRootTask and setFocusedTask", ex)
@@ -317,32 +404,33 @@ object ShellExecutor {
 
     fun relaunchFreeformTask(taskId: Int, component: String) {
         try {
-            if (rikka.shizuku.Shizuku.pingBinder()) {
-                val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
-                val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
-                val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
-                val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
-                val activityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
-
+            val manager = getActivityTaskManager()
+            if (manager != null) {
                 val options = android.app.ActivityOptions.makeBasic()
                 try {
                     val setLaunchWindowingModeMethod = options.javaClass.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
                     setLaunchWindowingModeMethod.invoke(options, 5) // 5 = WINDOWING_MODE_FREEFORM
                 } catch (e: Exception) {}
 
-                val startActivityFromRecentsMethod = activityTaskManager.javaClass.getMethod(
-                    "startActivityFromRecents",
-                    Int::class.javaPrimitiveType,
-                    android.os.Bundle::class.java
-                )
-                startActivityFromRecentsMethod.invoke(activityTaskManager, taskId, options.toBundle())
+                val method = synchronized(lock) {
+                    if (cachedStartActivityFromRecentsMethod == null) {
+                        cachedStartActivityFromRecentsMethod = manager.javaClass.getMethod(
+                            "startActivityFromRecents",
+                            Int::class.javaPrimitiveType,
+                            android.os.Bundle::class.java
+                        )
+                    }
+                    cachedStartActivityFromRecentsMethod!!
+                }
+                method.invoke(manager, taskId, options.toBundle())
                 
                 // Ensure task gets immediate focus after launching
-                setFocusedRootTaskWithManager(activityTaskManager, taskId)
+                setFocusedRootTaskWithManager(manager, taskId)
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to relaunch task via direct Binder call, falling back to shell", e)
+            clearAtmCache()
         }
 
         triggerShellInteraction()
@@ -362,22 +450,23 @@ object ShellExecutor {
 
     fun moveTaskToBack(taskId: Int) {
         try {
-            if (rikka.shizuku.Shizuku.pingBinder()) {
-                val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
-                val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
-                val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
-                val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
-                val activityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
-
-                val moveTaskToBackMethod = activityTaskManager.javaClass.getMethod(
-                    "moveTaskToBack",
-                    Int::class.javaPrimitiveType
-                )
-                moveTaskToBackMethod.invoke(activityTaskManager, taskId)
+            val manager = getActivityTaskManager()
+            if (manager != null) {
+                val method = synchronized(lock) {
+                    if (cachedMoveTaskToBackMethod == null) {
+                        cachedMoveTaskToBackMethod = manager.javaClass.getMethod(
+                            "moveTaskToBack",
+                            Int::class.javaPrimitiveType
+                        )
+                    }
+                    cachedMoveTaskToBackMethod!!
+                }
+                method.invoke(manager, taskId)
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to move task to back via direct Binder call, falling back to shell", e)
+            clearAtmCache()
         }
 
         triggerShellInteraction()
@@ -395,49 +484,93 @@ object ShellExecutor {
         exec("cmd activity task move-to-back $taskId")
     }
 
+    fun removeTask(taskId: Int) {
+        try {
+            val manager = getActivityTaskManager()
+            if (manager != null) {
+                val method = synchronized(lock) {
+                    if (cachedRemoveTaskMethod == null) {
+                        cachedRemoveTaskMethod = manager.javaClass.getMethod(
+                            "removeTask",
+                            Int::class.javaPrimitiveType
+                        )
+                    }
+                    cachedRemoveTaskMethod!!
+                }
+                method.invoke(manager, taskId)
+                Log.d(TAG, "Successfully removed task $taskId via direct Binder call")
+                return
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to remove task via direct Binder call, falling back to shell", e)
+            clearAtmCache()
+        }
+
+        triggerShellInteraction()
+        val writer = persistentWriter
+        if (writer != null) {
+            try {
+                writer.write("cmd activity task remove $taskId\n")
+                writer.flush()
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed writing task remove to persistent shell, resetting shell", e)
+                closePersistentShell()
+            }
+        }
+        exec("cmd activity task remove $taskId")
+    }
+
     fun forceStopApp(packageName: String, taskId: Int = -1) {
         try {
             if (rikka.shizuku.Shizuku.pingBinder()) {
                 // 1. Force stop app via IActivityManager
                 try {
-                    val amBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity")
-                    val shizukuAmBinder = rikka.shizuku.ShizukuBinderWrapper(amBinder)
-                    val amStub = Class.forName("android.app.IActivityManager\$Stub")
-                    val amAsInterface = amStub.getMethod("asInterface", android.os.IBinder::class.java)
-                    val activityManager = amAsInterface.invoke(null, shizukuAmBinder)
-
-                    val forceStopMethod = activityManager.javaClass.getMethod(
-                        "forceStopPackage",
-                        String::class.java,
-                        Int::class.javaPrimitiveType
-                    )
-                    forceStopMethod.invoke(activityManager, packageName, -2) // -2 = UserHandle.USER_CURRENT
+                    val amManager = getActivityManager()
+                    if (amManager != null) {
+                        val forceStopMethod = synchronized(lock) {
+                            if (cachedForceStopPackageMethod == null) {
+                                cachedForceStopPackageMethod = amManager.javaClass.getMethod(
+                                    "forceStopPackage",
+                                    String::class.java,
+                                    Int::class.javaPrimitiveType
+                                )
+                            }
+                            cachedForceStopPackageMethod!!
+                        }
+                        forceStopMethod.invoke(amManager, packageName, -2) // -2 = UserHandle.USER_CURRENT
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to forceStopPackage via Binder", e)
+                    clearAtmCache()
                 }
 
                 // 2. Remove task via IActivityTaskManager
                 if (taskId != -1) {
                     try {
-                        val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
-                        val shizukuAtmBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
-                        val atmStub = Class.forName("android.app.IActivityTaskManager\$Stub")
-                        val atmAsInterface = atmStub.getMethod("asInterface", android.os.IBinder::class.java)
-                        val activityTaskManager = atmAsInterface.invoke(null, shizukuAtmBinder)
-
-                        val removeTaskMethod = activityTaskManager.javaClass.getMethod(
-                            "removeTask",
-                            Int::class.javaPrimitiveType
-                        )
-                        removeTaskMethod.invoke(activityTaskManager, taskId)
+                        val atmManager = getActivityTaskManager()
+                        if (atmManager != null) {
+                            val removeTaskMethod = synchronized(lock) {
+                                if (cachedRemoveTaskMethod == null) {
+                                    cachedRemoveTaskMethod = atmManager.javaClass.getMethod(
+                                        "removeTask",
+                                        Int::class.javaPrimitiveType
+                                    )
+                                }
+                                cachedRemoveTaskMethod!!
+                            }
+                            removeTaskMethod.invoke(atmManager, taskId)
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to removeTask via Binder", e)
+                        clearAtmCache()
                     }
                 }
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed force stop via direct Binder calls, falling back to shell", e)
+            clearAtmCache()
         }
 
         triggerShellInteraction()

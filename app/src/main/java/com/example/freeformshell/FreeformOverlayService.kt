@@ -260,6 +260,48 @@ class FreeformOverlayService : Service() {
 
         fun getInstance(): FreeformOverlayService? = instance
 
+        private val forceCloseList = java.util.concurrent.CopyOnWriteArraySet<String>()
+        private var isForceCloseLoaded = false
+
+        private fun ensureForceCloseLoaded(context: Context) {
+            if (isForceCloseLoaded) return
+            try {
+                val prefs = context.applicationContext.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)
+                val saved = prefs.getStringSet("force_close_list", emptySet()) ?: emptySet()
+                forceCloseList.clear()
+                forceCloseList.addAll(saved.map { it.lowercase() })
+                isForceCloseLoaded = true
+                Log.d("FreeformOverlayService", "Force close list loaded: $forceCloseList")
+            } catch (e: Exception) {
+                Log.e("FreeformOverlayService", "Failed to load force close list", e)
+            }
+        }
+
+        @JvmStatic
+        fun toggleForceClose(context: Context, packageName: String) {
+            ensureForceCloseLoaded(context)
+            val lower = packageName.lowercase()
+            if (forceCloseList.contains(lower)) {
+                forceCloseList.remove(lower)
+            } else {
+                forceCloseList.add(lower)
+            }
+            try {
+                val prefs = context.applicationContext.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)
+                prefs.edit().putStringSet("force_close_list", forceCloseList).apply()
+                Log.d("FreeformOverlayService", "Force close list saved: $forceCloseList")
+            } catch (e: Exception) {
+                Log.e("FreeformOverlayService", "Failed to save force close list", e)
+            }
+        }
+
+        @JvmStatic
+        fun shouldForceClose(context: Context, packageName: String): Boolean {
+            ensureForceCloseLoaded(context)
+            val lower = packageName.lowercase()
+            return forceCloseList.contains(lower)
+        }
+
         fun requestRefresh() {
             instance?.let { inst ->
                 inst.handler.removeCallbacks(inst.refreshRunnable)
@@ -437,15 +479,7 @@ class FreeformOverlayService : Service() {
         return metrics
     }
 
-    private val baseBlacklist = setOf(
-        "fallback",
-        "taskbar",
-        "launcher",
-        "systemui",
-        "freeformshell",
-        "documentsui",
-        "externalstorage"
-    )
+    private val baseBlacklist = emptySet<String>()
 
     private fun monitorTasks() {
         if (isMonitoring) return
@@ -859,11 +893,10 @@ class FreeformOverlayService : Service() {
                 }
 
                 val isTaskVisible = taskInfo.isVisible
-                val isAndroid12 = Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2
-                val bypassVisibility = isAndroid12 && isFreeform
+                val bypassVisibility = CompatibilityManager.isAndroid12VisibilityBypassEnabled(this@FreeformOverlayService) && isFreeform
                 val isFreeformWindow = windowMode == 5
                 
-                val actualVisible = if (isTaskVisible || bypassVisibility || isFreeformWindow) {
+                val actualVisible = if (isTaskVisible || bypassVisibility) {
                     visibilityGracePeriodTasks[task.taskId] = 0
                     true
                 } else {
@@ -955,7 +988,13 @@ class FreeformOverlayService : Service() {
                             onClose = { 
                                 knownFreeformTasks.remove(task.taskId)
                                 hideOverlay(task.taskId)
-                                Thread { ShellExecutor.forceStopApp(task.packageName, task.taskId) }.start()
+                                Thread { 
+                                    if (shouldForceClose(this@FreeformOverlayService, task.packageName)) {
+                                        ShellExecutor.forceStopApp(task.packageName, task.taskId)
+                                    } else {
+                                        ShellExecutor.removeTask(task.taskId)
+                                    }
+                                }.start()
                             }
                         )
                         overlay.show()
@@ -1144,9 +1183,7 @@ class FreeformOverlayService : Service() {
                         background = drawable
                     }
                 }
-                if (snapGuideView?.parent != null) {
-                    try { wm.removeViewImmediate(snapGuideView) } catch (e: Exception) {}
-                }
+                
                 val params = WindowManager.LayoutParams(
                     rect.width(),
                     rect.height(),
@@ -1158,7 +1195,16 @@ class FreeformOverlayService : Service() {
                     y = rect.top
                     gravity = Gravity.TOP or Gravity.LEFT
                 }
-                try { wm.addView(snapGuideView, params) } catch (e: Exception) {}
+                
+                try {
+                    if (snapGuideView?.parent == null) {
+                        wm.addView(snapGuideView, params)
+                    } else {
+                        wm.updateViewLayout(snapGuideView, params)
+                    }
+                } catch (e: Exception) {
+                    Log.e("FreeformOverlayService", "Failed to update snap guide layout", e)
+                }
             }
         }
     }

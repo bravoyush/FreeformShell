@@ -1,0 +1,227 @@
+{
+  "G:\\Ai\\FreeformShell\\build.gradle.kts": {
+    "mtime": 1778852408.929035,
+    "ast_hash": "9e9f8292a59499ce698866da6e3730f9",
+    "semantic_hash": "9e9f8292a59499ce698866da6e3730f9"
+  },
+  "G:\\Ai\\FreeformShell\\gradlew": {
+    "mtime": 1778854081.4881785,
+    "ast_hash": "266606e78242737ef3da02a80ea0564d",
+    "semantic_hash": "266606e78242737ef3da02a80ea0564d"
+  },
+  "G:\\Ai\\FreeformShell\\settings.gradle.kts": {
+    "mtime": 1778843536.7689545,
+    "ast_hash": "df27ae8b6172e983a9484841e636a0a8",
+    "semantic_hash": "df27ae8b6172e983a9484841e636a0a8"
+  },
+  "G:\\Ai\\FreeformShell\\app\\build.gradle.kts": {
+    "mtime": 1779194657.963024,
+    "ast_hash": "169b715f04f8aff0785cf9c98031aa5b",
+    "semantic_hash": "169b715f04f8aff0785cf9c98031aa5b"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DragResizeOverlay.kt": {
+    "mtime": 1779336115.0124705,
+    "ast_hash": "53de548db62abece47ee8a46d1109d7c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformOverlayService.kt": {
+    "mtime": 1779339531.1187165,
+    "ast_hash": "c344e4194673c903382ff3629f430dc8",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformWidget.kt": {
+    "mtime": 1779013115.3519962,
+    "ast_hash": "914b43f6e10235f826c596053fa3c41c",
+    "semantic_hash": "914b43f6e10235f826c596053fa3c41c"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformWidgetService.kt": {
+    "mtime": 1779006473.4804275,
+    "ast_hash": "c8973f791f60314539f445eeca4805e1",
+    "semantic_hash": "c8973f791f60314539f445eeca4805e1"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MainActivity.kt": {
+    "mtime": 1779342497.9244318,
+    "ast_hash": "9fea044790f521208ee60d3f85b4aafc",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MinimizedBubble.kt": {
+    "mtime": 1778994225.255885,
+    "ast_hash": "4fd15caf71d0b7c54e58c252aa804698",
+    "semantic_hash": "4fd15caf71d0b7c54e58c252aa804698"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ShellExecutor.kt": {
+    "mtime": 1779332982.248707,
+    "ast_hash": "0d00281f5b715b641669877d244a024b",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\SimpleOverlayService.kt": {
+    "mtime": 1778855166.9222927,
+    "ast_hash": "5c35c3231f26dab39c2713055f9d0d2b",
+    "semantic_hash": "5c35c3231f26dab39c2713055f9d0d2b"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\TaskManager.kt": {
+    "mtime": 1779194543.4840913,
+    "ast_hash": "0649d89fc0116cc0ba6c561cb00b0d84",
+    "semantic_hash": "0649d89fc0116cc0ba6c561cb00b0d84"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ThemeManager.kt": {
+    "mtime": 1779332892.3288536,
+    "ast_hash": "fca93bb12696d662312cbacbe93e8afc",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceManager.kt": {
+    "mtime": 1779343019.6962867,
+    "ast_hash": "e988ca1c77e95e52c5bb521c94e0658c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\app_documentation_template.md.metadata.json": {
+    "mtime": 1779071192.9290197,
+    "ast_hash": "e3c908948b7d860d858cdc6570349c27",
+    "semantic_hash": "e3c908948b7d860d858cdc6570349c27"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\features_documentation.md.metadata.json": {
+    "mtime": 1779071450.3843212,
+    "ast_hash": "6e94ef9d4b5bbc89f9c96ecc4447d599",
+    "semantic_hash": "6e94ef9d4b5bbc89f9c96ecc4447d599"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\user_onboarding_workflow.md.metadata.json": {
+    "mtime": 1779071254.2616038,
+    "ast_hash": "7ef40f2bb28e35a435fed5afb24a0048",
+    "semantic_hash": "7ef40f2bb28e35a435fed5afb24a0048"
+  },
+  "G:\\Ai\\FreeformShell\\containers.txt": {
+    "mtime": 1778861392.0358078,
+    "ast_hash": "45ae2997b7c658adb4cd6dd75ad323c4",
+    "semantic_hash": "45ae2997b7c658adb4cd6dd75ad323c4"
+  },
+  "G:\\Ai\\FreeformShell\\containers2.txt": {
+    "mtime": 1778862884.683885,
+    "ast_hash": "85656b0e9d5a58ccd941acf7ff2f9ce2",
+    "semantic_hash": "85656b0e9d5a58ccd941acf7ff2f9ce2"
+  },
+  "G:\\Ai\\FreeformShell\\recents.txt": {
+    "mtime": 1778861361.909492,
+    "ast_hash": "aa7a58b78f7c2f3a4591d2b43dd968d8",
+    "semantic_hash": "aa7a58b78f7c2f3a4591d2b43dd968d8"
+  },
+  "G:\\Ai\\FreeformShell\\tasks2.txt": {
+    "mtime": 1778863024.9435177,
+    "ast_hash": "f703c4730bc524bd60033124df14e267",
+    "semantic_hash": "f703c4730bc524bd60033124df14e267"
+  },
+  "G:\\Ai\\FreeformShell\\tasks_dump.txt": {
+    "mtime": 1778861256.2335098,
+    "ast_hash": "f703c4730bc524bd60033124df14e267",
+    "semantic_hash": "f703c4730bc524bd60033124df14e267"
+  },
+  "G:\\Ai\\FreeformShell\\windows.txt": {
+    "mtime": 1778862947.9089954,
+    "ast_hash": "9a61eed7642845707ff4537db1166594",
+    "semantic_hash": "9a61eed7642845707ff4537db1166594"
+  },
+  "G:\\Ai\\FreeformShell\\windows_dump.txt": {
+    "mtime": 1778892946.547769,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\rules\\graphify.md": {
+    "mtime": 1779196544.9125402,
+    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
+    "semantic_hash": "a0e4d192b9e2e17256124dbfc8e24e6a"
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\workflows\\graphify.md": {
+    "mtime": 1779196544.914642,
+    "ast_hash": "84de69efd46ab0b8430393bd4188f8f2",
+    "semantic_hash": "84de69efd46ab0b8430393bd4188f8f2"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\app_documentation_template.md": {
+    "mtime": 1779071192.9182875,
+    "ast_hash": "2fc7e85fbe7648b3f31d97afefa7fe70",
+    "semantic_hash": "2fc7e85fbe7648b3f31d97afefa7fe70"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\features_documentation.md": {
+    "mtime": 1779071450.3805208,
+    "ast_hash": "9bb186764e212e48a6b35df6f9009a2b",
+    "semantic_hash": "9bb186764e212e48a6b35df6f9009a2b"
+  },
+  "G:\\Ai\\FreeformShell\\docs\\architecture_evolution_log.md": {
+    "mtime": 1779195861.679335,
+    "ast_hash": "570af461c2cfdeaa9987ac2be06db774",
+    "semantic_hash": "570af461c2cfdeaa9987ac2be06db774"
+  },
+  "G:\\Ai\\FreeformShell\\docs\\core_logic.md": {
+    "mtime": 1779196071.1724358,
+    "ast_hash": "294289d027dbad3f04be1106a669f3ae",
+    "semantic_hash": "294289d027dbad3f04be1106a669f3ae"
+  },
+  "G:\\Ai\\FreeformShell\\docs\\v1.1_release_notes.md": {
+    "mtime": 1779121271.9377227,
+    "ast_hash": "0fc046a59deb2b298266487f0a76a30f",
+    "semantic_hash": "0fc046a59deb2b298266487f0a76a30f"
+  },
+  "G:\\Ai\\FreeformShell\\docs\\v1_documentation.md": {
+    "mtime": 1779071692.082033,
+    "ast_hash": "b321b0823dc55307dce77db12ec44d2d",
+    "semantic_hash": "b321b0823dc55307dce77db12ec44d2d"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\dashboard_ui_mockup.png": {
+    "mtime": 1779071035.5077236,
+    "ast_hash": "3b8a6ab6e18df209451ae8a503919e45",
+    "semantic_hash": "3b8a6ab6e18df209451ae8a503919e45"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\freeform_desktop_ui.png": {
+    "mtime": 1779071309.6000454,
+    "ast_hash": "49e6e942d48a36726b09f9cf7d79d088",
+    "semantic_hash": "49e6e942d48a36726b09f9cf7d79d088"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\minimized_app_bubbles.png": {
+    "mtime": 1779071347.205789,
+    "ast_hash": "be51bd21267577f2f88665a0068dd0e2",
+    "semantic_hash": "be51bd21267577f2f88665a0068dd0e2"
+  },
+  "G:\\Ai\\FreeformShell\\artifacts\\window_snap_zones.png": {
+    "mtime": 1779071327.9938934,
+    "ast_hash": "cfa4355a91ced67dc19cd80e4c755312",
+    "semantic_hash": "cfa4355a91ced67dc19cd80e4c755312"
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ShizukuLifecycleManager.kt": {
+    "mtime": 1779197161.1754506,
+    "ast_hash": "ae2119cf4c20a3f53e10fce1e85ac1f5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\rules\\compatibility.md": {
+    "mtime": 1779271950.7686,
+    "ast_hash": "24f463c0fb6f06dfdca79b172c2219d6",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\CompatibilityManager.kt": {
+    "mtime": 1779332920.2078793,
+    "ast_hash": "efecee8735e5466eb164f644c92644aa",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\docs\\discord_announcement.md": {
+    "mtime": 1779305814.5747347,
+    "ast_hash": "565ad873f3da79bc8222127ab60187d3",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\docs\\experimental_beta_guide.md": {
+    "mtime": 1779305430.1135802,
+    "ast_hash": "a86ea350a5d7e02dcb10083d162f3b55",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\HANDOFF.md": {
+    "mtime": 1779344049.7806218,
+    "ast_hash": "317f9ef33ce928d77f2346ca209b4e0f",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\LEDGER.md": {
+    "mtime": 1779344040.173125,
+    "ast_hash": "435dcd7b4fc512161f7f107e4a1674d7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\rules\\agents.md": {
+    "mtime": 1779344061.3940573,
+    "ast_hash": "48905c501d9cebdd134651a59d252e0c",
+    "semantic_hash": ""
+  }
+}

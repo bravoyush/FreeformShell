@@ -306,8 +306,10 @@ fun MainScreen(
         scope.launch(Dispatchers.IO) {
             val pm = context.packageManager
             val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 || it.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0 }
-                .map { AppInfo(it.loadLabel(pm).toString(), it.packageName, null) }
+                .map { app ->
+                    val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM != 0)
+                    AppInfo(app.loadLabel(pm).toString(), app.packageName, null, isSystem)
+                }
                 .sortedBy { it.label }
             withContext(Dispatchers.Main) { 
                 allApps = installedApps 
@@ -324,6 +326,7 @@ fun MainScreen(
                 NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.Security, null) }, label = { Text("Safe Area") })
                 NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") })
                 NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
+                NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") })
             }
         },
         floatingActionButton = {
@@ -404,6 +407,7 @@ fun MainScreen(
             2 -> SafeAreaScreen(padding, availableDisplays)
             3 -> BlacklistScreen(padding)
             4 -> AppSettingsScreen(padding, availableDisplays)
+            5 -> CompatibilityScreen(padding)
         }
 
         if (showLogDialog) {
@@ -808,15 +812,38 @@ fun DashboardScreen(
                             leadingContent = { AppIcon(task.packageName, modifier = Modifier.size(40.dp)) },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val isForceClose = FreeformOverlayService.shouldForceClose(context, task.packageName)
+                                    val isBlacklisted = FreeformOverlayService.isBlacklisted(context, task.packageName)
+
+                                    IconButton(onClick = { 
+                                        FreeformOverlayService.toggleForceClose(context, task.packageName)
+                                        onRefresh()
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = "Toggle Force Close",
+                                            tint = if (isForceClose) Color.Red else Color.Gray
+                                        )
+                                    }
+
                                     TextButton(onClick = { 
-                                        ShellExecutor.forceStopApp(task.packageName, task.taskId)
+                                        if (isForceClose) {
+                                            ShellExecutor.forceStopApp(task.packageName, task.taskId)
+                                        } else {
+                                            ShellExecutor.removeTask(task.taskId)
+                                        }
                                         onRefresh() // Auto refresh after close
                                     }) { 
-                                        Text("Close", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) 
+                                        Text(
+                                            if (isForceClose) "Force Stop" else "Close", 
+                                            color = MaterialTheme.colorScheme.error, 
+                                            fontWeight = FontWeight.Bold
+                                        ) 
                                     }
-                                    val isBlacklisted = FreeformOverlayService.isBlacklisted(context, task.packageName)
+
                                     IconButton(onClick = { 
                                         FreeformOverlayService.toggleBlacklist(context, task.packageName)
+                                        onRefresh()
                                     }) {
                                         Icon(if (isBlacklisted) Icons.Default.Block else Icons.Default.AddCircleOutline, null, 
                                             tint = if (isBlacklisted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
@@ -1017,7 +1044,7 @@ fun DashboardScreen(
     }
 }
 
-data class AppInfo(val label: String, val packageName: String, val icon: ImageBitmap? = null)
+data class AppInfo(val label: String, val packageName: String, val icon: ImageBitmap? = null, val isSystem: Boolean = false)
 data class DisplayInfo(val id: Int, val name: String, val width: Int, val height: Int, val dpi: Int = 420, val isRounded: Boolean = true)
 
 @Composable
@@ -1792,6 +1819,51 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
 
+                var isVisualHandlesGlobalEnabled by remember {
+                    mutableStateOf(ThemeManager.getVisualCornerHandlesGlobal(context))
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Show Visual Corner Handles", style = MaterialTheme.typography.bodyLarge)
+                        Text("Displays prominent rounded handles on window corners for easier touch input. Diagonal resizing itself is always active by dragging the window corners.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Switch(checked = isVisualHandlesGlobalEnabled, onCheckedChange = {
+                        isVisualHandlesGlobalEnabled = it
+                        ThemeManager.setVisualCornerHandlesGlobal(context, it)
+                    })
+                }
+
+                if (isVisualHandlesGlobalEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                            displayManager.displays.forEach { d ->
+                                Text("Configure: ${d.name} (ID: ${d.displayId})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.height(4.dp))
+                                
+                                var handlesEnabled by remember(d.displayId) { 
+                                    mutableStateOf(ThemeManager.getVisualCornerHandles(context, d.displayId)) 
+                                }
+                                
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Enable Corner Handles", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Switch(checked = handlesEnabled, onCheckedChange = {
+                                        handlesEnabled = it
+                                        ThemeManager.setVisualCornerHandles(context, d.displayId, it)
+                                    })
+                                }
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        }
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+
                 var hideOnLauncherActive by remember { mutableStateOf(ThemeManager.getHideOnLauncherActive(context)) }
                 var selectedLauncherPackage by remember { mutableStateOf(ThemeManager.getDockLauncherPackage(context)) }
                 
@@ -1889,7 +1961,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                                 LaunchedEffect(Unit) {
                                     withContext(Dispatchers.IO) {
                                         val apps = pm.getInstalledApplications(0)
-                                            .map { AppInfo(it.loadLabel(pm).toString(), it.packageName, null) }
+                                            .map { app ->
+                                                val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM != 0)
+                                                AppInfo(app.loadLabel(pm).toString(), app.packageName, null, isSystem)
+                                            }
                                             .sortedBy { it.label }
                                         withContext(Dispatchers.Main) {
                                             customApps = apps
@@ -1948,12 +2023,275 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Compatibility Screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun CompatibilityScreen(padding: PaddingValues) {
+    val context = LocalContext.current
+
+    val fixStates = remember {
+        CompatibilityManager.ALL_FIXES.associate { fix ->
+            fix.id to mutableStateOf(
+                ThemeManager.getCompFix(context, fix.id, fix.smartDefault())
+            )
+        }
+    }
+
+    val anyNonDefault = fixStates.entries.any { (id, state) ->
+        val def = CompatibilityManager.ALL_FIXES.find { it.id == id }
+        state.value != (def?.smartDefault?.invoke() ?: state.value)
+    }
+
+    var showResetConfirm by remember { mutableStateOf(false) }
+
+    val sdkInt = Build.VERSION.SDK_INT
+    val versionName = when {
+        sdkInt >= 35 -> "Android 15+"
+        sdkInt == 34 -> "Android 14"
+        sdkInt == 33 -> "Android 13"
+        sdkInt == 32 -> "Android 12L"
+        sdkInt == 31 -> "Android 12"
+        sdkInt == 30 -> "Android 11"
+        sdkInt == 29 -> "Android 10"
+        else         -> "Android (API $sdkInt)"
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(padding)
+            .padding(16.dp)
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            "Compatibility",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            "Toggle per-Android-version workarounds. Defaults are auto-selected for your device.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Device version badge
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.PhoneAndroid,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Column {
+                    Text(
+                        "Your Device",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        "$versionName  ·  API $sdkInt",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // Fix Cards
+        CompatibilityManager.ALL_FIXES.forEach { fix ->
+            val isRelevantForDevice = fix.smartDefault()
+            val state = fixStates[fix.id] ?: return@forEach
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 5.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = when {
+                        !isRelevantForDevice -> MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                        state.value          -> MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                        else                 -> MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+                    }
+                ),
+                shape = MaterialTheme.shapes.extraLarge
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    fix.label,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (!isRelevantForDevice)
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurface
+                                )
+                                if (isRelevantForDevice) {
+                                    Surface(
+                                        shape = MaterialTheme.shapes.small,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            "ACTIVE",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                fix.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = if (!isRelevantForDevice) 0.5f else 1f
+                                )
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                                Text(
+                                    fix.affectsVersionLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            if (!isRelevantForDevice) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "Not needed for $versionName — you can still force-enable it.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.value,
+                            onCheckedChange = { newValue ->
+                                state.value = newValue
+                                ThemeManager.setCompFix(context, fix.id, newValue)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(28.dp))
+
+        // Reset to Defaults
+        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = { showResetConfirm = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = if (anyNonDefault)
+                    MaterialTheme.colorScheme.error
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.dp,
+                color = if (anyNonDefault)
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                else
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+            )
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Reset All to Smart Defaults", fontWeight = FontWeight.SemiBold)
+        }
+
+        Text(
+            "Resets every toggle to the recommended value for $versionName (API $sdkInt).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp, bottom = 24.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+            title = { Text("Reset Compatibility Fixes?") },
+            text = {
+                Text(
+                    "All toggles will revert to their recommended defaults for $versionName (API $sdkInt). " +
+                    "Any manual overrides you've set will be lost.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        ThemeManager.resetCompFixes(context)
+                        CompatibilityManager.ALL_FIXES.forEach { fix ->
+                            fixStates[fix.id]?.value = fix.smartDefault()
+                        }
+                        showResetConfirm = false
+                        Toast.makeText(context, "Compatibility fixes reset to defaults.", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Reset") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlacklistScreen(padding: PaddingValues) {
     val context = LocalContext.current
     var allInstalled by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(0) } // 0: All, 1: User, 2: System
     val scope = rememberCoroutineScope()
     
     var refreshKey by remember { mutableStateOf(0) }
@@ -1961,34 +2299,97 @@ fun BlacklistScreen(padding: PaddingValues) {
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO) {
             val pm = context.packageManager
-            val apps = pm.getInstalledApplications(0) // Fast loading without metadata
-                .map { AppInfo(it.loadLabel(pm).toString(), it.packageName, null) }
-                .sortedBy { it.label }
+            val apps = pm.getInstalledApplications(0)
+                .map { app ->
+                    val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM != 0)
+                    AppInfo(app.loadLabel(pm).toString(), app.packageName, null, isSystem)
+                }
             withContext(Dispatchers.Main) { allInstalled = apps }
         }
     }
     
-    val filtered = allInstalled.filter { it.label.contains(searchQuery, true) || it.packageName.contains(searchQuery, true) }
+    val displayList by remember(allInstalled, searchQuery, selectedFilter, refreshKey) {
+        derivedStateOf {
+            allInstalled.asSequence()
+                .filter { app ->
+                    // 1. Filter by search query
+                    app.label.contains(searchQuery, true) || app.packageName.contains(searchQuery, true)
+                }
+                .filter { app ->
+                    // 2. Filter by category
+                    when (selectedFilter) {
+                        1 -> !app.isSystem
+                        2 -> app.isSystem
+                        else -> true
+                    }
+                }
+                .map { app ->
+                    // Pre-calculate blacklisted state for efficient sorting
+                    Pair(app, FreeformOverlayService.isBlacklisted(context, app.packageName))
+                }
+                .sortedWith(compareByDescending<Pair<AppInfo, Boolean>> { it.second }.thenBy { it.first.label.lowercase() })
+                .toList()
+        }
+    }
     
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
         Text("App Blacklist", style = MaterialTheme.typography.headlineSmall)
         Text("Apps in this list will NOT have freeform overlays attached.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         
+        Spacer(Modifier.height(12.dp))
+        
+        // Filter Tags
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("All", "User", "System").forEachIndexed { index, label ->
+                FilterChip(
+                    selected = selectedFilter == index,
+                    onClick = { selectedFilter = index },
+                    label = { Text(label) },
+                    leadingIcon = if (selectedFilter == index) {
+                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                    } else null
+                )
+            }
+        }
+
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             placeholder = { Text("Search apps...") },
-            leadingIcon = { Icon(Icons.Default.Search, null) }
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = if (searchQuery.isNotEmpty()) {
+                { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) } }
+            } else null,
+            shape = MaterialTheme.shapes.medium
         )
         
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(filtered, key = { it.packageName }) { app ->
-                val isBlacklisted = remember(app.packageName, refreshKey) { 
-                    FreeformOverlayService.isBlacklisted(context, app.packageName) 
-                }
+            items(displayList, key = { it.first.packageName }) { (app, isBlacklisted) ->
                 ListItem(
-                    headlineContent = { Text(app.label) },
+                    headlineContent = { 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(app.label)
+                            if (app.isSystem) {
+                                Spacer(Modifier.width(6.dp))
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = MaterialTheme.shapes.extraSmall
+                                ) {
+                                    Text(
+                                        "SYSTEM",
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 8.sp,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    },
                     supportingContent = { Text(app.packageName, style = MaterialTheme.typography.labelSmall) },
                     leadingContent = { AppIcon(app.packageName, modifier = Modifier.size(32.dp)) },
                     trailingContent = {
@@ -1998,7 +2399,7 @@ fun BlacklistScreen(padding: PaddingValues) {
                         })
                     }
                 )
-                Divider()
+                Divider(thickness = 0.5.dp, color = Color.Gray.copy(alpha = 0.2f))
             }
         }
     }
