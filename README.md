@@ -9,6 +9,21 @@
 
 ---
 
+## 🎯 Target Audience: Who is FreeformShell for?
+
+FreeformShell is a specialized power-user tool developed with a specific target audience and socio-economic purpose in mind. **It is not designed for every Android user.**
+
+### 🚫 Who does NOT need this?
+*   **Samsung & Flagship OEM Users**: If you are using a premium Samsung flagship with **Samsung DeX**, or a device from an OEM that already bundles a robust, feature-rich desktop mode (with built-in window title bars, drag handles, and desktop panels), you do not need this utility.
+
+### 🎯 Who is this built for?
+*   **OEM Feature Compensation (e.g. Sony, Motorola, etc.)**: Many OEMs (such as Sony) allow you to launch applications in Android's native freeform mode, but **strip out window title bars, borders, and multi-window resizing controls**—often limiting you to just a single floating app at a time. FreeformShell injects those missing title bar frames, drag-to-resize borders, side-snapping guidelines, and minimized floating bubbles back into the OS to restore fully functional multitasking.
+*   **The "Phone-First" Workstation (Bridging the PC Cost Gap)**: For many people worldwide, their smartphone is their primary or only computing device. With hardware inflation, supply shortages, and high costs making desktop PCs unaffordable, FreeformShell empowers users to bridge the gap—transforming a powerful smartphone they already own into a fully functional desktop station.
+*   **Power Users with Scrcpy & ADB**: Ideal for users who have a high-spec or second-hand phone supporting Type-C video output (DisplayPort Alt Mode), but only have access to an older or low-power PC. By leveraging **[scrcpy](https://github.com/Genymobile/scrcpy)** and ADB wireless, power users can cast a beautiful, window-managed Android desktop workspace directly to their large monitors.
+*   **Restricted Tablet Users**: Large-screen and Android tablet users who want a rich, desktop-like multitasking environment, but whose device manufacturer did not bundle any desktop interface in their software.
+
+---
+
 ## ⚠️ Important Pre-requisites: Third-Party Launchers
 
 > [!WARNING]
