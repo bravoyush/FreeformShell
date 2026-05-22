@@ -37,7 +37,7 @@ FreeformShell is a specialized power-user tool developed with a specific target 
 > **Highly Recommended Companion Launchers:**
 > *   **[Taskbar](https://github.com/farmerbb/Taskbar)** (by farmerbb) — A highly reliable, open-source desktop-style taskbar and app drawer overlay for Android.
 > *   **[SmartDock](https://github.com/axel358/SmartDock)** — A modern desktop dock and system panel provider supporting advanced freeform behaviors.
-> *   **[YoukiDEX](https://github.com/youkidex/YoukiDEX)** — A dedicated desktop-mode experience provider for custom window scaling.
+> *   **[YoukiDEX](https://github.com/mrYouki/YoukiDex-Android-Desktop)** — A dedicated desktop-mode experience provider for custom window scaling.
 
 ---
 
