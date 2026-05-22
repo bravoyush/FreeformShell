@@ -6,6 +6,7 @@ You are an AI coding agent operating inside the **FreeformShell** workspace. To 
 Before doing any research, analysis, or code modification:
 1.  **Read the Ledger:** Open and read [.agents/LEDGER.md](file:///g:/Ai/FreeformShell/.agents/LEDGER.md) to instantly acquire the codebase schema, stability guardrails, and version status.
 2.  **Read the Handoff:** Open and read [.agents/HANDOFF.md](file:///g:/Ai/FreeformShell/.agents/HANDOFF.md) to see exactly what the last agent did and what needs to be worked on now.
+3.  **Read Identity & Roles:** Open and read [.agents/rules/identity.md](file:///g:/Ai/FreeformShell/.agents/rules/identity.md) to understand who is the Admin/Owner (Ayush), core maintainers, and approved contributors, ensuring all code attributions and communication styles respect these roles.
 
 ### 2. Token Discipline & Context Optimization
 1.  **Use Graphify First:** Do not run large file reads or generic grep searches. If `graphify-out/graph.json` exists, use `query_graph` or `shortest_path` to read only the small, relevant subgraphs.

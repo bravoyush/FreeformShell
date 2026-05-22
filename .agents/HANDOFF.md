@@ -37,3 +37,11 @@ If you are picking up work, the current focus areas are:
 2.  **Implement physics-based spring animations** for docking transitions in `DragResizeOverlay`.
 
 *Good luck with the build! Always respect the ledger.*
+
+---
+
+## 👥 Project Team Roles & Roster
+
+1. **Owner/Admin (Ayush)**: Lead architect and workspace authority. When answering or coding, you are pair-programming directly with Ayush. Keep a highly collaborative tone.
+2. **AI Co-Developer (Antigravity)**: Handled overlay safety confirmations, automated workflows, and sync pipelines.
+3. **Reference**: Always read the official [identity.md](file:///g:/Ai/FreeformShell/.agents/rules/identity.md) during your Entry Protocol session bootstrapping.
