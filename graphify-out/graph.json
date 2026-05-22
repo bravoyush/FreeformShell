@@ -2154,7 +2154,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
       "source_location": "L77",
       "id": "freeformshell_thememanager_thememanager_settextcolor",
-      "community": 17,
+      "community": 0,
       "norm_label": ".settextcolor()"
     },
     {
@@ -3049,10 +3049,46 @@
       "norm_label": "freeformshell \ud83d\ude80"
     },
     {
+      "label": "\ud83c\udfaf Target Audience: Who is FreeformShell for?",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L13",
+      "id": "freeformshell_readme_target_audience_who_is_freeformshell_for",
+      "community": 37,
+      "norm_label": "\ud83c\udfaf target audience: who is freeformshell for?"
+    },
+    {
+      "label": "\ud83d\udeab Who does NOT need this?",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L17",
+      "id": "freeformshell_readme_who_does_not_need_this",
+      "community": 37,
+      "norm_label": "\ud83d\udeab who does not need this?"
+    },
+    {
+      "label": "\ud83c\udfaf Who is this built for?",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L20",
+      "id": "freeformshell_readme_who_is_this_built_for",
+      "community": 37,
+      "norm_label": "\ud83c\udfaf who is this built for?"
+    },
+    {
+      "label": "\u26a0\ufe0f Important Pre-requisites: Third-Party Launchers",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L28",
+      "id": "freeformshell_readme_important_pre_requisites_third_party_launchers",
+      "community": 37,
+      "norm_label": "\u26a0\ufe0f important pre-requisites: third-party launchers"
+    },
+    {
       "label": "\ud83d\udcd6 Quick Start & User Guide",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L12",
+      "source_location": "L44",
       "id": "freeformshell_readme_quick_start_user_guide",
       "community": 37,
       "norm_label": "\ud83d\udcd6 quick start & user guide"
@@ -3061,7 +3097,7 @@
       "label": "1\ufe0f\u20e3 Step 1: Install the APK",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L16",
+      "source_location": "L48",
       "id": "freeformshell_readme_1_step_1_install_the_apk",
       "community": 37,
       "norm_label": "1\ufe0f\u20e3 step 1: install the apk"
@@ -3070,7 +3106,7 @@
       "label": "2\ufe0f\u20e3 Step 2: Establish the Binder Connection",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L25",
+      "source_location": "L57",
       "id": "freeformshell_readme_2_step_2_establish_the_binder_connection",
       "community": 37,
       "norm_label": "2\ufe0f\u20e3 step 2: establish the binder connection"
@@ -3079,7 +3115,7 @@
       "label": "code:bash (adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L33",
+      "source_location": "L65",
       "id": "freeformshell_readme_codeblock_1",
       "community": 37,
       "norm_label": "code:bash (adb shell sh /sdcard/android/data/moe.shizuku.privileged.api)"
@@ -3088,7 +3124,7 @@
       "label": "3\ufe0f\u20e3 Step 3: Enable the Accessibility Service",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L39",
+      "source_location": "L71",
       "id": "freeformshell_readme_3_step_3_enable_the_accessibility_service",
       "community": 37,
       "norm_label": "3\ufe0f\u20e3 step 3: enable the accessibility service"
@@ -3097,7 +3133,7 @@
       "label": "4\ufe0f\u20e3 Step 4: Master the Window Controls & Gestures",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L47",
+      "source_location": "L79",
       "id": "freeformshell_readme_4_step_4_master_the_window_controls_gestures",
       "community": 37,
       "norm_label": "4\ufe0f\u20e3 step 4: master the window controls & gestures"
@@ -3106,7 +3142,7 @@
       "label": "\u2728 Core Features Tour",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L68",
+      "source_location": "L100",
       "id": "freeformshell_readme_core_features_tour",
       "community": 37,
       "norm_label": "\u2728 core features tour"
@@ -3115,7 +3151,7 @@
       "label": "\ud83d\udcca 1. Dashboard & Diagnostics",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L72",
+      "source_location": "L104",
       "id": "freeformshell_readme_1_dashboard_diagnostics",
       "community": 37,
       "norm_label": "\ud83d\udcca 1. dashboard & diagnostics"
@@ -3124,7 +3160,7 @@
       "label": "\ud83c\udfa8 2. Window Customization & Style",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L77",
+      "source_location": "L109",
       "id": "freeformshell_readme_2_window_customization_style",
       "community": 37,
       "norm_label": "\ud83c\udfa8 2. window customization & style"
@@ -3133,25 +3169,25 @@
       "label": "\ud83d\udcd0 3. Display Safe Area Offsetter",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L83",
+      "source_location": "L115",
       "id": "freeformshell_readme_3_display_safe_area_offsetter",
       "community": 37,
       "norm_label": "\ud83d\udcd0 3. display safe area offsetter"
     },
     {
-      "label": "\u2699\ufe0f 4. Premium Display Density (DPI) Presets",
+      "label": "\u2699\ufe0f 4. Display Density (DPI) Scaling & Presets",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L87",
-      "id": "freeformshell_readme_4_premium_display_density_dpi_presets",
+      "source_location": "L119",
+      "id": "freeformshell_readme_4_display_density_dpi_scaling_presets",
       "community": 37,
-      "norm_label": "\u2699\ufe0f 4. premium display density (dpi) presets"
+      "norm_label": "\u2699\ufe0f 4. display density (dpi) scaling & presets"
     },
     {
       "label": "\ud83d\udeab 5. Application Blacklist Manager",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L93",
+      "source_location": "L125",
       "id": "freeformshell_readme_5_application_blacklist_manager",
       "community": 37,
       "norm_label": "\ud83d\udeab 5. application blacklist manager"
@@ -3160,7 +3196,7 @@
       "label": "\ud83e\udde9 6. Interactive Home Screen Widgets",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L96",
+      "source_location": "L128",
       "id": "freeformshell_readme_6_interactive_home_screen_widgets",
       "community": 37,
       "norm_label": "\ud83e\udde9 6. interactive home screen widgets"
@@ -3169,7 +3205,7 @@
       "label": "\ud83d\udee0\ufe0f Developer & Contributor Guide",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L101",
+      "source_location": "L133",
       "id": "freeformshell_readme_developer_contributor_guide",
       "community": 37,
       "norm_label": "\ud83d\udee0\ufe0f developer & contributor guide"
@@ -3178,7 +3214,7 @@
       "label": "\ud83d\udcc2 Project Structure",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L105",
+      "source_location": "L137",
       "id": "freeformshell_readme_project_structure",
       "community": 37,
       "norm_label": "\ud83d\udcc2 project structure"
@@ -3187,7 +3223,7 @@
       "label": "code:block2 (\u251c\u2500\u2500 .agents/                 # Developer Guidelines & AI Age)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L107",
+      "source_location": "L139",
       "id": "freeformshell_readme_codeblock_2",
       "community": 37,
       "norm_label": "code:block2 (\u251c\u2500\u2500 .agents/                 # developer guidelines & ai age)"
@@ -3196,7 +3232,7 @@
       "label": "\ud83e\udde9 Tech Stack & Architecture",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L123",
+      "source_location": "L155",
       "id": "freeformshell_readme_tech_stack_architecture",
       "community": 37,
       "norm_label": "\ud83e\udde9 tech stack & architecture"
@@ -3205,7 +3241,7 @@
       "label": "\ud83e\udd16 AI-Human Co-Development & \"Vibe-Coding\"",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L132",
+      "source_location": "L164",
       "id": "freeformshell_readme_ai_human_co_development_vibe_coding",
       "community": 37,
       "norm_label": "\ud83e\udd16 ai-human co-development & \"vibe-coding\""
@@ -3214,7 +3250,7 @@
       "label": "\ud83d\ude80 Building & Running Locally",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L141",
+      "source_location": "L173",
       "id": "freeformshell_readme_building_running_locally",
       "community": 37,
       "norm_label": "\ud83d\ude80 building & running locally"
@@ -3223,7 +3259,7 @@
       "label": "1. Compile the App",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L145",
+      "source_location": "L177",
       "id": "freeformshell_readme_1_compile_the_app",
       "community": 37,
       "norm_label": "1. compile the app"
@@ -3232,7 +3268,7 @@
       "label": "code:bash (./gradlew compileDebugKotlin)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L147",
+      "source_location": "L179",
       "id": "freeformshell_readme_codeblock_3",
       "community": 37,
       "norm_label": "code:bash (./gradlew compiledebugkotlin)"
@@ -3241,7 +3277,7 @@
       "label": "2. Install to Connected Device",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L151",
+      "source_location": "L183",
       "id": "freeformshell_readme_2_install_to_connected_device",
       "community": 37,
       "norm_label": "2. install to connected device"
@@ -3250,7 +3286,7 @@
       "label": "code:bash (./gradlew installDebug)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L153",
+      "source_location": "L185",
       "id": "freeformshell_readme_codeblock_4",
       "community": 37,
       "norm_label": "code:bash (./gradlew installdebug)"
@@ -3259,7 +3295,7 @@
       "label": "\ud83d\udce6 Automated Release Pipeline (CI/CD)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L157",
+      "source_location": "L189",
       "id": "freeformshell_readme_automated_release_pipeline_ci_cd",
       "community": 37,
       "norm_label": "\ud83d\udce6 automated release pipeline (ci/cd)"
@@ -3268,16 +3304,25 @@
       "label": "code:bash (git tag v1.4.0)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L161",
+      "source_location": "L193",
       "id": "freeformshell_readme_codeblock_5",
       "community": 37,
       "norm_label": "code:bash (git tag v1.4.0)"
     },
     {
+      "label": "\ud83d\udcac Join the Community",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L202",
+      "id": "freeformshell_readme_join_the_community",
+      "community": 37,
+      "norm_label": "\ud83d\udcac join the community"
+    },
+    {
       "label": "\ud83d\udee1\ufe0f License & Attributions",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L168",
+      "source_location": "L227",
       "id": "freeformshell_readme_license_attributions",
       "community": 37,
       "norm_label": "\ud83d\udee1\ufe0f license & attributions"
@@ -5497,6 +5542,15 @@
       "norm_label": "manual verification"
     },
     {
+      "label": "\u2699\ufe0f 4. Premium Display Density (DPI) Presets",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L87",
+      "community": 37,
+      "norm_label": "\u2699\ufe0f 4. premium display density (dpi) presets",
+      "id": "freeformshell_readme_4_premium_display_density_dpi_presets"
+    },
+    {
       "label": "\u2728 Key Features",
       "file_type": "document",
       "source_file": "README.md",
@@ -5558,7 +5612,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 2,
       "norm_label": "high-performance shell throttling",
       "id": "core_logic_high_performance_shell_throttling"
     },
@@ -5727,7 +5781,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 2,
       "norm_label": "programmatic active focus routing",
       "id": "architecture_evolution_programmatic_focus_routing"
     },
@@ -13072,6 +13126,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_target_audience_who_is_freeformshell_for",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_important_pre_requisites_third_party_launchers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
       "source_location": "L53",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -13097,6 +13171,16 @@
       "confidence_score": 1.0,
       "source": "freeformshell_readme_freeformshell",
       "target": "freeformshell_readme_developer_contributor_guide"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L202",
+      "weight": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_join_the_community",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13167,6 +13251,26 @@
       "confidence_score": 1.0,
       "source": "freeformshell_readme_freeformshell",
       "target": "freeformshell_readme_license_attributions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "freeformshell_readme_target_audience_who_is_freeformshell_for",
+      "target": "freeformshell_readme_who_does_not_need_this",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "freeformshell_readme_target_audience_who_is_freeformshell_for",
+      "target": "freeformshell_readme_who_is_this_built_for",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13262,11 +13366,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L39",
+      "source_location": "L119",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "freeformshell_readme_core_features_tour",
-      "target": "freeformshell_readme_4_premium_display_density_dpi_presets"
+      "target": "freeformshell_readme_4_display_density_dpi_scaling_presets",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13287,6 +13391,16 @@
       "confidence_score": 1.0,
       "source": "freeformshell_readme_core_features_tour",
       "target": "freeformshell_readme_6_interactive_home_screen_widgets"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_4_premium_display_density_dpi_presets"
     },
     {
       "relation": "contains",
@@ -13437,6 +13551,16 @@
       "confidence_score": 1.0,
       "source": "freeformshell_readme_automated_release_pipeline_ci_cd",
       "target": "freeformshell_readme_codeblock_5"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L227",
+      "weight": 1.0,
+      "source": "freeformshell_readme_join_the_community",
+      "target": "freeformshell_readme_license_attributions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -15868,5 +15992,5 @@
       "source_file": "docs/core_logic.md"
     }
   ],
-  "built_at_commit": "456af6cc63b4c20e8042581e3a43e641b87c8400"
+  "built_at_commit": "8c7fc4f7e81b4dfdbcd9038cd64977c7ba5c23bc"
 }
