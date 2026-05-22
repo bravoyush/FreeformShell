@@ -4,6 +4,25 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+fun getGitVersionName(): String {
+    return try {
+        val process = ProcessBuilder("git", "describe", "--tags", "--always", "--dirty").start()
+        val version = process.inputStream.bufferedReader().readText().trim()
+        if (version.startsWith("v")) version.substring(1) else version
+    } catch (e: Exception) {
+        "1.0"
+    }
+}
+
+fun getGitVersionCode(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
+        process.inputStream.bufferedReader().readText().trim().toInt()
+    } catch (e: Exception) {
+        1
+    }
+}
+
 android {
     namespace = "com.example.freeformshell"
     compileSdk = 34
@@ -12,8 +31,8 @@ android {
         applicationId = "com.example.freeformshell"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = getGitVersionCode()
+        versionName = getGitVersionName()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
