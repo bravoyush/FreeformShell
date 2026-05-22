@@ -24,6 +24,10 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.MotionEvent
 import androidx.core.app.NotificationCompat
+import android.widget.TextView
+import android.widget.LinearLayout
+import android.view.animation.OvershootInterpolator
+import java.util.HashMap
 
 class FreeformOverlayService : Service() {
 
@@ -65,6 +69,10 @@ class FreeformOverlayService : Service() {
     @Volatile var currentFocusedPackage: String = ""
     private var systemDefaultDensity = -1
     private val TAG = "FreeformOverlayService"
+
+    private val pendingDpiReversions = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+    private val dpiConfirmationContainers = java.util.concurrent.ConcurrentHashMap<Int, FrameLayout>()
+    private val dpiConfirmationRunnables = java.util.concurrent.ConcurrentHashMap<Int, Runnable>()
 
     private val monitorRunnable = object : Runnable {
         override fun run() {
@@ -138,6 +146,14 @@ class FreeformOverlayService : Service() {
                 val targetDisplay = intent.getIntExtra("EXTRA_TARGET_DISPLAY", -1)
                 if (groupJson != null) {
                     launchWorkspaceFromJson(groupJson, targetDisplay)
+                }
+            }
+            "ACTION_DPI_CONFIRMATION" -> {
+                val displayId = intent.getIntExtra("displayId", -1)
+                val targetDpi = intent.getIntExtra("targetDpi", -1)
+                val originalDpi = intent.getIntExtra("originalDpi", -1)
+                if (displayId != -1 && targetDpi != -1 && originalDpi != -1) {
+                    showDpiConfirmationOverlay(displayId, targetDpi, originalDpi)
                 }
             }
             else -> {
@@ -234,6 +250,20 @@ class FreeformOverlayService : Service() {
 
         isRunning = true
         
+        // Register JVM Shutdown Hook for recovery on sudden crash or VM exit
+        Runtime.getRuntime().addShutdownHook(Thread {
+            val pending = HashMap(pendingDpiReversions)
+            for ((displayId, originalDpi) in pending) {
+                try {
+                    // Try direct command execution synchronously
+                    val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "wm density $originalDpi -d $displayId"))
+                    process.waitFor()
+                } catch (e: Exception) {
+                    Log.e("FreeformOverlayService", "Shutdown hook failed to revert density for display $displayId", e)
+                }
+            }
+        })
+
         // Synchronize animator scales on startup based on user preference
         Thread {
             try {
@@ -729,6 +759,19 @@ class FreeformOverlayService : Service() {
         
         try { unregisterReceiver(screenOffReceiver) } catch (e: Exception) {}
             
+        // Revert any pending unconfirmed DPIs synchronously on service destruction
+        val pending = HashMap(pendingDpiReversions)
+        for ((displayId, originalDpi) in pending) {
+            try {
+                ShellExecutor.executeCommand("wm density $originalDpi -d $displayId")
+                ThemeManager.setDensity(this, displayId, originalDpi)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore density in onDestroy for display $displayId", e)
+            }
+            removeDpiConfirmationOverlay(displayId)
+        }
+        pendingDpiReversions.clear()
+
         displayShells.values.forEach { it.clear() }
         displayShells.clear()
         ShellExecutor.notifyOverlayCountChanged(0)
@@ -790,6 +833,266 @@ class FreeformOverlayService : Service() {
 
     private fun removeSnapGuide() {
         displayShells.values.forEach { it.removeSnapGuide() }
+    }
+
+    private fun getDisplayContext(displayId: Int): Context {
+        val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val targetDisplay = dm.getDisplay(displayId) ?: dm.getDisplay(Display.DEFAULT_DISPLAY)
+        val dContext = createDisplayContext(targetDisplay)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try { dContext.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null) } catch (e: Exception) { dContext }
+        } else {
+            dContext
+        }
+    }
+
+    private fun removeDpiConfirmationOverlay(displayId: Int) {
+        dpiConfirmationRunnables.remove(displayId)?.let { handler.removeCallbacks(it) }
+        dpiConfirmationContainers.remove(displayId)?.let { container ->
+            try {
+                val displayContext = getDisplayContext(displayId)
+                val wm = displayContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(container)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove DPI confirmation overlay", e)
+            }
+        }
+    }
+
+    private fun revertDpi(displayId: Int, originalDpi: Int) {
+        removeDpiConfirmationOverlay(displayId)
+        pendingDpiReversions.remove(displayId)
+        Thread {
+            ShellExecutor.executeCommand("wm density $originalDpi -d $displayId")
+            ThemeManager.setDensity(this, displayId, originalDpi)
+        }.start()
+    }
+
+    private fun showDpiConfirmationOverlay(displayId: Int, targetDpi: Int, originalDpi: Int) {
+        // Cancel any existing overlays/timers for this display
+        removeDpiConfirmationOverlay(displayId)
+
+        // Store the reversion mapping for safety
+        pendingDpiReversions[displayId] = originalDpi
+
+        // Trigger target density change immediately via shell execution
+        Thread {
+            ShellExecutor.executeCommand("wm density $targetDpi -d $displayId")
+            ThemeManager.setDensity(this, displayId, targetDpi)
+        }.start()
+
+        handler.post {
+            val context = getDisplayContext(displayId)
+            val density = context.resources.displayMetrics.density
+            fun dp(value: Float): Int = (value * density).toInt()
+
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val container = FrameLayout(context)
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                dimAmount = 0.5f
+                gravity = Gravity.CENTER
+            }
+
+            val card = FrameLayout(context).apply {
+                val bg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#E6121212")) // 90% black transparency
+                    cornerRadius = dp(20f).toFloat()
+                    setStroke(dp(1.5f), Color.argb(46, 255, 255, 255)) // 18% opacity white border
+                }
+                background = bg
+                val cardPadding = dp(24f)
+                setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
+            }
+
+            val cardParams = FrameLayout.LayoutParams(
+                dp(320f),
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+            container.addView(card, cardParams)
+
+            val contentLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            card.addView(contentLayout, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val titleText = TextView(context).apply {
+                text = "Confirm Display Settings"
+                setTextColor(Color.WHITE)
+                textSize = 20f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(titleText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(16f)
+            })
+
+            val messageText = TextView(context).apply {
+                text = "Do you want to keep this display density?\nReverting in 15 seconds."
+                setTextColor(Color.parseColor("#CCCCCC"))
+                textSize = 14f
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(messageText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(24f)
+            })
+
+            val buttonsRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = 2f
+            }
+            contentLayout.addView(buttonsRow, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val revertButton = TextView(context).apply {
+                text = "Revert"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.argb(38, 255, 255, 255)) // 15% white
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.argb(76, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.argb(38, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    revertDpi(displayId, originalDpi)
+                }
+            }
+
+            val keepButton = TextView(context).apply {
+                text = "Keep"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#1A73E8")) // Google Blue
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.parseColor("#1557B0"))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.parseColor("#1A73E8"))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    pendingDpiReversions.remove(displayId)
+                    removeDpiConfirmationOverlay(displayId)
+                }
+            }
+
+            revertButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+            keepButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+
+            val revertParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                rightMargin = dp(6f)
+            }
+            
+            val keepParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                leftMargin = dp(6f)
+            }
+            
+            buttonsRow.addView(revertButton, revertParams)
+            buttonsRow.addView(keepButton, keepParams)
+
+            // Premium Scale-in and alpha enter animation
+            card.alpha = 0f
+            card.scaleX = 0.8f
+            card.scaleY = 0.8f
+            card.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(250)
+                .setInterpolator(OvershootInterpolator(1.2f))
+                .start()
+
+            // 15-second countdown timer
+            var remainingSeconds = 15
+            val countdownRunnable = object : Runnable {
+                override fun run() {
+                    remainingSeconds--
+                    if (remainingSeconds <= 0) {
+                        revertDpi(displayId, originalDpi)
+                    } else {
+                        messageText.text = "Do you want to keep this display density?\nReverting in $remainingSeconds seconds."
+                        handler.postDelayed(this, 1000)
+                    }
+                }
+            }
+
+            dpiConfirmationRunnables[displayId] = countdownRunnable
+            dpiConfirmationContainers[displayId] = container
+
+            try {
+                wm.addView(container, params)
+                handler.postDelayed(countdownRunnable, 1000)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add DPI confirmation overlay to WindowManager", e)
+                pendingDpiReversions.remove(displayId)
+                dpiConfirmationRunnables.remove(displayId)
+            }
+        }
     }
 
     inner class DisplayShell(val displayId: Int) {
@@ -947,9 +1250,51 @@ class FreeformOverlayService : Service() {
                     dockedTasks.add(task.taskId)
                 }
                 
-                val aboveOccluders = nonBlacklistedTasks.take(currentTaskIndex.coerceAtLeast(0)).mapNotNull { taskDecorBounds[it.taskId] }
-                val aboveTitleBars = nonBlacklistedTasks.take(currentTaskIndex.coerceAtLeast(0)).mapNotNull { titleBarRects[it.taskId] }
-                val currentOccluders = aboveOccluders + aboveTitleBars
+                val currentOccluders = mutableListOf<DragResizeOverlay.OccluderInfo>()
+                if (currentTaskIndex > 0) {
+                    for (j in 0 until currentTaskIndex) {
+                        val aboveTask = nonBlacklistedTasks[j]
+                        val aboveOverlay = overlays[aboveTask.taskId]
+                        if (aboveOverlay != null) {
+                            currentOccluders.addAll(aboveOverlay.getOcclusionRegions())
+                        } else {
+                            // Fallback to estimation
+                            val aboveInfo = taskBoundsMap[aboveTask.taskId]
+                            var bounds = aboveInfo?.bounds ?: intendedBounds[aboveTask.packageName]
+                            if (bounds != null) {
+                                val safe = getSafeAreaRect(displayId)
+                                val isDockedAbove = dockedTasks.contains(aboveTask.taskId) || dockedPackages.contains(aboveTask.packageName)
+                                val usePill = ThemeManager.usePillForSnapped(this@FreeformOverlayService)
+                                val shouldShowPill = isDockedAbove && usePill
+                                
+                                val rBase = ThemeManager.getRoundness(this@FreeformOverlayService) * density
+                                val winRadius = if (isDockedAbove) rBase / 2f else rBase
+                                
+                                if (shouldShowPill) {
+                                    val useW = bounds.width()
+                                    val pillW = (110 * density).toInt().coerceAtMost(useW)
+                                    val pillH = (40 * density).toInt()
+                                    val pillX = bounds.left + (useW - pillW) / 2
+                                    val pillY = (bounds.top + (4 * density).toInt()).coerceIn(safe.top + (4 * density).toInt(), safe.bottom - pillH)
+                                    val pillRect = android.graphics.Rect(pillX, pillY, pillX + pillW, pillY + pillH)
+                                    currentOccluders.add(DragResizeOverlay.OccluderInfo(pillRect, pillH / 2f))
+                                    
+                                    val bodyRect = android.graphics.Rect(bounds.left, bounds.top, bounds.right, bounds.bottom)
+                                    currentOccluders.add(DragResizeOverlay.OccluderInfo(bodyRect, winRadius))
+                                } else {
+                                    val fw = bounds.width() + (borderWidth * 2)
+                                    val fh = bounds.height() + titleBarHeight + borderWidth
+                                    val fx = bounds.left - borderWidth
+                                    val decorY = (bounds.top - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
+                                    val fy = decorY - borderWidth
+                                    
+                                    val totalRect = android.graphics.Rect(fx, fy, fx + fw, fy + fh)
+                                    currentOccluders.add(DragResizeOverlay.OccluderInfo(totalRect, winRadius))
+                                }
+                            }
+                        }
+                    }
+                }
                 
                 val lowPkg = task.packageName.lowercase()
                 if (baseBlacklist.any { lowPkg.contains(it) } || isBlacklisted(this@FreeformOverlayService, task.packageName)) {

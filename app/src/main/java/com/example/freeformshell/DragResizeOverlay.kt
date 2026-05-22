@@ -97,7 +97,10 @@ class DragResizeOverlay(
     
     private var preMaximizedRect: Rect? = null
     private var preDockedRect: Rect? = null
-    var occluders: List<Rect> = emptyList()
+    
+    data class OccluderInfo(val rect: Rect, val cornerRadius: Float)
+    
+    var occluders: List<OccluderInfo> = emptyList()
         private set
     private val titleBarClipPath = android.graphics.Path()
     private val frameClipPath = android.graphics.Path()
@@ -253,7 +256,7 @@ class DragResizeOverlay(
         createResizeStrips()
     }
 
-    fun updateFocus(focused: Boolean, topOccluders: List<Rect>) {
+    fun updateFocus(focused: Boolean, topOccluders: List<OccluderInfo>) {
         isActuallyFocused = focused
         
         var changed = false
@@ -308,6 +311,50 @@ class DragResizeOverlay(
         }
     }
 
+    fun getActualTitleBarRect(): Rect? {
+        val view = titleBarView ?: return null
+        if (view.parent == null || view.visibility != View.VISIBLE) return null
+        val lp = view.layoutParams as? WindowManager.LayoutParams ?: return null
+        return Rect(lp.x, lp.y, lp.x + lp.width, lp.y + lp.height)
+    }
+
+    fun getActualFrameRect(): Rect? {
+        val view = frameView ?: return null
+        if (view.parent == null || view.visibility != View.VISIBLE) return null
+        val lp = view.layoutParams as? WindowManager.LayoutParams ?: return null
+        return Rect(lp.x, lp.y, lp.x + lp.width, lp.y + lp.height)
+    }
+
+    fun getOcclusionRegions(): List<OccluderInfo> {
+        val list = mutableListOf<OccluderInfo>()
+        val rBase = ThemeManager.getRoundness(displayContext) * density
+        val winRadius = if (isDocked) rBase / 2f else rBase
+        
+        val usePillForSnapped = ThemeManager.usePillForSnapped(displayContext)
+        val shouldShowPill = isMaximized || (isDocked && usePillForSnapped)
+        
+        if (shouldShowPill) {
+            // Pill Title Bar
+            getActualTitleBarRect()?.let {
+                list.add(OccluderInfo(it, it.height() / 2f))
+            }
+            // Snapped Task Body bounds to occlude background overlays underneath it!
+            val bodyRect = Rect(winL, winT, winL + winW, winT + winH)
+            list.add(OccluderInfo(bodyRect, winRadius))
+        } else {
+            // Standard Mode: Unified contiguous bounds including top, bottom, left, and right borders!
+            val fw = winW + (borderWidth * 2)
+            val fh = winH + titleBarHeight + borderWidth
+            val fx = winL - borderWidth
+            val safe = getSafeAreaRect()
+            val decorY = (winT - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
+            val fy = decorY - borderWidth
+            
+            val totalRect = Rect(fx, fy, fx + fw, fy + fh)
+            list.add(OccluderInfo(totalRect, winRadius))
+        }
+        return list
+    }
 
     fun setDockMode(docked: Boolean) {
         if (isDocked != docked) {
@@ -862,7 +909,7 @@ class DragResizeOverlay(
                 
                 // Hide other elements by setting size to 0
                 frameView?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
-                val showExternalHandles = (ThemeManager.getPairedScalingGlobal(displayContext) || ThemeManager.getPairedScaling(displayContext, displayId)) && !isInteracting
+                val showExternalHandles = (ThemeManager.getPairedScalingGlobal(displayContext) || ThemeManager.getPairedScaling(displayContext, displayId)) && !isInteracting && isFocused
                 if (showExternalHandles) {
                     leftStrip?.let { updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) }
                     rightStrip?.let { updateWindow(it, touchStripWidth, useH, useL + useW - touchStripWidth/2, useT, true) }
@@ -904,9 +951,9 @@ class DragResizeOverlay(
                             it.invalidate() // Force redraw of the border
                         }
                     }
-                    val showLeft = !isResizing || activeResizeLeft
-                    val showRight = !isResizing || activeResizeRight
-                    val showBottom = !isResizing || activeResizeBottom
+                    val showLeft = (!isResizing || activeResizeLeft) && isFocused
+                    val showRight = (!isResizing || activeResizeRight) && isFocused
+                    val showBottom = (!isResizing || activeResizeBottom) && isFocused
                     
                     leftStrip?.let { 
                         if (showLeft) updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) 
@@ -1443,7 +1490,7 @@ class DragResizeOverlay(
                                 val gaps = getAvailableSnapGaps()
                                 when (activeZone) {
                                     "Top" -> {
-                                        val topGaps = gaps.filter { it.centerY() < hH }
+                                        val topGaps = gaps.filter { it.top <= safe.top + gap || it.centerY() < hH }
                                         val bestTopGap = topGaps.minByOrNull { gapRect ->
                                             val dx = event.rawX - gapRect.centerX()
                                             val dy = event.rawY - gapRect.centerY()
@@ -1459,7 +1506,7 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Left" -> {
-                                        val leftGaps = gaps.filter { it.centerX() < hW }
+                                        val leftGaps = gaps.filter { it.left <= safe.left + gap || it.centerX() < hW }
                                         val bestLeftGap = leftGaps.minByOrNull { gapRect ->
                                             val dx = event.rawX - gapRect.centerX()
                                             val dy = event.rawY - gapRect.centerY()
@@ -1475,7 +1522,7 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Right" -> {
-                                        val rightGaps = gaps.filter { it.centerX() > hW }
+                                        val rightGaps = gaps.filter { it.right >= safe.right - gap || it.centerX() > hW }
                                         val bestRightGap = rightGaps.minByOrNull { gapRect ->
                                             val dx = event.rawX - gapRect.centerX()
                                             val dy = event.rawY - gapRect.centerY()
@@ -1491,7 +1538,7 @@ class DragResizeOverlay(
                                         }
                                     }
                                     "Bottom" -> {
-                                        val bottomGaps = gaps.filter { it.centerY() > hH }
+                                        val bottomGaps = gaps.filter { it.bottom >= safe.bottom - gap || it.centerY() > hH }
                                         val bestBottomGap = bottomGaps.minByOrNull { gapRect ->
                                             val dx = event.rawX - gapRect.centerX()
                                             val dy = event.rawY - gapRect.centerY()
@@ -1501,9 +1548,9 @@ class DragResizeOverlay(
                                             snapTargetRect = bestBottomGap
                                             targetSide = "GapVertical"
                                         } else {
-                                            // Transition into basic bottom split overlay after 4 seconds hold!
-                                            snapTargetRect = Rect(safe.left, hH + gap, safe.right, safe.bottom)
-                                            targetSide = "Bottom"
+                                            // Transition into fullscreen size indication overlay after 4 seconds hold!
+                                            snapTargetRect = Rect(safe.left, safe.top, safe.right, safe.bottom)
+                                            targetSide = "TopFull"
                                         }
                                     }
                                 }
@@ -2522,15 +2569,15 @@ class DragResizeOverlay(
             
             canvas.save()
             for (oc in occluders) {
-                val l = (oc.left - viewX).toFloat()
-                val t = (oc.top - viewY).toFloat()
-                val r = (oc.right - viewX).toFloat()
-                val b = (oc.bottom - viewY).toFloat()
+                val l = (oc.rect.left - viewX).toFloat()
+                val t = (oc.rect.top - viewY).toFloat()
+                val r = (oc.rect.right - viewX).toFloat()
+                val b = (oc.rect.bottom - viewY).toFloat()
                 
                 if (r > 0 && b > 0) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         val path = android.graphics.Path()
-                        val radius = 12 * density
+                        val radius = oc.cornerRadius
                         path.addRoundRect(l, t, r, b, radius, radius, android.graphics.Path.Direction.CW)
                         canvas.clipOutPath(path)
                     } else {
@@ -2587,10 +2634,10 @@ class DragResizeOverlay(
                         val viewY = loc[1]
                         
                         for (oc in occluders) {
-                            val l = oc.left - viewX
-                            val t = oc.top - viewY
-                            val r = oc.right - viewX
-                            val b = oc.bottom - viewY
+                            val l = oc.rect.left - viewX
+                            val t = oc.rect.top - viewY
+                            val r = oc.rect.right - viewX
+                            val b = oc.rect.bottom - viewY
                             
                             if (r > 0 && b > 0) {
                                 region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
@@ -2643,9 +2690,13 @@ class DragResizeOverlay(
                         val oldFlags = lp.flags
                         val oldAlpha = lp.alpha
                         
-                        if (originallyTouchable) {
+                        val isTouchable = originallyTouchable && (isFocused || v == titleBarView)
+                        if (isTouchable) {
                             lp.flags = lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                             lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        } else {
+                            lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            lp.flags = lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
                         }
                         lp.alpha = 1.0f
                         

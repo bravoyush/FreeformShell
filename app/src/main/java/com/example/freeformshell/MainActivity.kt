@@ -42,6 +42,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.graphics.drawable.toBitmap
@@ -1432,41 +1435,228 @@ fun SafeAreaScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
             Divider(Modifier.padding(vertical = 16.dp))
             
             Text("Display Density (DPI)", style = MaterialTheme.typography.titleMedium)
-            var currentDensity by remember(selectedIdx) { 
-                mutableStateOf(ThemeManager.getDensity(context, display.id, 420).toFloat()) 
+            Spacer(Modifier.height(8.dp))
+            
+            var physicalDensity by remember(selectedIdx) { mutableStateOf(420) }
+            var activeDensity by remember(selectedIdx) { mutableStateOf(ThemeManager.getDensity(context, display.id, 420)) }
+            
+            var showCustomDpiDialog by remember { mutableStateOf(false) }
+            var showPhoneWarningDialog by remember { mutableStateOf(false) }
+            var pendingDpiChange by remember { mutableStateOf<Int?>(null) }
+            
+            LaunchedEffect(selectedIdx) {
+                withContext(Dispatchers.IO) {
+                    val out = ShellExecutor.exec("wm density -d ${display.id}")
+                    val overrideMatch = "Override density: (\\d+)".toRegex().find(out)
+                    val active = if (overrideMatch != null) {
+                        overrideMatch.groupValues[1].toIntOrNull() ?: ThemeManager.getDensity(context, display.id, 420)
+                    } else {
+                        val physMatch = "Physical density: (\\d+)".toRegex().find(out)
+                        physMatch?.groupValues?.get(1)?.toIntOrNull() ?: ThemeManager.getDensity(context, display.id, 420)
+                    }
+                    val physMatch = "Physical density: (\\d+)".toRegex().find(out)
+                    val phys = physMatch?.groupValues?.get(1)?.toIntOrNull() ?: 420
+                    withContext(Dispatchers.Main) {
+                        activeDensity = active
+                        physicalDensity = phys
+                    }
+                }
             }
             
-            Slider(
-                value = currentDensity,
-                onValueChange = { currentDensity = it },
-                onValueChangeFinished = {
-                    val densityVal = currentDensity.toInt()
-                    ThemeManager.setDensity(context, display.id, densityVal)
-                    ShellExecutor.executeCommand("wm density $densityVal -d ${display.id}")
-                },
-                valueRange = 160f..600f
-            )
-            Text("Current: ${currentDensity.toInt()} DPI", style = MaterialTheme.typography.bodyMedium)
+            val minDimension = minOf(display.width, display.height)
+            val minDpiFromDp = (minDimension * 160) / 1000
+            val maxDpiFromDp = (minDimension * 160) / 320
+            val minAllowedDpi = maxOf(minDpiFromDp, (physicalDensity * 0.5).toInt()).coerceAtLeast(120)
+            val maxAllowedDpi = minOf(maxDpiFromDp, (physicalDensity * 1.5).toInt()).coerceAtMost(800)
+            
+            fun triggerDpiChange(targetDpi: Int) {
+                scope.launch(Dispatchers.IO) {
+                    val out = ShellExecutor.exec("wm density -d ${display.id}")
+                    val overrideMatch = "Override density: (\\d+)".toRegex().find(out)
+                    val currentActive = if (overrideMatch != null) {
+                        overrideMatch.groupValues[1].toIntOrNull() ?: activeDensity
+                    } else {
+                        val physMatch = "Physical density: (\\d+)".toRegex().find(out)
+                        physMatch?.groupValues?.get(1)?.toIntOrNull() ?: activeDensity
+                    }
+                    withContext(Dispatchers.Main) {
+                        val intent = Intent(context, FreeformOverlayService::class.java).apply {
+                            action = "ACTION_DPI_CONFIRMATION"
+                            putExtra("displayId", display.id)
+                            putExtra("targetDpi", targetDpi)
+                            putExtra("originalDpi", currentActive)
+                        }
+                        context.startService(intent)
+                        activeDensity = targetDpi
+                    }
+                }
+            }
+            
+            fun initiateDpiChange(targetDpi: Int) {
+                if (display.id == 0) {
+                    pendingDpiChange = targetDpi
+                    showPhoneWarningDialog = true
+                } else {
+                    triggerDpiChange(targetDpi)
+                }
+            }
+            
+            val defaultDpis = remember(physicalDensity) {
+                mutableListOf(120, 160, 240, 320, 360, 480).apply {
+                    if (!contains(physicalDensity)) add(physicalDensity)
+                }.sorted()
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                defaultDpis.forEach { dpi ->
+                    val isSelected = activeDensity == dpi
+                    val label = if (dpi == physicalDensity) "$dpi (Default)" else "$dpi"
+                    
+                    OutlinedButton(
+                        onClick = { initiateDpiChange(dpi) },
+                        colors = if (isSelected) {
+                            ButtonDefaults.outlinedButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            ButtonDefaults.outlinedButtonColors()
+                        },
+                        border = if (isSelected) {
+                            androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                        } else {
+                            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        }
+                    ) {
+                        Text(label)
+                    }
+                }
+                
+                OutlinedButton(
+                    onClick = { showCustomDpiDialog = true },
+                    colors = ButtonDefaults.outlinedButtonColors(),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Custom DPI")
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            Text("Current: $activeDensity DPI (Physical: $physicalDensity DPI)", style = MaterialTheme.typography.bodyMedium)
             Text("Lower DPI = More content fits (Desktop mode).\nHigher DPI = Larger text and buttons.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             
             Button(
-                onClick = { 
-                    ShellExecutor.executeCommand("wm density reset -d ${display.id}")
-                    // Refresh current density from shell
-                    scope.launch(Dispatchers.IO) {
-                        val out = ShellExecutor.exec("wm density -d ${display.id}")
-                        val match = "Physical density: (\\d+)".toRegex().find(out)
-                        val phys = match?.groupValues?.get(1)?.toIntOrNull() ?: 420
-                        withContext(Dispatchers.Main) {
-                            currentDensity = phys.toFloat()
-                            ThemeManager.setDensity(context, display.id, phys)
-                        }
-                    }
-                },
+                onClick = { initiateDpiChange(physicalDensity) },
                 modifier = Modifier.padding(top = 8.dp),
                 colors = ButtonDefaults.filledTonalButtonColors()
             ) {
                 Text("Reset to Default")
+            }
+            
+            if (showCustomDpiDialog) {
+                var customDpiInput by remember { mutableStateOf("") }
+                var allowUnsafe by remember { mutableStateOf(false) }
+                val activeMinDpi = if (allowUnsafe) 100 else minAllowedDpi
+                val parsedDpi = customDpiInput.toIntOrNull()
+                val isValid = parsedDpi != null && parsedDpi in activeMinDpi..maxAllowedDpi
+                
+                AlertDialog(
+                    onDismissRequest = { showCustomDpiDialog = false },
+                    title = { Text("Custom DPI Input") },
+                    text = {
+                        Column {
+                            Text("Enter a custom density for display ${display.name}:")
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = customDpiInput,
+                                onValueChange = { customDpiInput = it.filter { char -> char.isDigit() } },
+                                label = { Text("DPI Value (${activeMinDpi} - ${maxAllowedDpi})") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                isError = customDpiInput.isNotEmpty() && !isValid,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (customDpiInput.isNotEmpty() && !isValid) {
+                                Text(
+                                    text = "DPI must be between $activeMinDpi and $maxAllowedDpi",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            
+                            Spacer(Modifier.height(16.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().clickable { allowUnsafe = !allowUnsafe }
+                            ) {
+                                Checkbox(
+                                    checked = allowUnsafe,
+                                    onCheckedChange = { allowUnsafe = it }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Allow Unsafe Extreme DPI (Min 100)", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            if (allowUnsafe) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "⚠️ Warning: Setting DPI below 200 makes screen elements extremely tiny and can make touch input very difficult.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (isValid && parsedDpi != null) {
+                                    showCustomDpiDialog = false
+                                    initiateDpiChange(parsedDpi)
+                                }
+                            },
+                            enabled = isValid
+                        ) {
+                            Text("Apply")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showCustomDpiDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+            
+            if (showPhoneWarningDialog) {
+                AlertDialog(
+                    onDismissRequest = { showPhoneWarningDialog = false },
+                    title = { Text("⚠️ High Risk Display Change") },
+                    text = {
+                        Text("Changing display density (DPI) on your phone's built-in display can cause UI glitches, system crashes, or soft-bricking if set to an incompatible value.\n\nAre you sure you want to continue with ${pendingDpiChange ?: 0} DPI?")
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showPhoneWarningDialog = false
+                                pendingDpiChange?.let { triggerDpiChange(it) }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Continue")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showPhoneWarningDialog = false }) {
+                            Text("Cancel Resize")
+                        }
+                    }
+                )
             }
         }
     }

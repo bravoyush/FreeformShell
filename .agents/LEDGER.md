@@ -53,6 +53,12 @@ When making modifications, **you must strictly adhere** to the following Android
 - [x] **Direct IPC Focus Routing:** Fully routed touch-focus using reflected root task managers instead of simulated touch tap injections.
 - [x] **Smart Tiling Gaps:** Integrated edge snaps, quarterly corners, and non-overlapping tiling column engines (`getAvailableSnapGaps()`).
 - [x] **Interaction Handle Isolation:** Hides all inactive resize handles during active drag gestures to optimize coordinate rendering cycles.
+- [x] **Proximity-Based Snap Gap Filtering:** Refined top/bottom/left/right gap filtering to check edge proximity, allowing full-height and full-width gaps to be suggested.
+- [x] **Safe Bottom Snap Fallback:** Prevented overlap with existing bottom docked windows by falling back to Fullscreen instead of a Bottom Half split when the bottom is occupied.
+- [x] **Focus-Based Handle & Strip Isolation:** Hides background window resize handles/strips (`View.GONE`) and marks them `FLAG_NOT_TOUCHABLE` to eliminate touch interception and visual leakage.
+- [x] **Dynamic Unified Window Occlusion:** Dynamically computes precise window bounds and applies dynamic shape clipping using exact theme-configured corner radii to eliminate misaligned title bar cut-offs.
+- [x] **Snapped Window Z-Order Occlusion:** Added foreground snapped window bodies (`winL, winT, winL + winW, winT + winH`) to occlusion regions under pill/docked mode to clip out background standard overlays perfectly underneath active snapped windows.
+- [x] **Safe Presets & Glassmorphic DPI Overlay:** Overhauled display density configurations with dynamic phone screen safety calculations, custom override range warnings, horizontal preset scrolling rows (from 120 DPI Ultra Compact to 480 DPI), and a premium 15-second glassmorphic recovery overlay with JVM shutdown recovery hooks to prevent accidental soft-bricking.
 
 ### 🟡 In Progress / Planned
 - [ ] **Dynamic Display Padding Adjustments:** Adapting margins dynamically when camera cutouts/notches rotate.
@@ -60,4 +66,6 @@ When making modifications, **you must strictly adhere** to the following Android
 
 ---
 
-*Last Updated: 2026-05-21 by Antigravity*
+*Last Updated: 2026-05-21 by Antigravity (Archived Implementation Plan, Added 120 DPI Preset & Lowered Min Constraint to 120 DPI)*
+
+

@@ -1,0 +1,74 @@
+name: Build and Release FreeformShell APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on tags starting with v (e.g. v1.0.0, v1.4.1)
+
+permissions:
+  contents: write # Crucial: Allows GitHub Actions to publish releases and upload APK artifacts
+
+jobs:
+  build:
+    name: Build APK and Create Draft Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all tags and history for proper changelog generation
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Run Code Compilation Check
+        run: ./gradlew compileDebugKotlin
+
+      - name: Build Debug & Unsigned Release APKs
+        run: ./gradlew assembleDebug assembleRelease
+
+      - name: Prepare APK Artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/FreeformShell-debug.apk
+          # If the release APK is unsigned, it will be placed in app/build/outputs/apk/release/
+          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk release-artifacts/FreeformShell-release-unsigned.apk
+          elif [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk release-artifacts/FreeformShell-release.apk
+          fi
+
+      - name: Generate Changelog
+        id: github_changelog
+        run: |
+          echo "## What's Changed" > changelog.md
+          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --oneline --pretty=format:"* %s (%h)" >> changelog.md || echo "* Initial release version" >> changelog.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: changelog.md
+          draft: true # Creates it as a Draft so you can review the changelog before hitting publish
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-exp') || contains(github.ref, '-alpha') }}
+          files: |
+            release-artifacts/FreeformShell-debug.apk
+            release-artifacts/FreeformShell-release-unsigned.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
