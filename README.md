@@ -222,13 +222,6 @@ Connect with other power users, share your custom configurations, and get real-t
   </tr>
 </table>
 
-> [!TIP]
-> **Is the live counter showing "inaccessible"?**
-> To show how many members are currently online right on the GitHub landing page, you must enable the Discord Widget:
-> 1. Open Discord, click your server's name at the top left, and open **Server Settings**.
-> 2. Scroll to the left menu and select **Widget**.
-> 3. Turn on the **Enable Server Widget** toggle, and you're good to go!
-
 ---
 
 ### 🛡️ License & Attributions
