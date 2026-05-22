@@ -5,13 +5,29 @@
 [![Android Compatibility](https://img.shields.io/badge/Android-11%20to%2015%2B-green.svg)](#compatibility-guidelines)
 [![AI Co-Developed](https://img.shields.io/badge/AI--Co--Developed-Antigravity-orange.svg)](#ai-human-co-development-vibe-coding)
 
-**FreeformShell** is a system-level window manager overlay operating directly on native Android windowing components. Leveraging deep system-level APIs via Shizuku, direct Binder reflection, and fallback ADB shell utilities, FreeformShell unlocks desktop-class display scaling, custom densities, and flexible window overlays on Android devices running **Android 11 (API 30) up to Android 15+ (API 35+)**.
+**FreeformShell** is an experimental system-level window manager overlay and helper utility operating directly on native Android windowing components. Leveraging system-level APIs via Shizuku, direct Binder reflection, and fallback ADB shell utilities, FreeformShell adds custom window controls, display scaling configurations, and helper overlays for Android devices running **Android 11 (API 30) up to Android 15+ (API 35+)**.
+
+---
+
+## ⚠️ Important Pre-requisites: Third-Party Launchers
+
+> [!WARNING]
+> **FreeformShell is a window overlay helper and customization utility, not a full desktop system or app drawer.**
+> 
+> Android's built-in launcher does not natively support launching other applications in freeform windows. Therefore, to build a complete and productive desktop multitasking environment on your device, **you will need to pair FreeformShell with a third-party desktop-mode launcher**.
+> 
+> In this setup, the companion launcher handles starting your apps in freeform mode, while FreeformShell wraps those running windows with custom borders, drag-to-resize handles, minimize bubbles, side-snapping guidelines, and display-density scaling.
+> 
+> **Highly Recommended Companion Launchers:**
+> *   **[Taskbar](https://github.com/farmerbb/Taskbar)** (by farmerbb) — A highly reliable, open-source desktop-style taskbar and app drawer overlay for Android.
+> *   **[SmartDock](https://github.com/axel358/SmartDock)** — A modern desktop dock and system panel provider supporting advanced freeform behaviors.
+> *   **[YoukiDEX](https://github.com/youkidex/YoukiDEX)** — A dedicated desktop-mode experience provider for custom window scaling.
 
 ---
 
 ## 📖 Quick Start & User Guide
 
-Setting up FreeformShell is easy. Follow this step-by-step guide to get up and running:
+Follow this step-by-step guide to get FreeformShell configured on your device:
 
 ### 1️⃣ Step 1: Install the APK
 1. Navigate to [GitHub Releases](https://github.com/bravoyush/FreeformShell/releases).
@@ -23,7 +39,7 @@ Setting up FreeformShell is easy. Follow this step-by-step guide to get up and r
 ![Step 1: APK Installation](docs/images/step1_install.png)
 
 ### 2️⃣ Step 2: Establish the Binder Connection
-FreeformShell uses high-performance system Binder connections to manage windows safely.
+FreeformShell uses system Binder connections to manage overlays safely.
 *   **Option A: Using Shizuku (Recommended — On-Device)**:
     1. Install [Shizuku from Google Play](https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api).
     2. Open Shizuku and follow the on-screen instructions to start it via **Wireless Debugging** (no computer required!).
@@ -45,9 +61,9 @@ To display desktop window frames and drag handles on top of normal Android apps:
 ![Step 3: Accessibility Permission](docs/images/step3_accessibility.png)
 
 ### 4️⃣ Step 4: Master the Window Controls & Gestures
-Once set up, launching apps via the widgets or dashboard triggers the freeform shell:
+Once set up, launching apps via your companion launcher (e.g. Taskbar) or FreeformShell widgets will trigger the overlay frames:
 *   **Drag & Move**: Hold the colored title bar at the top of a floating app to move it anywhere.
-*   **Resize**: Grab the corners or bottom/side borders of a window to resize it smoothly.
+*   **Resize**: Grab the corners or bottom/side borders of a window to resize it.
 *   **Minimize Bubble**: Click the `_` icon on the window frame. The window shrinks into a floating bubble on the screen edge. Tap the bubble to expand it back instantly!
 *   **Maximize**: Click the `[]` icon to expand the window to fullscreen.
 *   **Split-Snapping**: Drag a window toward the left or right edge of the display. A visual snapping guideline appears—release to snap the app to exactly half-screen, creating a split productivity workspace.
@@ -60,33 +76,33 @@ Once set up, launching apps via the widgets or dashboard triggers the freeform s
 > [!NOTE]
 > ### 💡 The Philosophy: Why "FreeformShell"?
 > *   **`Freeform`**: Refers to Android’s native **Freeform Windowing Mode** (originally introduced in Android 7.0). This hidden system mode allows multiple applications to run simultaneously inside floating, resizable, overlapping windows, mimicking a desktop multitasking experience rather than standard mobile split-screen or single-app layouts.
-> *   **`Shell`**: In operating systems, a *shell* is the outer interface that manages how users interact with services, organize active workspaces, and control tasks. FreeformShell acts as a comprehensive system-level overlay shell—providing window titles, close/minimize/maximize buttons, snap-to-edge guidelines, minimized floating bubbles, and display-density adjustment dialogs. It literally wraps the native Android window system in a desktop-like shell overlay.
+> *   **`Shell`**: In operating systems, a *shell* is the outer interface that manages how users interact with services, organize active workspaces, and control tasks. FreeformShell acts as a system-level overlay shell—providing window titles, close/minimize/maximize buttons, snap-to-edge guidelines, minimized floating bubbles, and display-density adjustment dialogs. It literally wraps the native Android window system in a desktop-like shell overlay.
 > *   **`Freeform Beta` (Launcher Name)**: To ensure absolute user clarity during testing, the app displays as **Freeform Beta** in the Android launcher for experimental/beta branches, while keeping all internal packages, Gradle parameters, and system APIs unified under the robust `FreeformShell` name.
 
 ---
 
 ## ✨ Core Features Tour
 
-Explore the main panels and settings screens of FreeformShell designed to give you a premium, tailored window management experience:
+Explore the main configuration screens of FreeformShell designed to help you customize your window overlay experience:
 
 ### 📊 1. Dashboard & Diagnostics
-*   **Live Telemetry**: Monitor status checks of the Shizuku Binder Service, active binder permissions, and Accessibility Service.
-*   **Display Enumerator**: Displays names, IDs, hardware resolutions, and default densities of all active displays (built-in phone screen + external screens).
+*   **Status Telemetry**: Monitor status checks of the Shizuku Binder Service, active binder permissions, and Accessibility Service.
+*   **Display Enumerator**: Displays names, IDs, hardware resolutions, and default densities of all active displays (built-in phone screen + connected external monitors).
 *   **System Diagnostics**: Provides a real-time console log of underlying shell activity, command execution diagnostics, and ADB connection status.
 
 ### 🎨 2. Window Customization & Style
-*   **Glassmorphic Aesthetics**: Adjust transparent window overlays, borders, and dimming backdrops to match your styling preference.
+*   **Visual Adjustments**: Tune transparent window overlays, borders, and dimming backdrops to match your styling preference.
 *   **Interactive Corner Sliders**: Adjust window corner roundness (`0dp` sharp up to `32dp` rounded) and border thickness in real-time.
 *   **Title Bar & Stroke Opacities**: Customize handle transparency to make overlays bleed seamlessly into the background.
-*   **Harmonized Accent Color Picker**: Integrates an HSL-based color selector to style overlay title frames, snap indicators, and minimized bubbles. Includes a real-time **Interactive Window Preview** within the app so you see styles apply instantly.
+*   **HSL Accent Color Picker**: Integrates an HSL-based color selector to style overlay title frames, snap indicators, and minimized bubbles. Includes a real-time **Interactive Window Preview** within the app so you see styles apply instantly.
 
 ### 📐 3. Display Safe Area Offsetter
 *   **Notch & Camera Offset**: Compensate for rounded corners, camera notches, or punch-hole cameras by defining safe-area insets.
 *   **Multi-Monitor Customization**: Configure top, bottom, left, and right safe boundaries independently for each connected display panel.
 
-### ⚙️ 4. Premium Display Density (DPI) Presets
-*   **Scaling Down Focus**: Pack more information on screen! Presets focus heavily on scaling down, including **`120 DPI` (Ultra Compact)**, **`160 DPI` (Desktop mdpi)**, 240, 320, 360, Physical Default, and 480 DPI.
-*   **Allow Unsafe Extreme DPI**: Developers can toggle a override option to unlock extreme custom values down to **`100 DPI`**.
+### ⚙️ 4. Display Density (DPI) Scaling & Presets
+*   **Scaling Down Focus**: Pack more information on screen! Presets focus on scaling down, including **`120 DPI` (Ultra Compact)**, **`160 DPI` (Desktop mdpi)**, 240, 320, 360, Physical Default, and 480 DPI.
+*   **Allow Unsafe Extreme DPI**: Technical users can toggle an override option to unlock extreme custom values down to **`100 DPI`**.
 *   **Windows-Style Reversion Shield**: To prevent touch soft-locks, applying density changes triggers a **15-second overlay countdown timer** with a 50% backdrop dimming effect. If unconfirmed, it automatically rolls back safely to your previous DPI.
 *   **Unrestricted Secondary Displays**: Custom scale external desktop screens (e.g. mock monitors, USB-C docks, virtual displays) instantly without safe boundary limits or warning interruptions.
 
