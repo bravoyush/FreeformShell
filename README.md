@@ -197,6 +197,40 @@ git push origin v1.4.0
 
 GitHub Actions will automatically spin up, build the Debug and Unsigned Release APKs, compile changelogs from your commit history, and draft a release containing the downloadable files!
 
+---
+
+## 💬 Join the Community
+
+Connect with other power users, share your custom configurations, and get real-time assistance:
+
+<table>
+  <tr>
+    <td>
+      <a href="https://discord.gg/tTgjCK3XmW" target="_blank">
+        <img src="https://discord.com/api/guilds/1505754254114295828/widget.png?style=banner2" alt="Join FreeformShell Discord Server" width="350"/>
+      </a>
+    </td>
+    <td>
+      <h3>Why join our Discord?</h3>
+      <ul>
+        <li>🚀 <b>Get Instant Help:</b> Troubleshoot your Shizuku or ADB setup with other community members.</li>
+        <li>📐 <b>Share Presets:</b> Post your custom DPI layouts, safe area offsets, and display configurations.</li>
+        <li>💡 <b>Suggest Features:</b> Directly pitch system overlay improvements or launcher integrations.</li>
+        <li>🔄 <b>Beta Updates:</b> Get notified immediately when a new pre-release APK is compiled!</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+> [!TIP]
+> **Is the live counter showing "inaccessible"?**
+> To show how many members are currently online right on the GitHub landing page, you must enable the Discord Widget:
+> 1. Open Discord, click your server's name at the top left, and open **Server Settings**.
+> 2. Scroll to the left menu and select **Widget**.
+> 3. Turn on the **Enable Server Widget** toggle, and you're good to go!
+
+---
+
 ### 🛡️ License & Attributions
 
 This project is open-sourced under the **Apache License 2.0**. 
