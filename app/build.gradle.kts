@@ -4,22 +4,37 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-fun getGitVersionName(): String {
+fun getGitVersionName(projectDir: java.io.File): String {
     return try {
-        val process = ProcessBuilder("git", "describe", "--tags", "--always", "--dirty").start()
+        val process = ProcessBuilder("git", "describe", "--tags", "--always", "--dirty")
+            .directory(projectDir)
+            .start()
         val version = process.inputStream.bufferedReader().readText().trim()
-        if (version.startsWith("v")) version.substring(1) else version
-    } catch (e: Exception) {
-        "1.0"
+        val exitCode = process.waitFor()
+        if (exitCode == 0 && version.isNotEmpty()) {
+            if (version.startsWith("v")) version.substring(1) else version
+        } else {
+            "1.2.0"
+        }
+    } catch (e: java.lang.Exception) {
+        "1.2.0"
     }
 }
 
-fun getGitVersionCode(): Int {
+fun getGitVersionCode(projectDir: java.io.File): Int {
     return try {
-        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
-        process.inputStream.bufferedReader().readText().trim().toInt()
-    } catch (e: Exception) {
-        1
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .directory(projectDir)
+            .start()
+        val countStr = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+        if (exitCode == 0 && countStr.isNotEmpty()) {
+            countStr.toInt()
+        } else {
+            18
+        }
+    } catch (e: java.lang.Exception) {
+        18
     }
 }
 
@@ -31,8 +46,8 @@ android {
         applicationId = "com.example.freeformshell"
         minSdk = 30
         targetSdk = 34
-        versionCode = getGitVersionCode()
-        versionName = getGitVersionName()
+        versionCode = getGitVersionCode(project.rootDir)
+        versionName = getGitVersionName(project.rootDir)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
