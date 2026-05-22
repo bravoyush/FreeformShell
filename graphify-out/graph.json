@@ -61,6 +61,24 @@
       "norm_label": "build.gradle.kts"
     },
     {
+      "label": "getGitVersionName()",
+      "file_type": "code",
+      "source_file": "app/build.gradle.kts",
+      "source_location": "L7",
+      "id": "app_build_gradle_getgitversionname",
+      "community": 34,
+      "norm_label": "getgitversionname()"
+    },
+    {
+      "label": "getGitVersionCode()",
+      "file_type": "code",
+      "source_file": "app/build.gradle.kts",
+      "source_location": "L24",
+      "id": "app_build_gradle_getgitversioncode",
+      "community": 34,
+      "norm_label": "getgitversioncode()"
+    },
+    {
       "label": "CompatibilityManager.kt",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/CompatibilityManager.kt",
@@ -1560,7 +1578,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MinimizedBubble.kt",
       "source_location": "L1",
       "id": "app_src_main_java_com_example_freeformshell_minimizedbubble_kt",
-      "community": 23,
+      "community": 0,
       "norm_label": "minimizedbubble.kt"
     },
     {
@@ -1569,7 +1587,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MinimizedBubble.kt",
       "source_location": "L17",
       "id": "freeformshell_minimizedbubble_minimizedbubble",
-      "community": 23,
+      "community": 0,
       "norm_label": "minimizedbubble"
     },
     {
@@ -1578,7 +1596,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MinimizedBubble.kt",
       "source_location": "L107",
       "id": "freeformshell_minimizedbubble_minimizedbubble_show",
-      "community": 23,
+      "community": 0,
       "norm_label": ".show()"
     },
     {
@@ -1587,7 +1605,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MinimizedBubble.kt",
       "source_location": "L119",
       "id": "freeformshell_minimizedbubble_minimizedbubble_hide",
-      "community": 23,
+      "community": 0,
       "norm_label": ".hide()"
     },
     {
@@ -3373,6 +3391,15 @@
       "norm_label": "\ud83c\udfaf next tasks on the horizon"
     },
     {
+      "label": "\ud83d\udc65 Project Team Roles & Roster",
+      "file_type": "document",
+      "source_file": ".agents/HANDOFF.md",
+      "source_location": "L43",
+      "id": "agents_handoff_project_team_roles_roster",
+      "community": 22,
+      "norm_label": "\ud83d\udc65 project team roles & roster"
+    },
+    {
       "label": "LEDGER.md",
       "file_type": "document",
       "source_file": ".agents/LEDGER.md",
@@ -3718,7 +3745,7 @@
       "label": "2. Token Discipline & Context Optimization",
       "file_type": "document",
       "source_file": ".agents/rules/agents.md",
-      "source_location": "L10",
+      "source_location": "L11",
       "id": "rules_agents_2_token_discipline_context_optimization",
       "community": 20,
       "norm_label": "2. token discipline & context optimization"
@@ -3727,7 +3754,7 @@
       "label": "3. Planning & Checkpointing",
       "file_type": "document",
       "source_file": ".agents/rules/agents.md",
-      "source_location": "L15",
+      "source_location": "L16",
       "id": "rules_agents_3_planning_checkpointing",
       "community": 20,
       "norm_label": "3. planning & checkpointing"
@@ -3736,7 +3763,7 @@
       "label": "4. The Exit Protocol (Mandatory Final Step)",
       "file_type": "document",
       "source_file": ".agents/rules/agents.md",
-      "source_location": "L21",
+      "source_location": "L22",
       "id": "rules_agents_4_the_exit_protocol_mandatory_final_step",
       "community": 20,
       "norm_label": "4. the exit protocol (mandatory final step)"
@@ -3785,6 +3812,78 @@
       "id": "rules_graphify_graphify",
       "community": 30,
       "norm_label": "graphify"
+    },
+    {
+      "label": "identity.md",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L1",
+      "id": "agents_rules_identity_md",
+      "community": 23,
+      "norm_label": "identity.md"
+    },
+    {
+      "label": "\ud83d\udc65 FreeformShell Project Roles & Team Roster",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L1",
+      "id": "rules_identity_freeformshell_project_roles_team_roster",
+      "community": 23,
+      "norm_label": "\ud83d\udc65 freeformshell project roles & team roster"
+    },
+    {
+      "label": "\ud83d\udc51 The Workspace Authority",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L7",
+      "id": "rules_identity_the_workspace_authority",
+      "community": 23,
+      "norm_label": "\ud83d\udc51 the workspace authority"
+    },
+    {
+      "label": "**Ayush (Admin / Owner / Lead Architect)**",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L9",
+      "id": "rules_identity_ayush_admin_owner_lead_architect",
+      "community": 23,
+      "norm_label": "**ayush (admin / owner / lead architect)**"
+    },
+    {
+      "label": "\ud83d\udee0\ufe0f The Team & Contributors",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L16",
+      "id": "rules_identity_the_team_contributors",
+      "community": 23,
+      "norm_label": "\ud83d\udee0\ufe0f the team & contributors"
+    },
+    {
+      "label": "**Antigravity (AI Co-Developer)**",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L18",
+      "id": "rules_identity_antigravity_ai_co_developer",
+      "community": 23,
+      "norm_label": "**antigravity (ai co-developer)**"
+    },
+    {
+      "label": "**Core Maintainers & Approved Contributors**",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L23",
+      "id": "rules_identity_core_maintainers_approved_contributors",
+      "community": 23,
+      "norm_label": "**core maintainers & approved contributors**"
+    },
+    {
+      "label": "\ud83d\udcdc Coding & Attribution Guidelines for AIs",
+      "file_type": "document",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L28",
+      "id": "rules_identity_coding_attribution_guidelines_for_ais",
+      "community": 23,
+      "norm_label": "\ud83d\udcdc coding & attribution guidelines for ais"
     },
     {
       "label": "graphify.md",
@@ -5612,7 +5711,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 5,
       "norm_label": "high-performance shell throttling",
       "id": "core_logic_high_performance_shell_throttling"
     },
@@ -5781,7 +5880,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 5,
       "norm_label": "programmatic active focus routing",
       "id": "architecture_evolution_programmatic_focus_routing"
     },
@@ -5820,7 +5919,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 23,
+      "community": 0,
       "norm_label": "minimized app bubbles",
       "id": "image_minimized_app_bubbles"
     },
@@ -6093,6 +6192,26 @@
     }
   ],
   "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/build.gradle.kts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "app_build_gradle_kts",
+      "target": "app_build_gradle_getgitversionname",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/build.gradle.kts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "app_build_gradle_kts",
+      "target": "app_build_gradle_getgitversioncode",
+      "confidence_score": 1.0
+    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -13128,9 +13247,9 @@
       "source_file": "README.md",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_freeformshell",
-      "target": "freeformshell_readme_target_audience_who_is_freeformshell_for",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_target_audience_who_is_freeformshell_for"
     },
     {
       "relation": "contains",
@@ -13138,9 +13257,9 @@
       "source_file": "README.md",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_freeformshell",
-      "target": "freeformshell_readme_important_pre_requisites_third_party_launchers",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_important_pre_requisites_third_party_launchers"
     },
     {
       "relation": "contains",
@@ -13178,9 +13297,9 @@
       "source_file": "README.md",
       "source_location": "L202",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_freeformshell",
-      "target": "freeformshell_readme_join_the_community",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_join_the_community"
     },
     {
       "relation": "contains",
@@ -13258,9 +13377,9 @@
       "source_file": "README.md",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_target_audience_who_is_freeformshell_for",
-      "target": "freeformshell_readme_who_does_not_need_this",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_who_does_not_need_this"
     },
     {
       "relation": "contains",
@@ -13268,9 +13387,9 @@
       "source_file": "README.md",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_target_audience_who_is_freeformshell_for",
-      "target": "freeformshell_readme_who_is_this_built_for",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_who_is_this_built_for"
     },
     {
       "relation": "contains",
@@ -13368,9 +13487,9 @@
       "source_file": "README.md",
       "source_location": "L119",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_core_features_tour",
-      "target": "freeformshell_readme_4_display_density_dpi_scaling_presets",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_4_display_density_dpi_scaling_presets"
     },
     {
       "relation": "contains",
@@ -13558,9 +13677,9 @@
       "source_file": "README.md",
       "source_location": "L227",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_readme_join_the_community",
-      "target": "freeformshell_readme_license_attributions",
-      "confidence_score": 1.0
+      "target": "freeformshell_readme_license_attributions"
     },
     {
       "relation": "contains",
@@ -13601,6 +13720,16 @@
       "confidence_score": 1.0,
       "source": "agents_handoff_agent_handoff_brief",
       "target": "agents_handoff_next_tasks_on_the_horizon"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/HANDOFF.md",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "agents_handoff_agent_handoff_brief",
+      "target": "agents_handoff_project_team_roles_roster",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13991,6 +14120,76 @@
       "confidence_score": 1.0,
       "source": "agents_rules_graphify_md",
       "target": "rules_graphify_graphify"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "agents_rules_identity_md",
+      "target": "rules_identity_freeformshell_project_roles_team_roster",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "rules_identity_freeformshell_project_roles_team_roster",
+      "target": "rules_identity_the_workspace_authority",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "rules_identity_freeformshell_project_roles_team_roster",
+      "target": "rules_identity_the_team_contributors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "rules_identity_freeformshell_project_roles_team_roster",
+      "target": "rules_identity_coding_attribution_guidelines_for_ais",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "rules_identity_the_workspace_authority",
+      "target": "rules_identity_ayush_admin_owner_lead_architect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "rules_identity_the_team_contributors",
+      "target": "rules_identity_antigravity_ai_co_developer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".agents/rules/identity.md",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "rules_identity_the_team_contributors",
+      "target": "rules_identity_core_maintainers_approved_contributors",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -15992,5 +16191,5 @@
       "source_file": "docs/core_logic.md"
     }
   ],
-  "built_at_commit": "8c7fc4f7e81b4dfdbcd9038cd64977c7ba5c23bc"
+  "built_at_commit": "76186e5c540737ff7ed68d45f554af459e6c95c0"
 }

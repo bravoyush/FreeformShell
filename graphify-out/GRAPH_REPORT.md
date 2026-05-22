@@ -1,16 +1,16 @@
 # Graph Report - FreeformShell  (2026-05-22)
 
 ## Corpus Check
-- 42 files · ~134,394 words
+- 43 files · ~134,848 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 658 nodes · 959 edges · 42 communities (33 shown, 9 thin omitted)
+- 669 nodes · 969 edges · 42 communities (34 shown, 8 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8c7fc4f7`
+- Built from commit: `76186e5c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -68,30 +68,30 @@
 10. `SplitResizeHandle` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `DragResizeOverlay` --rationale_for--> `High-Performance Shell Throttling`  [EXTRACTED]
+  app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/core_logic.md
 - `DragResizeOverlay` --rationale_for--> `Dynamic Screen-to-View Occlusion Clipping`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
 - `DragResizeOverlay` --rationale_for--> `Dynamic Tiling Grid Engine`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
+- `DragResizeOverlay` --rationale_for--> `Programmatic Active Focus Routing`  [EXTRACTED]
+  app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
 - `FreeformOverlayService` --rationale_for--> `Android 14 Hidden API Exemption`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt → docs/architecture_evolution_log.md
-- `ShellExecutor` --rationale_for--> `High-Performance Shell Throttling`  [EXTRACTED]
-  app/src/main/java/com/example/freeformshell/ShellExecutor.kt → docs/core_logic.md
-- `ShellExecutor` --rationale_for--> `Programmatic Active Focus Routing`  [EXTRACTED]
-  app/src/main/java/com/example/freeformshell/ShellExecutor.kt → docs/architecture_evolution_log.md
 
 ## Hyperedges (group relationships)
 - **Window Drag and Resize Interaction Loop** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_freeformoverlayservice_freeformoverlayservice, freeformshell_shellexecutor_shellexecutor [INFERRED 0.95]
 - **Dynamic Tiling and Docking Grid System** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_workspacemanager_workspacemanager, core_logic_smart_snap_corner_restraints, core_logic_touch_aware_edge_snap_thresholds [INFERRED 0.95]
 
-## Communities (42 total, 9 thin omitted)
+## Communities (42 total, 8 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.06
-Nodes (28): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, DisplayShell, ensureForceCloseLoaded(), ensureLoaded(), FreeformOverlayService (+20 more)
+Cohesion: 0.05
+Nodes (30): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, DisplayShell, ensureForceCloseLoaded(), ensureLoaded(), FreeformOverlayService (+22 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.09
-Nodes (13): State-Aware Edge Hold Timer, Interaction Window Hiding, Programmatic Active Focus Routing, Handle Isolation, High-Performance Shell Throttling, Jitter-Free Title Bar Pinning, Smart Snap Corner Restraints & Edge Hold Delays, Snapping Exit & Window Scaling Rules (+5 more)
+Nodes (11): State-Aware Edge Hold Timer, Interaction Window Hiding, Handle Isolation, Jitter-Free Title Bar Pinning, Smart Snap Corner Restraints & Edge Hold Delays, Snapping Exit & Window Scaling Rules, Touch-Aware Edge Snap Thresholds, dismissActiveSnapMenu() (+3 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -102,8 +102,8 @@ Cohesion: 0.05
 Nodes (39): 10. Tiled Layout Swap, 11. Launcher & Dock Avoidance, 12. Drag & Resize Tint Overlay, 13. Title Bar Opacity Control, 14. Pill Shrink Style Picker, 15. Real-time Resize Toggle, 16. Instant Shell Resizing (Disable System Animations), 17. Force Close per App (+31 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.22
-Nodes (5): Persistent Interactive Shell Session, CommandResult, onConnected(), onDisconnected(), ShellExecutor
+Cohesion: 0.20
+Nodes (7): Persistent Interactive Shell Session, Programmatic Active Focus Routing, High-Performance Shell Throttling, CommandResult, onConnected(), onDisconnected(), ShellExecutor
 
 ### Community 6 - "Community 6"
 Cohesion: 0.13
@@ -158,8 +158,12 @@ Cohesion: 0.40
 Nodes (6): 📱 Android Compatibility Guidelines, 📢 Discord Announcement, 📘 Experimental Beta Guide, Programmatic Focus Routing, LSPosed HiddenApiBypass, InputDispatcher Touch Safety
 
 ### Community 22 - "Community 22"
-Cohesion: 0.40
-Nodes (4): 🤝 Agent Handoff Brief, ⚡ Context Snapshot, 🚀 How to Bootstrapping This Session (Token Saving Entry), 🎯 Next Tasks On the Horizon
+Cohesion: 0.33
+Nodes (5): 🤝 Agent Handoff Brief, ⚡ Context Snapshot, 🚀 How to Bootstrapping This Session (Token Saving Entry), 🎯 Next Tasks On the Horizon, 👥 Project Team Roles & Roster
+
+### Community 23 - "Community 23"
+Cohesion: 0.25
+Nodes (7): **Antigravity (AI Co-Developer)**, **Ayush (Admin / Owner / Lead Architect)**, 📜 Coding & Attribution Guidelines for AIs, **Core Maintainers & Approved Contributors**, 👥 FreeformShell Project Roles & Team Roster, 🛠️ The Team & Contributors, 👑 The Workspace Authority
 
 ### Community 24 - "Community 24"
 Cohesion: 0.40
@@ -206,24 +210,24 @@ Cohesion: 0.33
 Nodes (5): Android 12 Jetpack Compose Hover Loop Crash, Metadata, 🔗 Related Components, ⚠️ The Issue, 🛠️ The Workaround / Solution
 
 ## Knowledge Gaps
-- **186 isolated node(s):** `artifactType`, `updatedAt`, `version`, `artifactType`, `updatedAt` (+181 more)
+- **191 isolated node(s):** `artifactType`, `updatedAt`, `version`, `artifactType`, `updatedAt` (+186 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 6`?**
-  _High betweenness centrality (0.098) - this node is a cross-community bridge._
+- **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 5`, `Community 6`?**
+  _High betweenness centrality (0.094) - this node is a cross-community bridge._
 - **Why does `ThemeManager` connect `Community 1` to `Community 0`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+  _High betweenness centrality (0.085) - this node is a cross-community bridge._
 - **Why does `FreeformOverlayService` connect `Community 0` to `Community 6`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
 - **What connects `artifactType`, `updatedAt`, `version` to the rest of the system?**
-  _197 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _202 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.059319482083709726 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05399625768511093 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.0273972602739726 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.08646616541353383 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09158249158249158 - nodes in this community are weakly interconnected._
