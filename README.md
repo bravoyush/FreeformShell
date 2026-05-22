@@ -9,6 +9,54 @@
 
 ---
 
+## 📖 Quick Start & User Guide
+
+Setting up FreeformShell is easy. Follow this step-by-step guide to get up and running:
+
+### 1️⃣ Step 1: Install the APK
+1. Navigate to [GitHub Releases](https://github.com/bravoyush/FreeformShell/releases).
+2. Download the latest compiled asset:
+   *   `FreeformShell-debug.apk` (Recommended for developers/testers).
+   *   `Freeform-Beta-[Version]-debug.apk` (Standard beta branch build).
+3. Install the APK on your Android device (ensure "Allow Installation from Unknown Sources" is enabled in settings).
+
+![Step 1: APK Installation](docs/images/step1_install.png)
+
+### 2️⃣ Step 2: Establish the Binder Connection
+FreeformShell uses high-performance system Binder connections to manage windows safely.
+*   **Option A: Using Shizuku (Recommended — On-Device)**:
+    1. Install [Shizuku from Google Play](https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api).
+    2. Open Shizuku and follow the on-screen instructions to start it via **Wireless Debugging** (no computer required!).
+    3. Open **Freeform Beta**, click on **Shizuku Permission** under the status dashboard, and grant permission in the popup.
+*   **Option B: Using ADB Shell (Computer Fallback)**:
+    If Shizuku is not running, connect your phone to a computer with USB Debugging enabled, and start Shizuku's binder service manually:
+    ```bash
+    adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh
+    ```
+
+![Step 2: Shizuku & Binder Setup](docs/images/step2_shizuku.png)
+
+### 3️⃣ Step 3: Enable the Accessibility Service
+To display desktop window frames and drag handles on top of normal Android apps:
+1. Open the **Freeform Beta** App.
+2. Click the **Accessibility Service** chip under status dashboard.
+3. System settings will open. Locate **Freeform Beta / FreeformShell**, toggle **On**, and accept overlay warnings.
+
+![Step 3: Accessibility Permission](docs/images/step3_accessibility.png)
+
+### 4️⃣ Step 4: Master the Window Controls & Gestures
+Once set up, launching apps via the widgets or dashboard triggers the freeform shell:
+*   **Drag & Move**: Hold the colored title bar at the top of a floating app to move it anywhere.
+*   **Resize**: Grab the corners or bottom/side borders of a window to resize it smoothly.
+*   **Minimize Bubble**: Click the `_` icon on the window frame. The window shrinks into a floating bubble on the screen edge. Tap the bubble to expand it back instantly!
+*   **Maximize**: Click the `[]` icon to expand the window to fullscreen.
+*   **Split-Snapping**: Drag a window toward the left or right edge of the display. A visual snapping guideline appears—release to snap the app to exactly half-screen, creating a split productivity workspace.
+*   **Close**: Tap the `X` button on the title frame to close the task.
+
+![Step 4: Window Controls & Floating Overlays](docs/images/step4_window_controls.png)
+
+---
+
 > [!NOTE]
 > ### 💡 The Philosophy: Why "FreeformShell"?
 > *   **`Freeform`**: Refers to Android’s native **Freeform Windowing Mode** (originally introduced in Android 7.0). This hidden system mode allows multiple applications to run simultaneously inside floating, resizable, overlapping windows, mimicking a desktop multitasking experience rather than standard mobile split-screen or single-app layouts.
@@ -47,46 +95,6 @@ Explore the main panels and settings screens of FreeformShell designed to give y
 
 ### 🧩 6. Interactive Home Screen Widgets
 *   **One-Click Launches**: Pin specialized widgets to your Android launcher to launch pre-selected workspaces or specific apps directly into a floating freeform window.
-
----
-
-## 📖 Quick Start & User Guide
-
-Setting up FreeformShell is easy. Follow this step-by-step guide to get up and running:
-
-### 1️⃣ Step 1: Install the APK
-1. Navigate to [GitHub Releases](https://github.com/bravoyush/FreeformShell/releases).
-2. Download the latest compiled asset:
-   *   `FreeformShell-debug.apk` (Recommended for developers/testers).
-   *   `Freeform-Beta-[Version]-debug.apk` (Standard beta branch build).
-3. Install the APK on your Android device (ensure "Allow Installation from Unknown Sources" is enabled in settings).
-
-### 2️⃣ Step 2: Establish the Binder Connection
-FreeformShell uses high-performance system Binder connections to manage windows safely.
-*   **Option A: Using Shizuku (Recommended — On-Device)**:
-    1. Install [Shizuku from Google Play](https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api).
-    2. Open Shizuku and follow the on-screen instructions to start it via **Wireless Debugging** (no computer required!).
-    3. Open **Freeform Beta**, click on **Shizuku Permission** under the status dashboard, and grant permission in the popup.
-*   **Option B: Using ADB Shell (Computer Fallback)**:
-    If Shizuku is not running, connect your phone to a computer with USB Debugging enabled, and start Shizuku's binder service manually:
-    ```bash
-    adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh
-    ```
-
-### 3️⃣ Step 3: Enable the Accessibility Service
-To display desktop window frames and drag handles on top of normal Android apps:
-1. Open the **Freeform Beta** App.
-2. Click the **Accessibility Service** chip under status dashboard.
-3. System settings will open. Locate **Freeform Beta / FreeformShell**, toggle **On**, and accept overlay warnings.
-
-### 4️⃣ Step 4: Master the Window Controls & Gestures
-Once set up, launching apps via the widgets or dashboard triggers the freeform shell:
-*   **Drag & Move**: Hold the colored title bar at the top of a floating app to move it anywhere.
-*   **Resize**: Grab the corners or bottom/side borders of a window to resize it smoothly.
-*   **Minimize Bubble**: Click the `_` icon on the window frame. The window shrinks into a floating bubble on the screen edge. Tap the bubble to expand it back instantly!
-*   **Maximize**: Click the `[]` icon to expand the window to fullscreen.
-*   **Split-Snapping**: Drag a window toward the left or right edge of the display. A visual snapping guideline appears—release to snap the app to exactly half-screen, creating a split productivity workspace.
-*   **Close**: Tap the `X` button on the title frame to close the task.
 
 ---
 
