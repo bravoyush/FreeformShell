@@ -3049,46 +3049,163 @@
       "norm_label": "freeformshell \ud83d\ude80"
     },
     {
-      "label": "\u2728 Key Features",
+      "label": "\ud83d\udcd6 Quick Start & User Guide",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L12",
-      "id": "freeformshell_readme_key_features",
+      "id": "freeformshell_readme_quick_start_user_guide",
       "community": 37,
-      "norm_label": "\u2728 key features"
+      "norm_label": "\ud83d\udcd6 quick start & user guide"
     },
     {
-      "label": "\ud83d\udee0\ufe0f Tech Stack & Architecture",
+      "label": "1\ufe0f\u20e3 Step 1: Install the APK",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L22",
-      "id": "freeformshell_readme_tech_stack_architecture",
+      "source_location": "L16",
+      "id": "freeformshell_readme_1_step_1_install_the_apk",
       "community": 37,
-      "norm_label": "\ud83d\udee0\ufe0f tech stack & architecture"
+      "norm_label": "1\ufe0f\u20e3 step 1: install the apk"
+    },
+    {
+      "label": "2\ufe0f\u20e3 Step 2: Establish the Binder Connection",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L25",
+      "id": "freeformshell_readme_2_step_2_establish_the_binder_connection",
+      "community": 37,
+      "norm_label": "2\ufe0f\u20e3 step 2: establish the binder connection"
+    },
+    {
+      "label": "code:bash (adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L33",
+      "id": "freeformshell_readme_codeblock_1",
+      "community": 37,
+      "norm_label": "code:bash (adb shell sh /sdcard/android/data/moe.shizuku.privileged.api)"
+    },
+    {
+      "label": "3\ufe0f\u20e3 Step 3: Enable the Accessibility Service",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L39",
+      "id": "freeformshell_readme_3_step_3_enable_the_accessibility_service",
+      "community": 37,
+      "norm_label": "3\ufe0f\u20e3 step 3: enable the accessibility service"
+    },
+    {
+      "label": "4\ufe0f\u20e3 Step 4: Master the Window Controls & Gestures",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L47",
+      "id": "freeformshell_readme_4_step_4_master_the_window_controls_gestures",
+      "community": 37,
+      "norm_label": "4\ufe0f\u20e3 step 4: master the window controls & gestures"
+    },
+    {
+      "label": "\u2728 Core Features Tour",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L68",
+      "id": "freeformshell_readme_core_features_tour",
+      "community": 37,
+      "norm_label": "\u2728 core features tour"
+    },
+    {
+      "label": "\ud83d\udcca 1. Dashboard & Diagnostics",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L72",
+      "id": "freeformshell_readme_1_dashboard_diagnostics",
+      "community": 37,
+      "norm_label": "\ud83d\udcca 1. dashboard & diagnostics"
+    },
+    {
+      "label": "\ud83c\udfa8 2. Window Customization & Style",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L77",
+      "id": "freeformshell_readme_2_window_customization_style",
+      "community": 37,
+      "norm_label": "\ud83c\udfa8 2. window customization & style"
+    },
+    {
+      "label": "\ud83d\udcd0 3. Display Safe Area Offsetter",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L83",
+      "id": "freeformshell_readme_3_display_safe_area_offsetter",
+      "community": 37,
+      "norm_label": "\ud83d\udcd0 3. display safe area offsetter"
+    },
+    {
+      "label": "\u2699\ufe0f 4. Premium Display Density (DPI) Presets",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L87",
+      "id": "freeformshell_readme_4_premium_display_density_dpi_presets",
+      "community": 37,
+      "norm_label": "\u2699\ufe0f 4. premium display density (dpi) presets"
+    },
+    {
+      "label": "\ud83d\udeab 5. Application Blacklist Manager",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L93",
+      "id": "freeformshell_readme_5_application_blacklist_manager",
+      "community": 37,
+      "norm_label": "\ud83d\udeab 5. application blacklist manager"
+    },
+    {
+      "label": "\ud83e\udde9 6. Interactive Home Screen Widgets",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L96",
+      "id": "freeformshell_readme_6_interactive_home_screen_widgets",
+      "community": 37,
+      "norm_label": "\ud83e\udde9 6. interactive home screen widgets"
+    },
+    {
+      "label": "\ud83d\udee0\ufe0f Developer & Contributor Guide",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L101",
+      "id": "freeformshell_readme_developer_contributor_guide",
+      "community": 37,
+      "norm_label": "\ud83d\udee0\ufe0f developer & contributor guide"
     },
     {
       "label": "\ud83d\udcc2 Project Structure",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L33",
+      "source_location": "L105",
       "id": "freeformshell_readme_project_structure",
       "community": 37,
       "norm_label": "\ud83d\udcc2 project structure"
     },
     {
-      "label": "code:block1 (\u251c\u2500\u2500 .agents/                 # Developer Guidelines & AI Age)",
+      "label": "code:block2 (\u251c\u2500\u2500 .agents/                 # Developer Guidelines & AI Age)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L35",
-      "id": "freeformshell_readme_codeblock_1",
+      "source_location": "L107",
+      "id": "freeformshell_readme_codeblock_2",
       "community": 37,
-      "norm_label": "code:block1 (\u251c\u2500\u2500 .agents/                 # developer guidelines & ai age)"
+      "norm_label": "code:block2 (\u251c\u2500\u2500 .agents/                 # developer guidelines & ai age)"
+    },
+    {
+      "label": "\ud83e\udde9 Tech Stack & Architecture",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L123",
+      "id": "freeformshell_readme_tech_stack_architecture",
+      "community": 37,
+      "norm_label": "\ud83e\udde9 tech stack & architecture"
     },
     {
       "label": "\ud83e\udd16 AI-Human Co-Development & \"Vibe-Coding\"",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L53",
+      "source_location": "L132",
       "id": "freeformshell_readme_ai_human_co_development_vibe_coding",
       "community": 37,
       "norm_label": "\ud83e\udd16 ai-human co-development & \"vibe-coding\""
@@ -3097,7 +3214,7 @@
       "label": "\ud83d\ude80 Building & Running Locally",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L62",
+      "source_location": "L141",
       "id": "freeformshell_readme_building_running_locally",
       "community": 37,
       "norm_label": "\ud83d\ude80 building & running locally"
@@ -3106,7 +3223,7 @@
       "label": "1. Compile the App",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L66",
+      "source_location": "L145",
       "id": "freeformshell_readme_1_compile_the_app",
       "community": 37,
       "norm_label": "1. compile the app"
@@ -3115,8 +3232,8 @@
       "label": "code:bash (./gradlew compileDebugKotlin)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L68",
-      "id": "freeformshell_readme_codeblock_2",
+      "source_location": "L147",
+      "id": "freeformshell_readme_codeblock_3",
       "community": 37,
       "norm_label": "code:bash (./gradlew compiledebugkotlin)"
     },
@@ -3124,7 +3241,7 @@
       "label": "2. Install to Connected Device",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L72",
+      "source_location": "L151",
       "id": "freeformshell_readme_2_install_to_connected_device",
       "community": 37,
       "norm_label": "2. install to connected device"
@@ -3133,8 +3250,8 @@
       "label": "code:bash (./gradlew installDebug)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L74",
-      "id": "freeformshell_readme_codeblock_3",
+      "source_location": "L153",
+      "id": "freeformshell_readme_codeblock_4",
       "community": 37,
       "norm_label": "code:bash (./gradlew installdebug)"
     },
@@ -3142,7 +3259,7 @@
       "label": "\ud83d\udce6 Automated Release Pipeline (CI/CD)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L80",
+      "source_location": "L157",
       "id": "freeformshell_readme_automated_release_pipeline_ci_cd",
       "community": 37,
       "norm_label": "\ud83d\udce6 automated release pipeline (ci/cd)"
@@ -3151,8 +3268,8 @@
       "label": "code:bash (git tag v1.4.0)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L84",
-      "id": "freeformshell_readme_codeblock_4",
+      "source_location": "L161",
+      "id": "freeformshell_readme_codeblock_5",
       "community": 37,
       "norm_label": "code:bash (git tag v1.4.0)"
     },
@@ -3160,7 +3277,7 @@
       "label": "\ud83d\udee1\ufe0f License & Attributions",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L93",
+      "source_location": "L168",
       "id": "freeformshell_readme_license_attributions",
       "community": 37,
       "norm_label": "\ud83d\udee1\ufe0f license & attributions"
@@ -5378,6 +5495,15 @@
       "id": "old_plans_implementation_plan_v1_3_120dpi_presets_manual_verification",
       "community": 36,
       "norm_label": "manual verification"
+    },
+    {
+      "label": "\u2728 Key Features",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L12",
+      "community": 37,
+      "norm_label": "\u2728 key features",
+      "id": "freeformshell_readme_key_features"
     },
     {
       "label": "Android Version Compatibility (Android 11 to 15+)",
@@ -12946,6 +13072,36 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
+      "source_location": "L53",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_quick_start_user_guide"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_core_features_tour"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L93",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_freeformshell",
+      "target": "freeformshell_readme_developer_contributor_guide"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
       "source_location": "L12",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -13016,11 +13172,201 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
+      "source_location": "L57",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_quick_start_user_guide",
+      "target": "freeformshell_readme_1_step_1_install_the_apk"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L64",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_quick_start_user_guide",
+      "target": "freeformshell_readme_2_step_2_establish_the_binder_connection"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L76",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_quick_start_user_guide",
+      "target": "freeformshell_readme_3_step_3_enable_the_accessibility_service"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L82",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_quick_start_user_guide",
+      "target": "freeformshell_readme_4_step_4_master_the_window_controls_gestures"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L72",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_2_step_2_establish_the_binder_connection",
+      "target": "freeformshell_readme_codeblock_1"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
       "source_location": "L35",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "freeformshell_readme_project_structure",
       "target": "freeformshell_readme_codeblock_1"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_1_dashboard_diagnostics"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L29",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_2_window_customization_style"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_3_display_safe_area_offsetter"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_4_premium_display_density_dpi_presets"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_5_application_blacklist_manager"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_core_features_tour",
+      "target": "freeformshell_readme_6_interactive_home_screen_widgets"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_project_structure"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L115",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_tech_stack_architecture"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L124",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_ai_human_co_development_vibe_coding"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L133",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_building_running_locally"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L149",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_automated_release_pipeline_ci_cd"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L160",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_developer_contributor_guide",
+      "target": "freeformshell_readme_license_attributions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L99",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_project_structure",
+      "target": "freeformshell_readme_codeblock_2"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L68",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_1_compile_the_app",
+      "target": "freeformshell_readme_codeblock_2"
     },
     {
       "relation": "contains",
@@ -13046,11 +13392,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L68",
+      "source_location": "L139",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "freeformshell_readme_1_compile_the_app",
-      "target": "freeformshell_readme_codeblock_2"
+      "target": "freeformshell_readme_codeblock_3"
     },
     {
       "relation": "contains",
@@ -13066,11 +13412,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
+      "source_location": "L145",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_2_install_to_connected_device",
+      "target": "freeformshell_readme_codeblock_4"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
       "source_location": "L84",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "freeformshell_readme_automated_release_pipeline_ci_cd",
       "target": "freeformshell_readme_codeblock_4"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L153",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_readme_automated_release_pipeline_ci_cd",
+      "target": "freeformshell_readme_codeblock_5"
     },
     {
       "relation": "contains",
@@ -13188,9 +13554,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_ai_knowledge_readme_md",
-      "target": "ai_knowledge_readme_ai_knowledge_exchange_hub",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_ai_knowledge_exchange_hub"
     },
     {
       "relation": "contains",
@@ -13198,9 +13564,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_readme_ai_knowledge_exchange_hub",
-      "target": "ai_knowledge_readme_how_to_use_this_hub",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_how_to_use_this_hub"
     },
     {
       "relation": "contains",
@@ -13208,9 +13574,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_readme_ai_knowledge_exchange_hub",
-      "target": "ai_knowledge_readme_directory_layout",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_directory_layout"
     },
     {
       "relation": "contains",
@@ -13218,9 +13584,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_readme_how_to_use_this_hub",
-      "target": "ai_knowledge_readme_1_before_you_code_querying",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_1_before_you_code_querying"
     },
     {
       "relation": "contains",
@@ -13228,9 +13594,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_readme_how_to_use_this_hub",
-      "target": "ai_knowledge_readme_2_when_you_discover_something_new_writing",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_2_when_you_discover_something_new_writing"
     },
     {
       "relation": "contains",
@@ -13238,9 +13604,9 @@
       "source_file": ".agents/ai_knowledge/README.md",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_readme_directory_layout",
-      "target": "ai_knowledge_readme_codeblock_1",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_readme_codeblock_1"
     },
     {
       "relation": "contains",
@@ -13248,9 +13614,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_ai_knowledge_template_md",
-      "target": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception"
     },
     {
       "relation": "contains",
@@ -13258,9 +13624,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception",
-      "target": "ai_knowledge_template_metadata",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_metadata"
     },
     {
       "relation": "contains",
@@ -13268,9 +13634,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception",
-      "target": "ai_knowledge_template_the_issue",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_the_issue"
     },
     {
       "relation": "contains",
@@ -13278,9 +13644,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception",
-      "target": "ai_knowledge_template_the_workaround_solution",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_the_workaround_solution"
     },
     {
       "relation": "contains",
@@ -13288,9 +13654,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_template_discovery_title_e_g_samsung_dex_input_focus_interception",
-      "target": "ai_knowledge_template_related_components",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_related_components"
     },
     {
       "relation": "contains",
@@ -13298,9 +13664,9 @@
       "source_file": ".agents/ai_knowledge/template.md",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ai_knowledge_template_the_workaround_solution",
-      "target": "ai_knowledge_template_codeblock_1",
-      "confidence_score": 1.0
+      "target": "ai_knowledge_template_codeblock_1"
     },
     {
       "relation": "contains",
@@ -13308,9 +13674,9 @@
       "source_file": ".agents/ai_knowledge/generic/android_12_hover_loop.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_ai_knowledge_generic_android_12_hover_loop_md",
-      "target": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash",
-      "confidence_score": 1.0
+      "target": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash"
     },
     {
       "relation": "contains",
@@ -13318,9 +13684,9 @@
       "source_file": ".agents/ai_knowledge/generic/android_12_hover_loop.md",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash",
-      "target": "generic_android_12_hover_loop_metadata",
-      "confidence_score": 1.0
+      "target": "generic_android_12_hover_loop_metadata"
     },
     {
       "relation": "contains",
@@ -13328,9 +13694,9 @@
       "source_file": ".agents/ai_knowledge/generic/android_12_hover_loop.md",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash",
-      "target": "generic_android_12_hover_loop_the_issue",
-      "confidence_score": 1.0
+      "target": "generic_android_12_hover_loop_the_issue"
     },
     {
       "relation": "contains",
@@ -13338,9 +13704,9 @@
       "source_file": ".agents/ai_knowledge/generic/android_12_hover_loop.md",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash",
-      "target": "generic_android_12_hover_loop_the_workaround_solution",
-      "confidence_score": 1.0
+      "target": "generic_android_12_hover_loop_the_workaround_solution"
     },
     {
       "relation": "contains",
@@ -13348,9 +13714,9 @@
       "source_file": ".agents/ai_knowledge/generic/android_12_hover_loop.md",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "generic_android_12_hover_loop_android_12_jetpack_compose_hover_loop_crash",
-      "target": "generic_android_12_hover_loop_related_components",
-      "confidence_score": 1.0
+      "target": "generic_android_12_hover_loop_related_components"
     },
     {
       "relation": "contains",
@@ -13358,9 +13724,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_ai_knowledge_oems_samsung_dex_focus_handling_md",
-      "target": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions"
     },
     {
       "relation": "contains",
@@ -13368,9 +13734,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions",
-      "target": "samsung_dex_focus_handling_metadata",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_metadata"
     },
     {
       "relation": "contains",
@@ -13378,9 +13744,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions",
-      "target": "samsung_dex_focus_handling_the_issue",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_the_issue"
     },
     {
       "relation": "contains",
@@ -13388,9 +13754,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions",
-      "target": "samsung_dex_focus_handling_the_workaround_solution",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_the_workaround_solution"
     },
     {
       "relation": "contains",
@@ -13398,9 +13764,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "samsung_dex_focus_handling_samsung_dex_focus_routing_knox_overlay_restrictions",
-      "target": "samsung_dex_focus_handling_related_components",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_related_components"
     },
     {
       "relation": "contains",
@@ -13408,9 +13774,9 @@
       "source_file": ".agents/ai_knowledge/oems/samsung/dex_focus_handling.md",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "samsung_dex_focus_handling_the_workaround_solution",
-      "target": "samsung_dex_focus_handling_codeblock_1",
-      "confidence_score": 1.0
+      "target": "samsung_dex_focus_handling_codeblock_1"
     },
     {
       "relation": "contains",
@@ -15502,5 +15868,5 @@
       "source_file": "docs/core_logic.md"
     }
   ],
-  "built_at_commit": "99f3c1ed9d92016e364f9c36666dbe3688e92414"
+  "built_at_commit": "456af6cc63b4c20e8042581e3a43e641b87c8400"
 }

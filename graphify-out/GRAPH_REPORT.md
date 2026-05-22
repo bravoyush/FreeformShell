@@ -1,16 +1,16 @@
 # Graph Report - FreeformShell  (2026-05-22)
 
 ## Corpus Check
-- 42 files · ~132,989 words
+- 42 files · ~133,841 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 638 nodes · 928 edges · 42 communities (33 shown, 9 thin omitted)
+- 652 nodes · 952 edges · 42 communities (33 shown, 9 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `99f3c1ed`
+- Built from commit: `456af6cc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -186,8 +186,8 @@ Cohesion: 0.12
 Nodes (15): Automated Tests, code:mermaid (sequenceDiagram), code:kotlin (val minDimension = minOf(display.width, display.height)), code:kotlin (if (pendingDpiReversions.isNotEmpty()) {), 🟢 `FreeformOverlayService.kt`, Implementation Plan — Display Density (DPI) Overhaul & Safety Guard System (Updated to 120 DPI presets), Key Features, 🟢 `MainActivity.kt` (+7 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.13
-Nodes (14): 1. Compile the App, 2. Install to Connected Device, 🤖 AI-Human Co-Development & "Vibe-Coding", 📦 Automated Release Pipeline (CI/CD), 🚀 Building & Running Locally, code:block1 (├── .agents/                 # Developer Guidelines & AI Age), code:bash (./gradlew compileDebugKotlin), code:bash (./gradlew installDebug) (+6 more)
+Cohesion: 0.09
+Nodes (28): 1. Compile the App, 📊 1. Dashboard & Diagnostics, 1️⃣ Step 1: Install the APK, 2. Install to Connected Device, 2️⃣ Step 2: Establish the Binder Connection, 🎨 2. Window Customization & Style, 📐 3. Display Safe Area Offsetter, 3️⃣ Step 3: Enable the Accessibility Service (+20 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.14
@@ -206,7 +206,7 @@ Cohesion: 0.33
 Nodes (5): Android 12 Jetpack Compose Hover Loop Crash, Metadata, 🔗 Related Components, ⚠️ The Issue, 🛠️ The Workaround / Solution
 
 ## Knowledge Gaps
-- **179 isolated node(s):** `artifactType`, `updatedAt`, `version`, `artifactType`, `updatedAt` (+174 more)
+- **182 isolated node(s):** `artifactType`, `updatedAt`, `version`, `artifactType`, `updatedAt` (+177 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -214,13 +214,13 @@ Nodes (5): Android 12 Jetpack Compose Hover Loop Crash, Metadata, 🔗 Related C
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 5`, `Community 6`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
+  _High betweenness centrality (0.099) - this node is a cross-community bridge._
 - **Why does `ThemeManager` connect `Community 1` to `Community 17`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+  _High betweenness centrality (0.090) - this node is a cross-community bridge._
 - **Why does `FreeformOverlayService` connect `Community 0` to `Community 6`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
 - **What connects `artifactType`, `updatedAt`, `version` to the rest of the system?**
-  _190 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _193 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.06049382716049383 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
