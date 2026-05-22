@@ -1,6 +1,7 @@
 # FreeformShell 🚀
 
 [![Build and Release FreeformShell APK](https://github.com/Ayush/FreeformShell/actions/workflows/release.yml/badge.svg)](https://github.com/Ayush/FreeformShell/actions/workflows/release.yml)
+[![Discord Chat](https://img.shields.io/discord/1505754254114295828?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/tTgjCK3XmW)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](file:///g:/Ai/FreeformShell/LICENSE)
 [![Android Compatibility](https://img.shields.io/badge/Android-11%20to%2015%2B-green.svg)](#compatibility-guidelines)
 [![AI Co-Developed](https://img.shields.io/badge/AI--Co--Developed-Antigravity-orange.svg)](#ai-human-co-development-vibe-coding)
