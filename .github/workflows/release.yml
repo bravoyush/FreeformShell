@@ -41,20 +41,14 @@ jobs:
       - name: Run Code Compilation Check
         run: ./gradlew compileDebugKotlin
 
-      - name: Build Debug & Unsigned Release APKs
-        run: ./gradlew assembleDebug assembleRelease
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
       - name: Prepare APK Artifacts
         run: |
           mkdir -p release-artifacts
           VERSION="${{ github.ref_name }}"
           cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/Freeform-Beta-${VERSION}-debug.apk
-          # If the release APK is unsigned, it will be placed in app/build/outputs/apk/release/
-          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk release-artifacts/Freeform-Beta-${VERSION}-release-unsigned.apk
-          elif [ -f app/build/outputs/apk/release/app-release.apk ]; then
-            cp app/build/outputs/apk/release/app-release.apk release-artifacts/Freeform-Beta-${VERSION}-release.apk
-          fi
 
       - name: Generate Changelog
         id: github_changelog
