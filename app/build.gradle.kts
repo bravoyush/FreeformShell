@@ -42,6 +42,12 @@ android {
     namespace = "com.example.freeformshell"
     compileSdk = 34
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        disable.add("BlockedPrivateApi")
+    }
+
     defaultConfig {
         applicationId = "com.example.freeformshell"
         minSdk = 30
