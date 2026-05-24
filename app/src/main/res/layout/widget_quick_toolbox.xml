@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_quick_toolbox_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Title Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp"
+        android:orientation="horizontal">
+        
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="6dp"
+            android:src="@android:drawable/ic_menu_compass" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🍱 QUICK TOOLBOX"
+            android:textColor="#E0E0E0"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+    </LinearLayout>
+
+    <!-- Bento Grid Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Bento Row 1: Terminate All (Crimson Full-width Card) -->
+        <LinearLayout
+            android:id="@+id/widget_bento_btn_close_all"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.0"
+            android:background="@drawable/widget_bento_red"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔴 FORCE CLOSE COMPANION APP"
+                android:textColor="#FF8E94"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05" />
+        </LinearLayout>
+
+        <!-- Bento Row 2: Active Tracker (Amber) + Restart (Indigo) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.4"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <!-- Active App Tracker Card -->
+            <LinearLayout
+                android:id="@+id/widget_bento_active_app_root"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.3"
+                android:background="@drawable/widget_bento_orange"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:layout_marginEnd="6dp">
+
+                <ImageView
+                    android:id="@+id/widget_bento_active_app_icon"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/sym_def_app_icon" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="6dp">
+
+                    <TextView
+                        android:id="@+id/widget_bento_active_app_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="None"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:ellipsize="end"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/widget_bento_active_app_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Task ID: N/A"
+                        android:textColor="#E0E0E0"
+                        android:textSize="8sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Restart Shell Overlay Card -->
+            <LinearLayout
+                android:id="@+id/widget_bento_btn_restart_shell"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.0"
+                android:background="@drawable/widget_bento_blue"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="8dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔵 RESTART"
+                    android:textColor="#8EBDFF"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Overlay Overlays"
+                    android:textColor="#B0CFFF"
+                    android:textSize="7sp"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Bento Row 3: Connected Screen Overlays (Green) + Open Companion Settings (Dark) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.2"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <!-- Toggle External Display Card -->
+            <LinearLayout
+                android:id="@+id/widget_bento_btn_toggle_displays"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.3"
+                android:background="@drawable/widget_bento_green"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:layout_marginEnd="6dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/widget_bento_displays_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_monitor_monochrome"
+                    android:tint="#8EFFB1" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="6dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🟢 SHELL OVERLAYS"
+                        android:textColor="#8EFFB1"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:ellipsize="end"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/widget_bento_displays_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Toggle Ext Display Shell"
+                        android:textColor="#C2FFD4"
+                        android:textSize="7sp"
+                        android:ellipsize="end"
+                        android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Open Console Settings Card -->
+            <LinearLayout
+                android:id="@+id/widget_bento_btn_open_console"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.0"
+                android:background="@drawable/widget_bento_dark"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="8dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="↗️ CONSOLE"
+                    android:textColor="#E0E0E0"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Open Companion"
+                    android:textColor="#8E8E93"
+                    android:textSize="7sp"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

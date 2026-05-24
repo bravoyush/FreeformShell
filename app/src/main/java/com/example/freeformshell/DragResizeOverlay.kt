@@ -146,8 +146,52 @@ class DragResizeOverlay(
     private var bottomLeftHandle: View? = null
     private var bottomRightHandle: View? = null
     private val previewDrawable = android.graphics.drawable.GradientDrawable()
+
+    private var lastDispatchedL = -1
+    private var lastDispatchedT = -1
+    private var lastDispatchedW = -1
+    private var lastDispatchedH = -1
+
+    private var frameScheduled = false
+    private var vsyncFrameCounter = 0
+    private var isBinderTransactionPending = false
+    private var needsPendingDispatch = false
+    
+    private val frameCallback = object : android.view.Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            frameScheduled = false
+            updateLayouts(false)
+            if (isInteracting) {
+                applyBounds(force = false) // Executes our RESIZE_MODE_USER update
+            }
+            updateColors()
+        }
+    }
+    
+    private fun scheduleFrame(forceBounds: Boolean) {
+        if (frameScheduled) return
+        frameScheduled = true
+        android.view.Choreographer.getInstance().postFrameCallback(frameCallback)
+    }
     
     internal var lastInteractionTime = 0L
+    
+    // WMS Synchronization State
+    private var isWaitingForSystemSync = false
+    private var pendingTargetL = 0
+    private var pendingTargetT = 0
+    private var pendingTargetW = 0
+    private var pendingTargetH = 0
+    
+    private fun shouldFadeBorder(): Boolean {
+        val fadeEnabled = CompatibilityManager.isFixEnabled(displayContext, CompatibilityManager.COMPAT_BORDER_FADE_ON_RESIZE)
+        val isolatedEnabled = CompatibilityManager.isFixEnabled(displayContext, CompatibilityManager.COMPAT_ISOLATED_TITLEBAR_LINKING)
+        val preciseEnabled = CompatibilityManager.isFixEnabled(displayContext, CompatibilityManager.COMPAT_PRECISE_TOUCH_REGION)
+        if (!isolatedEnabled && !preciseEnabled) {
+            return false
+        }
+        return fadeEnabled && !isDocked && (isResizing || isWaitingForSystemSync)
+    }
     
     private var isPillShrunk = false
     private val shrinkHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -471,6 +515,11 @@ class DragResizeOverlay(
             val contentColor = if (isDark) Color.WHITE else Color.BLACK
             val buttonBg = if (isDark) Color.argb(60, 255, 255, 255) else Color.argb(60, 0, 0, 0)
 
+            val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+            val strokeW = if (isDocked) (2 * density).toInt() else (ThemeManager.getBorderWidth(displayContext) * density).toInt()
+            val paddingHorizontal = (12 * density).toInt() + (if (isPrecise && !shouldShowPill) strokeW else 0)
+            root.setPadding(paddingHorizontal, 0, paddingHorizontal, 0)
+
             val bg = GradientDrawable().apply {
                 if (shouldShowPill) {
                     val style = ThemeManager.getPillShrinkStyle(displayContext)
@@ -483,9 +532,24 @@ class DragResizeOverlay(
                     setColor(finalBgColor)
                     val r = ThemeManager.getRoundness(displayContext) * density
                     cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                    
+                    if (isPrecise) {
+                        val bColor = if (isFocused) baseColor else {
+                            if (isDarkMode) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+                        }
+                        val bAlpha = if (isFocused) 255 else 100
+                        val strokeColor = Color.argb(bAlpha, Color.red(bColor), Color.green(bColor), Color.blue(bColor))
+                        setStroke(strokeW, strokeColor)
+                    }
                 }
             }
-            root.background = bg
+            if (isPrecise && !shouldShowPill) {
+                val layerDrawable = android.graphics.drawable.LayerDrawable(arrayOf(bg))
+                layerDrawable.setLayerInset(0, 0, 0, 0, -strokeW)
+                root.background = layerDrawable
+            } else {
+                root.background = bg
+            }
             
             // Update Title Text and Icons
             for (i in 0 until (root as LinearLayout).childCount) {
@@ -514,6 +578,13 @@ class DragResizeOverlay(
                 0f
             }
         }
+
+        val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+        if (isPrecise) {
+            leftStrip?.invalidate()
+            rightStrip?.invalidate()
+            bottomStrip?.invalidate()
+        }
     }
 
     private fun endInteraction() {
@@ -525,6 +596,15 @@ class DragResizeOverlay(
         
         FreeformOverlayService.getInstance()?.triggerFastPollingSequence()
         
+        val isHybridPacingActive = CompatibilityManager.isHybridFramePacingEnabled(displayContext)
+        if (isHybridPacingActive) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                ShellExecutor.moveTaskToFront(taskId)
+                FreeformOverlayService.getInstance()?.elevateOverlayToTop(taskId)
+                updateLayouts()
+            }, 45)
+        }
+        
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (!isInteracting) {
                 updateLayouts()
@@ -533,12 +613,40 @@ class DragResizeOverlay(
     }
 
     fun updateFromSystem(l: Int, t: Int, w: Int, h: Int, forcedTitleTop: Int? = null) {
+        if (isInteracting || isActivelyDraggingOrResizing) {
+            return
+        }
         if (!isInteracting) {
-            val recentlyInteracted = (System.currentTimeMillis() - lastInteractionTime) < 400
-            if (recentlyInteracted) {
-                // Ignore stale bounds updates from system dumpsys right after user interaction
-                return
+            val isStrictSync = CompatibilityManager.isStrictWmsSyncEnabled(displayContext)
+            
+            if (isWaitingForSystemSync) {
+                val threshold = if (isStrictSync) (8 * density).toInt().coerceAtLeast(8) else (24 * density).toInt().coerceAtLeast(24)
+                val diffL = Math.abs(l - pendingTargetL)
+                val diffT = Math.abs(t - pendingTargetT)
+                val diffW = Math.abs(w - pendingTargetW)
+                val diffH = Math.abs(h - pendingTargetH)
+                val isSynced = diffL < threshold && diffT < threshold && diffW < threshold && diffH < threshold
+                val timeout = (System.currentTimeMillis() - lastInteractionTime) > 1500
+
+                if (isSynced || timeout) {
+                    isWaitingForSystemSync = false
+                    Log.d("DragResizeOverlaySync", "WMS Successfully Synced! Accepted bounds: ($l, $t, $w, $h), target was: ($pendingTargetL, $pendingTargetT, $pendingTargetW, $pendingTargetH), timeout=$timeout")
+                } else {
+                    // WMS is still reporting stale bounds, ignore to prevent rubber-banding/flicker
+                    if (CompatibilityManager.isDebugTouchRegionsEnabled(displayContext)) {
+                        Log.d("DragResizeOverlaySync", "Ignoring stale WMS bounds: ($l, $t, $w, $h), waiting for target: ($pendingTargetL, $pendingTargetT, $pendingTargetW, $pendingTargetH)")
+                    }
+                    return
+                }
+            } else {
+                val debounceWindow = if (isStrictSync) 1200 else 400
+                val recentlyInteracted = (System.currentTimeMillis() - lastInteractionTime) < debounceWindow
+                if (recentlyInteracted) {
+                    // Ignore stale bounds updates from system dumpsys right after user interaction
+                    return
+                }
             }
+            
             winL = l
             winW = w
             winH = h
@@ -586,13 +694,18 @@ class DragResizeOverlay(
 
         val pm = context.packageManager
         try {
-            val info = pm.getApplicationInfo(packageName, 0)
-            val icon = pm.getApplicationIcon(info)
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            val iconPackDrawable = IconPackManager.getIconFromPack(context, packageName)
+            val iconDrawable = iconPackDrawable ?: (androidx.core.content.res.ResourcesCompat.getDrawableForDensity(
+                pm.getResourcesForApplication(appInfo), appInfo.icon, android.util.DisplayMetrics.DENSITY_XXHIGH, null
+            ) ?: pm.getApplicationIcon(appInfo))
             
-            val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+            val width = iconDrawable.intrinsicWidth.coerceAtLeast(256)
+            val height = iconDrawable.intrinsicHeight.coerceAtLeast(256)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            icon.setBounds(0, 0, 64, 64)
-            icon.draw(canvas)
+            iconDrawable.setBounds(0, 0, width, height)
+            iconDrawable.draw(canvas)
             appIconBitmap = bitmap
             
             // Requirement: Advanced Palette Analysis for "Majorly used color"
@@ -630,9 +743,9 @@ class DragResizeOverlay(
             appDynamicColor = systemAccentColor
             try {
                 val fallbackDrawable = pm.defaultActivityIcon
-                val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+                val bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
-                fallbackDrawable.setBounds(0, 0, 64, 64)
+                fallbackDrawable.setBounds(0, 0, 256, 256)
                 fallbackDrawable.draw(canvas)
                 appIconBitmap = bitmap
             } catch (ex: Exception) {}
@@ -644,6 +757,16 @@ class DragResizeOverlay(
         return darkness >= 0.5
     }
 
+    fun reloadAppTheme() {
+        CoroutineScope(Dispatchers.IO).launch {
+            extractAppTheme()
+            CoroutineScope(Dispatchers.Main).launch {
+                updateColors()
+                updateLayouts()
+            }
+        }
+    }
+
     fun show() {
         extractAppTheme()
         if (titleBarView?.parent != null) return
@@ -651,29 +774,82 @@ class DragResizeOverlay(
             val initialDecorY = winT - titleBarHeight
             val initialFrameH = winH + titleBarHeight + borderWidth
             
+            val shouldShowResize = true
+
+            val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
             if (frameView?.parent == null) 
-                windowManager.addView(frameView, createParams(winW + (borderWidth * 2), initialFrameH, winL - borderWidth, initialDecorY - borderWidth, false))
+                windowManager.addView(frameView, createParams(winW + (borderWidth * 2), initialFrameH, winL - borderWidth, initialDecorY - borderWidth, isPrecise))
             if (titleBarView?.parent == null) 
                 windowManager.addView(titleBarView, createParams(winW, titleBarHeight, winL, initialDecorY, true))
-            if (leftStrip?.parent == null) 
+            
+            if (leftStrip?.parent == null && shouldShowResize) 
                 windowManager.addView(leftStrip, createParams(touchStripWidth, winH, winL - touchStripWidth/2, winT, true))
-            if (rightStrip?.parent == null) 
+            if (rightStrip?.parent == null && shouldShowResize) 
                 windowManager.addView(rightStrip, createParams(touchStripWidth, winH, winL + winW - touchStripWidth/2, winT, true))
-            if (bottomStrip?.parent == null) 
+            if (bottomStrip?.parent == null && shouldShowResize) 
                 windowManager.addView(bottomStrip, createParams(winW, touchStripWidth, winL, winT + winH - touchStripWidth/2, true))
             
             val handleTouchSize = (48 * density).toInt()
-            if (bottomLeftHandle?.parent == null) 
+            if (bottomLeftHandle?.parent == null && shouldShowResize) 
                 windowManager.addView(bottomLeftHandle, createParams(handleTouchSize, handleTouchSize, winL - handleTouchSize/2, winT + winH - handleTouchSize/2, true))
-            if (bottomRightHandle?.parent == null) 
+            if (bottomRightHandle?.parent == null && shouldShowResize) 
                 windowManager.addView(bottomRightHandle, createParams(handleTouchSize, handleTouchSize, winL + winW - handleTouchSize/2, winT + winH - handleTouchSize/2, true))
             
+            frameView?.let { setupTouchRegionHelper(it) }
             titleBarView?.let { setupTouchRegionHelper(it) }
-            leftStrip?.let { setupTouchRegionHelper(it) }
-            rightStrip?.let { setupTouchRegionHelper(it) }
-            bottomStrip?.let { setupTouchRegionHelper(it) }
-            bottomLeftHandle?.let { setupTouchRegionHelper(it) }
-            bottomRightHandle?.let { setupTouchRegionHelper(it) }
+            
+            if (shouldShowResize) {
+                leftStrip?.let { setupTouchRegionHelper(it) }
+                rightStrip?.let { setupTouchRegionHelper(it) }
+                bottomStrip?.let { setupTouchRegionHelper(it) }
+                bottomLeftHandle?.let { setupTouchRegionHelper(it) }
+                bottomRightHandle?.let { setupTouchRegionHelper(it) }
+            }
+            
+            if (CompatibilityManager.isIsolatedTitlebarLinkingEnabled(displayContext)) {
+                titleBarView?.let { tbView ->
+                    tbView.post {
+                        var attempts = 0
+                        val maxAttempts = 10
+                        val reparentRunnable = object : Runnable {
+                            override fun run() {
+                                try {
+                                    val attachedSurfaceControl = tbView.rootSurfaceControl
+                                    val getSurfaceControlMethod = attachedSurfaceControl?.javaClass?.getMethod("getSurfaceControl")
+                                    val surfaceControl = getSurfaceControlMethod?.invoke(attachedSurfaceControl) as? android.view.SurfaceControl
+                                    if (surfaceControl != null && surfaceControl.isValid) {
+                                        val taskLeash = TaskManager.getTaskLeash(taskId)
+                                        if (taskLeash != null && taskLeash.isValid) {
+                                            android.view.SurfaceControl.Transaction()
+                                                .reparent(surfaceControl, taskLeash)
+                                                .setLayer(surfaceControl, Integer.MAX_VALUE)
+                                                .apply()
+                                            Log.d(TAG, "Successfully grafted titlebar surface onto task leash for task $taskId")
+                                        } else {
+                                            if (attempts < maxAttempts) {
+                                                attempts++
+                                                tbView.postDelayed(this, 100)
+                                            } else {
+                                                Log.w(TAG, "Failed to reparent titlebar: taskLeash is null or invalid for task $taskId after $attempts attempts")
+                                            }
+                                        }
+                                    } else {
+                                        if (attempts < maxAttempts) {
+                                            attempts++
+                                            tbView.postDelayed(this, 100)
+                                        } else {
+                                            Log.w(TAG, "Failed to reparent titlebar: titleBarSurface is null or invalid for task $taskId after $attempts attempts")
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Safe fallback: Failed to reparent titlebar to task leash for task $taskId", e)
+                                }
+                            }
+                        }
+                        tbView.post(reparentRunnable)
+                    }
+                }
+            }
             
             updatePillShrink(true)
         } catch (e: Exception) {
@@ -757,6 +933,12 @@ class DragResizeOverlay(
             this.x = clampedX; this.y = clampedY
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
             windowAnimations = 0
+            if (displayId != 0) {
+                FreeformOverlayService.primaryDisplayToken?.let {
+                    this.token = it
+                    Log.d("DragResizeOverlay", "Mapping harvested primary display token to secondary display window params: $it")
+                }
+            }
         }
     }
 
@@ -788,10 +970,18 @@ class DragResizeOverlay(
             val safe = getSafeAreaRect()
             val decorY = (useT - titleBarHeight).coerceIn(safe.top - titleBarHeight, safe.bottom - titleBarHeight)
             
-            // Requirement: If resizing, draw the translucent boundary guide dynamically, but keep the headers and input handlers completely stationary to avoid input dropouts or glitchy visual jumps!
-            if (isInteracting && isResizing) {
+            val isSnapped = (isMaximized || isDocked) && !FreeformOverlayService.isSplitResizingActive
+            val activeStyle = if (isSnapped) ResizeStyle.FUTURE_STYLE_A else CompatibilityManager.getActiveResizeStyle(displayContext)
+            val isTintedOrMatte = activeStyle == ResizeStyle.FUTURE_STYLE_A || activeStyle == ResizeStyle.FUTURE_STYLE_B
+            
+            // Requirement: If resizing or under a local preview style, draw the translucent boundary guide dynamically, but keep the headers and input handlers completely stationary to avoid input dropouts or glitchy visual jumps!
+            if (isInteracting && isResizing && isTintedOrMatte) {
                 frameView?.let { 
-                    val realtime = ThemeManager.realtimeResize(displayContext)
+                    val realtime = if (isTintedOrMatte) {
+                        false
+                    } else {
+                        ThemeManager.realtimeResize(displayContext)
+                    }
                     if (realtime) {
                         // When real-time resize is enabled, hide the translucent outline!
                         updateWindow(it, 0, 0, -1000, -1000, false)
@@ -923,6 +1113,9 @@ class DragResizeOverlay(
                 bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
             } else {
                 // STANDARD MODE: Show full title bar and frame
+                val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+                val strokeW = if (isDocked) (2 * density).toInt() else (ThemeManager.getBorderWidth(displayContext) * density).toInt()
+
                 if (isInteracting) {
                     // PERFORMANCE FIX: Skip updating secondary strips during active dragging, but keep border visible!
                     frameView?.let {
@@ -930,30 +1123,65 @@ class DragResizeOverlay(
                         val fh = useH + titleBarHeight + borderWidth
                         val fx = useL - borderWidth
                         val fy = decorY - borderWidth
-                        updateWindow(it, fw, fh, fx, fy, false)
+                        updateWindow(it, fw, fh, fx, fy, isPrecise)
                         it.invalidate()
                     }
-                    leftStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
-                    rightStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
-                    bottomStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
-                    bottomLeftHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
-                    bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    if (isResizing) {
+                        // During active manual resizing, we MUST update the active strip/handles so the finger grab is NOT lost!
+                        val showLeft = activeResizeLeft && (isFocused || isPrecise)
+                        val showRight = activeResizeRight && (isFocused || isPrecise)
+                        val showBottom = activeResizeBottom && (isFocused || isPrecise)
+                        
+                        leftStrip?.let { 
+                            if (showLeft) updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) 
+                            else updateWindow(it, 0, 0, -1000, -1000, false)
+                        }
+                        rightStrip?.let { 
+                            if (showRight) updateWindow(it, touchStripWidth, useH, useL + useW - touchStripWidth/2, useT, true) 
+                            else updateWindow(it, 0, 0, -1000, -1000, false)
+                        }
+                        bottomStrip?.let { 
+                            if (showBottom) {
+                                val finalBottomW = if (isPrecise) useW + strokeW * 2 else useW
+                                val finalBottomX = if (isPrecise) useL - strokeW else useL
+                                updateWindow(it, finalBottomW, touchStripWidth, finalBottomX, useT + useH - touchStripWidth/2, true) 
+                            } else updateWindow(it, 0, 0, -1000, -1000, false)
+                        }
+                        
+                        val handleTouchSize = (48 * density).toInt()
+                        bottomLeftHandle?.let { 
+                            if (isFocused && activeResizeLeft && activeResizeBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
+                            else updateWindow(it, 0, 0, -1000, -1000, false)
+                        }
+                        bottomRightHandle?.let { 
+                            if (isFocused && activeResizeRight && activeResizeBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL + useW - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
+                            else updateWindow(it, 0, 0, -1000, -1000, false)
+                        }
+                    } else {
+                        // Dragging only: hide everything to maximize performance
+                        leftStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                        rightStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                        bottomStrip?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                        bottomLeftHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                        bottomRightHandle?.let { updateWindow(it, 0, 0, -1000, -1000, false) }
+                    }
                 } else {
                     frameView?.let { 
-                        if (isDocked) {
+                        if (isDocked || isPrecise) {
                             updateWindow(it, 0, 0, -1000, -1000, false)
                         } else {
                             val fw = useW + (borderWidth * 2)
                             val fh = useH + titleBarHeight + borderWidth
                             val fx = useL - borderWidth
                             val fy = decorY - borderWidth
-                            updateWindow(it, fw, fh, fx, fy, false)
+                            val isFrameTouchable = if (isPrecise) false else isPrecise
+                            updateWindow(it, fw, fh, fx, fy, isFrameTouchable)
                             it.invalidate() // Force redraw of the border
                         }
                     }
-                    val showLeft = (!isResizing || activeResizeLeft) && isFocused
-                    val showRight = (!isResizing || activeResizeRight) && isFocused
-                    val showBottom = (!isResizing || activeResizeBottom) && isFocused
+                    val showLeft = (!isResizing || activeResizeLeft) && (isFocused || isPrecise)
+                    val showRight = (!isResizing || activeResizeRight) && (isFocused || isPrecise)
+                    val showBottom = (!isResizing || activeResizeBottom) && (isFocused || isPrecise)
                     
                     leftStrip?.let { 
                         if (showLeft) updateWindow(it, touchStripWidth, useH, useL - touchStripWidth/2, useT, true) 
@@ -964,21 +1192,26 @@ class DragResizeOverlay(
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                     bottomStrip?.let { 
-                        if (showBottom) updateWindow(it, useW, touchStripWidth, useL, useT + useH - touchStripWidth/2, true) 
-                        else updateWindow(it, 0, 0, -1000, -1000, false)
+                        if (showBottom) {
+                            val finalBottomW = if (isPrecise) useW + strokeW * 2 else useW
+                            val finalBottomX = if (isPrecise) useL - strokeW else useL
+                            updateWindow(it, finalBottomW, touchStripWidth, finalBottomX, useT + useH - touchStripWidth/2, true) 
+                        } else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                     
                     val handleTouchSize = (48 * density).toInt()
                     bottomLeftHandle?.let { 
-                        if (showLeft || showBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
+                        if (isFocused && (showLeft || showBottom)) updateWindow(it, handleTouchSize, handleTouchSize, useL - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                     bottomRightHandle?.let { 
-                        if (showRight || showBottom) updateWindow(it, handleTouchSize, handleTouchSize, useL + useW - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
+                        if (isFocused && (showRight || showBottom)) updateWindow(it, handleTouchSize, handleTouchSize, useL + useW - handleTouchSize/2, useT + useH - handleTouchSize/2, true)
                         else updateWindow(it, 0, 0, -1000, -1000, false)
                     }
                 }
-                titleBarView?.let { updateWindow(it, useW, titleBarHeight, useL, decorY, true) }
+                val finalTitleW = if (isPrecise) useW + strokeW * 2 else useW
+                val finalTitleX = if (isPrecise) useL - strokeW else useL
+                titleBarView?.let { updateWindow(it, finalTitleW, titleBarHeight, finalTitleX, decorY, true) }
             }
             
             // Ensure snap menu stays on top if it's showing for this specific task
@@ -1016,12 +1249,31 @@ class DragResizeOverlay(
                 if (v.visibility != View.GONE) {
                     v.visibility = View.GONE
                 }
+                if (v.parent != null) {
+                    try {
+                        val lp = v.layoutParams as WindowManager.LayoutParams
+                        var changed = false
+                        if (lp.width != 0) { lp.width = 0; changed = true }
+                        if (lp.height != 0) { lp.height = 0; changed = true }
+                        if (lp.x != -1000) { lp.x = -1000; changed = true }
+                        if (lp.y != -1000) { lp.y = -1000; changed = true }
+                        
+                        val newFlags = (lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
+                        if (lp.flags != newFlags) {
+                            lp.flags = newFlags
+                            changed = true
+                        }
+                        
+                        if (changed) {
+                            windowManager.updateViewLayout(v, lp)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("DragResizeOverlay", "Failed to clear hidden window params", e)
+                    }
+                }
                 return
             }
-            if (v.visibility != View.VISIBLE) {
-                v.visibility = View.VISIBLE
-            }
-            
+
             val hideOnLauncher = ThemeManager.getHideOnLauncherActive(displayContext)
             val launcherPkg = ThemeManager.getDockLauncherPackage(displayContext)
             val isImmersion = if (isInteracting) {
@@ -1052,6 +1304,10 @@ class DragResizeOverlay(
             val isThisHandleActive = (v == bottomLeftHandle && activeResizeLeft && activeResizeBottom) || 
                                      (v == bottomRightHandle && activeResizeRight && activeResizeBottom)
             
+            val isSnapped = (isMaximized || isDocked) && !FreeformOverlayService.isSplitResizingActive
+            val activeStyle = if (isSnapped) ResizeStyle.FUTURE_STYLE_A else CompatibilityManager.getActiveResizeStyle(displayContext)
+            val isTintedOrMatte = activeStyle == ResizeStyle.FUTURE_STYLE_A || activeStyle == ResizeStyle.FUTURE_STYLE_B
+
             val targetAlpha = if (isTitle && !shouldShowPill) {
                 if (isAnyOtherOverlayDragging()) 0.40f else baseAlpha
             } else if (isImmersion) {
@@ -1059,6 +1315,8 @@ class DragResizeOverlay(
             } else if (isHandle) {
                 // Show full opacity if hovered or active, otherwise semi-transparent
                 if (isThisHandleActive || isThisHandleHovered) 1.0f else 0.35f
+            } else if (v == frameView && isInteracting && isResizing && isTintedOrMatte) {
+                1.0f
             } else if (isInteracting) {
                 0.40f
             } else if (isAnyOtherOverlayDragging()) {
@@ -1103,8 +1361,25 @@ class DragResizeOverlay(
                 if (changed) {
                     windowManager.updateViewLayout(v, lp)
                 }
+
+                // REQUIREMENT: Update coordinates FIRST via updateViewLayout, then make VISIBLE
+                // This prevents the "bounce-from-center" bug by ensuring the window appears at the correct location instantly.
+                if (v.visibility != View.VISIBLE) {
+                    v.visibility = View.VISIBLE
+                }
             } else {
                 windowManager.addView(v, createParams(w, h, x, y, actualTouchable))
+                if (displayId == 0 && FreeformOverlayService.primaryDisplayToken == null) {
+                    v.post {
+                        if (FreeformOverlayService.primaryDisplayToken == null) {
+                            val token = v.windowToken ?: (v.layoutParams as? WindowManager.LayoutParams)?.token
+                            if (token != null) {
+                                FreeformOverlayService.primaryDisplayToken = token
+                                Log.d("DragResizeOverlay", "Harvested valid primary display token: $token")
+                            }
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating overlay window", e)
@@ -1112,14 +1387,81 @@ class DragResizeOverlay(
     }
 
     internal fun applyBounds(force: Boolean = false) {
-        val now = System.currentTimeMillis()
-        if (!force && now - lastShellTime < 16) return
-        lastShellTime = now
+        val isSnapped = (isMaximized || isDocked) && !FreeformOverlayService.isSplitResizingActive
+        val activeStyle = if (isSnapped) ResizeStyle.FUTURE_STYLE_A else CompatibilityManager.getActiveResizeStyle(displayContext)
+        
+        if (!force && isResizing && (activeStyle == ResizeStyle.FUTURE_STYLE_A || activeStyle == ResizeStyle.FUTURE_STYLE_B)) {
+            return // Suppress background binder resizing completely during active borders/corner scaling movement
+        }
+        
+        if (force) {
+            // Arm the smart WMS sync mechanism with our target bounds
+            pendingTargetL = winL
+            pendingTargetT = winT
+            pendingTargetW = winW
+            pendingTargetH = winH
+            isWaitingForSystemSync = true
+            lastInteractionTime = System.currentTimeMillis() // Also reset the ignore timer
+            
+            // Reset skip-to-latest state upon final snap
+            isBinderTransactionPending = false
+            needsPendingDispatch = false
+        }
+        
+        val mode = if (activeStyle == ResizeStyle.REAL_TIME_SCALING) {
+            if (force) 2 else {
+                vsyncFrameCounter++
+                if (vsyncFrameCounter % 4 == 0) 2 else 1
+            }
+        } else if (activeStyle == ResizeStyle.FUTURE_STYLE_A || 
+                  activeStyle == ResizeStyle.FUTURE_STYLE_B) {
+            2
+        } else {
+            2
+        }
+        
+        if (!force) {
+            val threshold = 2 * density
+            val deltaL = Math.abs(winL - lastDispatchedL)
+            val deltaT = Math.abs(winT - lastDispatchedT)
+            val deltaW = Math.abs(winW - lastDispatchedW)
+            val deltaH = Math.abs(winH - lastDispatchedH)
+            
+            if (deltaL < threshold && deltaT < threshold && deltaW < threshold && deltaH < threshold) {
+                return // Suppress micro-movement layout jitter
+            }
+        }
+        
+        if (!force && activeStyle == ResizeStyle.REAL_TIME_SCALING) {
+            if (isBinderTransactionPending) {
+                needsPendingDispatch = true
+                return
+            }
+            isBinderTransactionPending = true
+        }
+        
+        lastDispatchedL = winL
+        lastDispatchedT = winT
+        lastDispatchedW = winW
+        lastDispatchedH = winH
         
         resizeJob?.cancel()
         resizeJob = CoroutineScope(Dispatchers.IO).launch {
-            if (!force) delay(8) // Minimal stabilization delay
-            ShellExecutor.resizeTask(taskId, winL, winT, winL + winW, winT + winH)
+            try {
+                ShellExecutor.resizeTask(taskId, winL, winT, winL + winW, winT + winH, mode)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in resizeTask binder dispatch", e)
+            } finally {
+                if (!force && activeStyle == ResizeStyle.REAL_TIME_SCALING) {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        isBinderTransactionPending = false
+                        if (needsPendingDispatch) {
+                            needsPendingDispatch = false
+                            applyBounds(force = false)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1170,6 +1512,23 @@ class DragResizeOverlay(
         root.addView(tv)
         
         // 3. Buttons
+        val minimizeButton = ImageView(displayContext).apply {
+            setImageDrawable(MinimizeDrawable(density))
+            setColorFilter(Color.WHITE)
+            val p = (6 * density).toInt()
+            setPadding(p, p, p, p)
+            val size = (26 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(size, size).apply { marginEnd = (8 * density).toInt() }
+            background = GradientDrawable().apply { 
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#444444"))
+            }
+            setOnClickListener { 
+                triggerPillInteraction()
+                onMinimize()
+            }
+        }
+
         val snapButton = ImageView(displayContext).apply {
             setImageResource(android.R.drawable.ic_menu_sort_by_size)
             setColorFilter(Color.WHITE)
@@ -1204,6 +1563,7 @@ class DragResizeOverlay(
             }
         }
         
+        root.addView(minimizeButton)
         root.addView(snapButton)
         root.addView(close)
         
@@ -1234,13 +1594,16 @@ class DragResizeOverlay(
                     preInteractT = winT
                     preInteractW = winW
                     preInteractH = winH
+                    lastDispatchedL = winL
+                    lastDispatchedT = winT
+                    lastDispatchedW = winW
+                    lastDispatchedH = winH
                     val usePillForSnapped = ThemeManager.usePillForSnapped(displayContext)
                     preShouldShowPill = isMaximized || (isDocked && usePillForSnapped)
                     
-                    // Finger Defer Fix: if enabled via CompatibilityManager, skip moveTaskToFront on
-                    // finger ACTION_DOWN to prevent InputDispatcher ACTION_CANCEL killing the drag.
                     val deferFocusForTouch = CompatibilityManager.isFingerDeferFocusEnabled(displayContext)
-                    if (!isTouch || !deferFocusForTouch) {
+                    val shouldDeferFocus = (isTouch && deferFocusForTouch) || (displayId != 0)
+                    if (!shouldDeferFocus) {
                         ShellExecutor.moveTaskToFront(taskId)
                     }
                     FreeformOverlayService.requestRefresh()
@@ -1328,8 +1691,22 @@ class DragResizeOverlay(
 
                     val safe = getSafeAreaRect()
                     
-                    var newL = winL + (event.rawX - lx).toInt()
-                    var newT = winT + (event.rawY - ly).toInt()
+                    var deltaX = (event.rawX - lx).toInt()
+                    var deltaY = (event.rawY - ly).toInt()
+                    
+                    if (toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+                        val threshold = 200 * density
+                        if (Math.abs(event.rawX - lx) > threshold || Math.abs(event.rawY - ly) > threshold) {
+                            Log.d("DragResizeOverlayTouch", "Display boundary crossover detected for mouse dragging. Discarding delta jumps to prevent warping.")
+                            deltaX = 0
+                            deltaY = 0
+                            lx = event.rawX
+                            ly = event.rawY
+                        }
+                    }
+                    
+                    var newL = winL + deltaX
+                    var newT = winT + deltaY
                     
                     val minT = safe.top + titleBarHeight
                     val maxL = (safe.right - 100).coerceAtLeast(safe.left - winW + 100)
@@ -1567,8 +1944,7 @@ class DragResizeOverlay(
                     }
                     
                     lx = event.rawX; ly = event.rawY
-                    updateLayouts(false)
-                    applyBounds(false)
+                    scheduleFrame(false)
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -1690,6 +2066,77 @@ class DragResizeOverlay(
         return Color.rgb(r, g, b)
     }
 
+    private fun drawStripBorder(canvas: Canvas, isLeft: Boolean) {
+        val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+        if (!isPrecise) return
+
+        val themeMode = ThemeManager.getThemeMode(displayContext)
+        val isDarkMode = when(themeMode) {
+            1 -> false
+            2 -> true
+            else -> (displayContext.resources.configuration.uiMode and 
+                     android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                     android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+
+        val accent = currentDecorationColor
+        val unfocusedBorder = if (isDarkMode) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+        val bColor = if (isFocused) accent else unfocusedBorder
+        val bAlpha = if (shouldFadeBorder()) 0 else (if (isFocused) 255 else 100)
+        val strokeColor = Color.argb(bAlpha, Color.red(bColor), Color.green(bColor), Color.blue(bColor))
+
+        val bWidth = ThemeManager.getBorderWidth(displayContext) * density
+        val strokeW = if (isDocked) (2 * density).toInt() else bWidth.toInt()
+
+        val paint = Paint().apply {
+            color = strokeColor
+            style = Paint.Style.FILL
+        }
+
+        if (isLeft) {
+            val startX = touchStripWidth / 2f - strokeW
+            val endX = touchStripWidth / 2f
+            canvas.drawRect(startX, 0f, endX, canvas.height.toFloat(), paint)
+        } else {
+            val startX = touchStripWidth / 2f
+            val endX = touchStripWidth / 2f + strokeW
+            canvas.drawRect(startX, 0f, endX, canvas.height.toFloat(), paint)
+        }
+    }
+
+    private fun drawBottomBorder(canvas: Canvas) {
+        val isPrecise = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+        if (!isPrecise) return
+
+        val themeMode = ThemeManager.getThemeMode(displayContext)
+        val isDarkMode = when(themeMode) {
+            1 -> false
+            2 -> true
+            else -> (displayContext.resources.configuration.uiMode and 
+                     android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                     android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+
+        val accent = currentDecorationColor
+        val unfocusedBorder = if (isDarkMode) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+        val bColor = if (isFocused) accent else unfocusedBorder
+        val bAlpha = if (shouldFadeBorder()) 0 else (if (isFocused) 255 else 100)
+        val strokeColor = Color.argb(bAlpha, Color.red(bColor), Color.green(bColor), Color.blue(bColor))
+
+        val bWidth = ThemeManager.getBorderWidth(displayContext) * density
+        val strokeW = if (isDocked) (2 * density).toInt() else bWidth.toInt()
+
+        val paint = Paint().apply {
+            color = strokeColor
+            style = Paint.Style.FILL
+        }
+
+        val startY = touchStripWidth / 2f
+        val endY = touchStripWidth / 2f + strokeW
+        canvas.drawRect(0f, startY, canvas.width.toFloat(), endY, paint)
+    }
+
+
     private fun createVisualFrame() {
         frameView = object : View(displayContext) {
             override fun onDraw(canvas: Canvas) {
@@ -1708,7 +2155,7 @@ class DragResizeOverlay(
                 val unfocusedBorder = if (isDarkMode) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
                 
                 val bColor = if (isFocused) accent else unfocusedBorder
-                val bAlpha = if (isFocused) 255 else 100
+                val bAlpha = if (shouldFadeBorder()) 0 else (if (isFocused) 255 else 100)
                 
                 val bWidth = ThemeManager.getBorderWidth(displayContext) * density
                 val strokeW = if (isDocked) (2 * density).toInt() else bWidth.toInt()
@@ -1745,43 +2192,135 @@ class DragResizeOverlay(
                 }
                 val isNearBottom = (currentWinT + winH) >= (screenH - (2 * density).toInt())
                 
-                // Configure our pre-allocated GradientDrawable
-                previewDrawable.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                val isSnapped = (isMaximized || isDocked) && !FreeformOverlayService.isSplitResizingActive
+                val activeStyle = if (isSnapped) ResizeStyle.FUTURE_STYLE_A else CompatibilityManager.getActiveResizeStyle(displayContext)
                 
-                // Set dynamic translucent fill background if interacting
-                if (isInteracting && ThemeManager.isDragTintEnabled(displayContext)) {
-                    previewDrawable.setColor(Color.argb(40, Color.red(accent), Color.green(accent), Color.blue(accent)))
+                 if (isInteracting && isResizing && activeStyle == ResizeStyle.FUTURE_STYLE_B) {
+                    // App-Branded Matte Overlay (Style 3)
+                    val matteColor = appDynamicColor or 0xFF000000.toInt()
+                    val isDarkMatte = isColorDark(matteColor)
+                    
+                    // Offset border brightness/darkness relative to the fill
+                    val strokeColor = if (isDarkMatte) {
+                        blendColors(matteColor, Color.WHITE, 0.4f)
+                    } else {
+                        blendColors(matteColor, Color.BLACK, 0.4f)
+                    }
+                    val strokeWidthPx = (2 * density).toInt()
+                    
+                    previewDrawable.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    previewDrawable.setColor(matteColor)
+                    previewDrawable.alpha = 255
+                    previewDrawable.setStroke(strokeWidthPx, strokeColor)
+                    
+                    val rTop = 16 * density
+                    val rBot = if (isNearBottom) 0f else 12 * density
+                    previewDrawable.cornerRadii = floatArrayOf(
+                        rTop, rTop,
+                        rTop, rTop,
+                        rBot, rBot,
+                        rBot, rBot
+                    )
+                    
+                    previewDrawable.setBounds(
+                        drawL.toInt(),
+                        drawT.toInt(),
+                        (drawL + drawW).toInt(),
+                        (drawT + drawH).toInt()
+                    )
+                    previewDrawable.draw(canvas)
+                    
+                    // Center the dynamically scaled application icon
+                    val icon = appIconBitmap
+                    if (icon != null) {
+                        val iconSize = (Math.min(drawW, drawH) * 0.25f).coerceIn(48 * density, 192 * density)
+                        val iconL = drawL + (drawW - iconSize) / 2f
+                        val iconT = drawT + (drawH - iconSize) / 2f
+                        val src = android.graphics.Rect(0, 0, icon.width, icon.height)
+                        val dst = android.graphics.RectF(iconL, iconT, iconL + iconSize, iconT + iconSize)
+                        canvas.drawBitmap(icon, src, dst, Paint().apply { 
+                            isAntiAlias = true 
+                            alpha = 255
+                        })
+                    }
                 } else {
-                    previewDrawable.setColor(Color.TRANSPARENT)
+                    // Configure our pre-allocated GradientDrawable for other styles
+                    previewDrawable.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    
+                    // Set dynamic translucent fill background if interacting and manual resizing is active
+                    if (isInteracting && isResizing && (activeStyle == ResizeStyle.FUTURE_STYLE_A || ThemeManager.isDragTintEnabled(displayContext))) {
+                        previewDrawable.setColor(Color.argb(45, Color.red(accent), Color.green(accent), Color.blue(accent)))
+                    } else {
+                        previewDrawable.setColor(Color.TRANSPARENT)
+                    }
+                    
+                    // Set stroke border color with transparency factored in
+                    val strokeColorWithAlpha = Color.argb(
+                        bAlpha,
+                        Color.red(bColor),
+                        Color.green(bColor),
+                        Color.blue(bColor)
+                    )
+                    previewDrawable.setStroke(strokeW, strokeColorWithAlpha)
+                    
+                    // Dynamic corner radii matching individual rounded edges
+                    val rTop = 16 * density
+                    val rBot = if (isNearBottom) 0f else 12 * density
+                    previewDrawable.cornerRadii = floatArrayOf(
+                        rTop, rTop, // Top-left
+                        rTop, rTop, // Top-right
+                        rBot, rBot, // Bottom-right
+                        rBot, rBot  // Bottom-left
+                    )
+                    
+                    // Draw the dynamic shape instantly using highly optimized C++ GPU pipelines!
+                    previewDrawable.setBounds(
+                        drawL.toInt(),
+                        drawT.toInt(),
+                        (drawL + drawW).toInt(),
+                        (drawT + drawH).toInt()
+                    )
+                    previewDrawable.draw(canvas)
                 }
-                
-                // Set stroke border color with transparency factored in
-                val strokeColorWithAlpha = Color.argb(
-                    bAlpha,
-                    Color.red(bColor),
-                    Color.green(bColor),
-                    Color.blue(bColor)
-                )
-                previewDrawable.setStroke(strokeW, strokeColorWithAlpha)
-                
-                // Dynamic corner radii matching individual rounded edges
-                val rTop = 16 * density
-                val rBot = if (isNearBottom) 0f else 12 * density
-                previewDrawable.cornerRadii = floatArrayOf(
-                    rTop, rTop, // Top-left
-                    rTop, rTop, // Top-right
-                    rBot, rBot, // Bottom-right
-                    rBot, rBot  // Bottom-left
-                )
-                
-                // Draw the dynamic shape instantly using highly optimized C++ GPU pipelines!
-                previewDrawable.setBounds(
-                    drawL.toInt(),
-                    drawT.toInt(),
-                    (drawL + drawW).toInt(),
-                    (drawT + drawH).toInt()
-                )
-                previewDrawable.draw(canvas)
+
+                // Visual touch region debugger
+                if (CompatibilityManager.isDebugTouchRegionsEnabled(displayContext)) {
+                    val paint = Paint().apply {
+                        color = Color.argb(80, 0, 255, 0) // Semi-transparent green overlay
+                        style = Paint.Style.FILL
+                    }
+                    val rect = android.graphics.Rect(0, 0, width, height)
+                    val region = android.graphics.Region(rect)
+                    
+
+                    
+                    if (!this@DragResizeOverlay.isFocused && occluders.isNotEmpty()) {
+                        val loc = IntArray(2)
+                        getLocationOnScreen(loc)
+                        val viewX = loc[0]
+                        val viewY = loc[1]
+                        for (oc in occluders) {
+                            val l = oc.rect.left - viewX
+                            val t = oc.rect.top - viewY
+                            val r = oc.rect.right - viewX
+                            val b = oc.rect.bottom - viewY
+                            if (r > 0 && b > 0) {
+                                region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
+                            }
+                        }
+                    }
+                    
+                    val path = region.boundaryPath
+                    canvas.drawPath(path, paint)
+                    
+                    // Draw a thin neon red border around the border cutout to highlight it
+                    val borderPaint = Paint().apply {
+                        color = Color.RED
+                        style = Paint.Style.STROKE
+                        strokeWidth = 2 * density
+                    }
+                    canvas.drawPath(path, borderPaint)
+                }
             }
             
             override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
@@ -1810,6 +2349,10 @@ class DragResizeOverlay(
     private fun createResizeStrips() {
         leftStrip = object : View(displayContext) {
             override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                drawStripBorder(canvas, true)
+            }
         }.apply { 
             isClickable = true
             isFocusable = true
@@ -1819,6 +2362,10 @@ class DragResizeOverlay(
         
         rightStrip = object : View(displayContext) {
             override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                drawStripBorder(canvas, false)
+            }
         }.apply { 
             isClickable = true
             isFocusable = true
@@ -1828,12 +2375,17 @@ class DragResizeOverlay(
         
         bottomStrip = object : View(displayContext) {
             override fun draw(canvas: Canvas) { applyMaskAndDraw(this, canvas) { super.draw(it) } }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                drawBottomBorder(canvas)
+            }
         }.apply { 
             isClickable = true
             isFocusable = true
             setBackgroundColor(Color.argb(1, 0, 0, 0))
             setOnTouchListener { _, e -> handleResize(e, false, false, true) } 
         }
+
 
         val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
@@ -1859,7 +2411,7 @@ class DragResizeOverlay(
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
                 val showVisual = ThemeManager.getVisualCornerHandlesGlobal(displayContext) && ThemeManager.getVisualCornerHandles(displayContext, displayId)
-                if (!showVisual) return
+                if (!showVisual || shouldFadeBorder()) return
                 
                 val cx = width / 2f
                 val cy = height / 2f
@@ -1893,7 +2445,7 @@ class DragResizeOverlay(
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
                 val showVisual = ThemeManager.getVisualCornerHandlesGlobal(displayContext) && ThemeManager.getVisualCornerHandles(displayContext, displayId)
-                if (!showVisual) return
+                if (!showVisual || shouldFadeBorder()) return
                 
                 val cx = width / 2f
                 val cy = height / 2f
@@ -1924,6 +2476,9 @@ class DragResizeOverlay(
     }
 
     private fun handleResize(event: MotionEvent, left: Boolean, right: Boolean, bottom: Boolean): Boolean {
+        if (isDocked || isMaximized) {
+            return false // Disable manual individual border resizing completely for docked or maximized windows!
+        }
         val action = event.action
         val toolType = if (event.pointerCount > 0) event.getToolType(0) else MotionEvent.TOOL_TYPE_UNKNOWN
         val isTouch = toolType == MotionEvent.TOOL_TYPE_FINGER
@@ -1948,6 +2503,10 @@ class DragResizeOverlay(
                 preInteractT = winT
                 preInteractW = winW
                 preInteractH = winH
+                lastDispatchedL = winL
+                lastDispatchedT = winT
+                lastDispatchedW = winW
+                lastDispatchedH = winH
                 val usePillForSnapped = ThemeManager.usePillForSnapped(displayContext)
                 preShouldShowPill = isMaximized || (isDocked && usePillForSnapped)
                 
@@ -1958,7 +2517,8 @@ class DragResizeOverlay(
                 
                 // Finger Defer Fix: same guard as in the title bar drag handler.
                 val deferFocusForTouch = CompatibilityManager.isFingerDeferFocusEnabled(displayContext)
-                if (!isTouch || !deferFocusForTouch) {
+                val shouldDeferFocus = (isTouch && deferFocusForTouch) || (displayId != 0)
+                if (!shouldDeferFocus) {
                     ShellExecutor.moveTaskToFront(taskId)
                 }
                 FreeformOverlayService.requestRefresh()
@@ -1969,39 +2529,33 @@ class DragResizeOverlay(
                 true 
             }
             MotionEvent.ACTION_MOVE -> {
-                val now = System.currentTimeMillis()
-                if (now - lastManualResizeTime >= 16) {
-                    lastManualResizeTime = now
-                    val screenW = realMetrics.widthPixels
-                    val screenH = realMetrics.heightPixels
-                    
-                    val dx = (event.rawX - rLx).toInt(); val dy = (event.rawY - rLy).toInt()
-                    val minW = (120 * density).toInt().coerceAtMost(350)
-                    val minH = (80 * density).toInt().coerceAtMost(200)
-                    if (left) { 
-                        val oldL = winL
-                        val maxL = ((oldL + winW) - minW).coerceAtLeast(0)
-                        winL = (winL + dx).coerceIn(0, maxL)
-                        winW -= (winL - oldL)
-                    }
-                    if (right) { 
-                        val maxW = (screenW - winL).coerceAtLeast(minW)
-                        winW = (winW + dx).coerceIn(minW, maxW) 
-                    }
-                    if (bottom) { 
-                        val maxH = (screenH - winT).coerceAtLeast(minH)
-                        winH = (winH + dy).coerceIn(minH, maxH) 
-                    }
-                    
-                    rLx = event.rawX; rLy = event.rawY
-                    if (ThemeManager.realtimeResize(displayContext)) {
-                        updateLayouts(false)
-                        applyBounds(false)
-                    } else {
-                        updateLayouts(false)
-                        updateColors()
-                    }
+                val screenW = realMetrics.widthPixels
+                val screenH = realMetrics.heightPixels
+                
+                val dx = (event.rawX - rLx).toInt(); val dy = (event.rawY - rLy).toInt()
+                val minW = (120 * density).toInt().coerceAtMost(350)
+                val minH = (80 * density).toInt().coerceAtMost(200)
+                if (left) { 
+                    val oldL = winL
+                    val maxL = ((oldL + winW) - minW).coerceAtLeast(0)
+                    winL = (winL + dx).coerceIn(0, maxL)
+                    winW -= (winL - oldL)
                 }
+                if (right) { 
+                    val maxW = (screenW - winL).coerceAtLeast(minW)
+                    winW = (winW + dx).coerceIn(minW, maxW) 
+                }
+                if (bottom) { 
+                    val maxH = (screenH - winT).coerceAtLeast(minH)
+                    winH = (winH + dy).coerceIn(minH, maxH) 
+                }
+                
+                rLx = event.rawX; rLy = event.rawY
+                
+                if (frameScheduled) {
+                    return true
+                }
+                scheduleFrame(false)
                 true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { 
@@ -2623,31 +3177,100 @@ class DragResizeOverlay(
             ) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     val insetsInfo = args[0]
-                    if (!isFocused && occluders.isNotEmpty()) {
-                        val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
-                        val rect = android.graphics.Rect(0, 0, view.width, view.height)
-                        val region = android.graphics.Region(rect)
-                        
-                        val loc = IntArray(2)
-                        view.getLocationOnScreen(loc)
-                        val viewX = loc[0]
-                        val viewY = loc[1]
-                        
-                        for (oc in occluders) {
-                            val l = oc.rect.left - viewX
-                            val t = oc.rect.top - viewY
-                            val r = oc.rect.right - viewX
-                            val b = oc.rect.bottom - viewY
+                    
+                    val usePillForSnapped = ThemeManager.usePillForSnapped(displayContext)
+                    val isPillMode = isMaximized || (isDocked && usePillForSnapped)
+                    
+                    if (isPillMode) {
+                        // Strict constraint: Do NOT edit or change pill titlebar / pill mode overlays!
+                        // Keep original library/app behavior for pill mode.
+                        if (!this@DragResizeOverlay.isFocused && occluders.isNotEmpty()) {
+                            val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
+                            val rect = android.graphics.Rect(0, 0, view.width, view.height)
+                            val region = android.graphics.Region(rect)
                             
-                            if (r > 0 && b > 0) {
-                                region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
+                            val loc = IntArray(2)
+                            view.getLocationOnScreen(loc)
+                            val viewX = loc[0]
+                            val viewY = loc[1]
+                            
+                            for (oc in occluders) {
+                                val l = oc.rect.left - viewX
+                                val t = oc.rect.top - viewY
+                                val r = oc.rect.right - viewX
+                                val b = oc.rect.bottom - viewY
+                                if (r > 0 && b > 0) {
+                                    region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
+                                }
                             }
+                            touchableRegion.set(region)
+                            setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
+                            
+                            if (CompatibilityManager.isDebugTouchRegionsEnabled(displayContext)) {
+                                Log.d("DragResizeOverlay", "onComputeInternalInsets [unfocused pill]: Subtracted ${occluders.size} occluders from touchable region of view ${view.javaClass.simpleName}. Final bounds: ${region.bounds}")
+                            }
+                        } else {
+                            setTouchableInsetsMethod.invoke(insetsInfo, 0) // TOUCHABLE_INSETS_FRAME
+                        }
+                    } else {
+                        // Standard (Normal) Titlebar / Window Mode
+                        val isPreciseEnabled = CompatibilityManager.isPreciseTouchRegionEnabled(displayContext)
+                        
+                        // Initialize region we want to make touchable
+                        // If view is frameView and precise cutout is enabled, start with borders only.
+                        // Otherwise, start with the full view.
+                        val region = if (view == frameView && isPreciseEnabled) {
+                            val fullRect = android.graphics.Rect(0, 0, view.width, view.height)
+                            val r = android.graphics.Region(fullRect)
+                            val centerLeft = borderWidth
+                            val centerTop = titleBarHeight + borderWidth
+                            val centerRight = view.width - borderWidth
+                            val centerBottom = view.height - borderWidth
+                            if (centerRight > centerLeft && centerBottom > centerTop) {
+                                r.op(centerLeft, centerTop, centerRight, centerBottom, android.graphics.Region.Op.DIFFERENCE)
+                            }
+                            r
+                        } else {
+                            val rect = android.graphics.Rect(0, 0, view.width, view.height)
+                            android.graphics.Region(rect)
                         }
                         
-                        touchableRegion.set(region)
-                        setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
-                    } else {
-                        setTouchableInsetsMethod.invoke(insetsInfo, 0) // TOUCHABLE_INSETS_FRAME (whole window frame is touchable)
+                        var useRegionInsets = (view == frameView && isPreciseEnabled)
+                        
+                        // If unfocused and there are occluders, subtract above occluders from our region
+                        if (!this@DragResizeOverlay.isFocused && occluders.isNotEmpty()) {
+                            val loc = IntArray(2)
+                            view.getLocationOnScreen(loc)
+                            val viewX = loc[0]
+                            val viewY = loc[1]
+                            
+                            for (oc in occluders) {
+                                val l = oc.rect.left - viewX
+                                val t = oc.rect.top - viewY
+                                val r = oc.rect.right - viewX
+                                val b = oc.rect.bottom - viewY
+                                
+                                if (r > 0 && b > 0) {
+                                    region.op(l, t, r, b, android.graphics.Region.Op.DIFFERENCE)
+                                }
+                            }
+                            useRegionInsets = true
+                        }
+                        
+                        if (useRegionInsets) {
+                            val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
+                            touchableRegion.set(region)
+                            setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
+                            
+                            if (CompatibilityManager.isDebugTouchRegionsEnabled(displayContext)) {
+                                Log.d("DragResizeOverlay", "onComputeInternalInsets [Region]: View=${view.javaClass.simpleName}, Focused=${this@DragResizeOverlay.isFocused}, Final bounds=${region.bounds}")
+                            }
+                        } else {
+                            setTouchableInsetsMethod.invoke(insetsInfo, 0) // TOUCHABLE_INSETS_FRAME (whole window frame is touchable)
+                            if (CompatibilityManager.isDebugTouchRegionsEnabled(displayContext) && view == frameView) {
+                                Log.d("DragResizeOverlay", "onComputeInternalInsets [Frame]: View=${view.javaClass.simpleName}, Set TOUCHABLE_INSETS_FRAME")
+                            }
+                        }
                     }
                 }
                 null
@@ -2730,5 +3353,37 @@ class DragResizeOverlay(
             activeSnapMenu = null
             activeSnapMenuTaskId = -1
         }
+
+        fun clearIconCache() {
+            iconCache.evictAll()
+        }
     }
+}
+
+class MinimizeDrawable(private val density: Float) : android.graphics.drawable.Drawable() {
+    private val paint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f * density
+        strokeCap = Paint.Cap.ROUND
+        isAntiAlias = true
+    }
+
+    override fun draw(canvas: Canvas) {
+        val bounds = bounds
+        val centerY = bounds.centerY().toFloat()
+        val padding = bounds.width() * 0.22f
+        canvas.drawLine(bounds.left + padding, centerY, bounds.right - padding, centerY, paint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        paint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+        paint.colorFilter = colorFilter
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }

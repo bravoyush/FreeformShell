@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_item_bg"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp">
+
+    <!-- App Icon -->
+    <ImageView
+        android:id="@+id/widget_task_app_icon"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/sym_def_app_icon" />
+
+    <!-- Info Column -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_task_app_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="App Name"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/widget_task_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Task ID: 0"
+            android:textColor="#8E8E93"
+            android:textSize="10sp"
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!-- Action Buttons -->
+    <!-- Bring to Front [▲] -->
+    <ImageView
+        android:id="@+id/widget_task_btn_bring_front"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_upload"
+        android:padding="6dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_marginEnd="6dp"
+        android:contentDescription="Bring to Front" />
+
+    <!-- Close [❌] -->
+    <ImageView
+        android:id="@+id/widget_task_btn_close"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:padding="6dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close" />
+
+</LinearLayout>

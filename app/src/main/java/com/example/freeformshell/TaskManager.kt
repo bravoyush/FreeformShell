@@ -18,6 +18,141 @@ data class CombinedTaskState(val tasks: List<AppTask>, val boundsMap: Map<Int, T
 object TaskManager {
     private const val TAG = "TaskManager"
 
+    private val taskLeashes = java.util.concurrent.ConcurrentHashMap<Int, android.view.SurfaceControl>()
+    private var isOrganizerRegistered = false
+    private val registrationLock = Any()
+
+    fun getTaskLeash(taskId: Int): android.view.SurfaceControl? {
+        registerTaskOrganizerIfNeeded()
+        return taskLeashes[taskId]
+    }
+
+    private fun registerTaskOrganizerIfNeeded() {
+        if (isOrganizerRegistered) return
+        synchronized(registrationLock) {
+            if (isOrganizerRegistered) return
+            try {
+                if (rikka.shizuku.Shizuku.pingBinder()) {
+                    val atmBinder = rikka.shizuku.SystemServiceHelper.getSystemService("activity_task")
+                    val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(atmBinder)
+                    val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
+                    val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
+                    val activityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    
+                    val getTaskOrganizerControllerMethod = activityTaskManager.javaClass.getMethod("getTaskOrganizerController")
+                    val rawController = getTaskOrganizerControllerMethod.invoke(activityTaskManager)
+                    
+                    if (rawController != null) {
+                        val controllerBinder = rawController as? android.os.IBinder
+                            ?: (rawController.javaClass.getMethod("asBinder").invoke(rawController) as android.os.IBinder)
+                        val wrappedControllerBinder = rikka.shizuku.ShizukuBinderWrapper(controllerBinder)
+                        
+                        val controllerStubClass = Class.forName("android.window.ITaskOrganizerController\$Stub")
+                        val controllerAsInterfaceMethod = controllerStubClass.getMethod("asInterface", android.os.IBinder::class.java)
+                        val controller = controllerAsInterfaceMethod.invoke(null, wrappedControllerBinder)
+                        
+                        // Retrieve transaction codes reflectively to support Android 11 to 15+
+                        val iTaskOrganizerStubClass = Class.forName("android.window.ITaskOrganizer\$Stub")
+                        
+                        val onTaskAppearedField = iTaskOrganizerStubClass.getDeclaredField("TRANSACTION_onTaskAppeared").apply { isAccessible = true }
+                        val onTaskAppearedCode = onTaskAppearedField.get(null) as Int
+                        
+                        val onTaskVanishedField = iTaskOrganizerStubClass.getDeclaredField("TRANSACTION_onTaskVanished").apply { isAccessible = true }
+                        val onTaskVanishedCode = onTaskVanishedField.get(null) as Int
+                        
+                        // Create our custom Binder implementing ITaskOrganizer
+                        val myBinder = object : android.os.Binder() {
+                            override fun getInterfaceDescriptor(): String {
+                                return "android.window.ITaskOrganizer"
+                            }
+                            
+                            override fun onTransact(code: Int, data: android.os.Parcel, reply: android.os.Parcel?, flags: Int): Boolean {
+                                try {
+                                    if (code == onTaskAppearedCode) {
+                                        data.enforceInterface("android.window.ITaskOrganizer")
+                                        
+                                        // Read RunningTaskInfo
+                                        val hasTaskInfo = data.readInt() != 0
+                                        val taskInfo = if (hasTaskInfo) {
+                                            android.app.ActivityManager.RunningTaskInfo.CREATOR.createFromParcel(data)
+                                        } else {
+                                            null
+                                        }
+                                        
+                                        // Read SurfaceControl
+                                        val hasSurfaceControl = data.readInt() != 0
+                                        val leash = if (hasSurfaceControl) {
+                                            android.view.SurfaceControl.CREATOR.createFromParcel(data)
+                                        } else {
+                                            null
+                                        }
+                                        
+                                        if (taskInfo != null && leash != null) {
+                                            taskLeashes[taskInfo.taskId] = leash
+                                            Log.d(TAG, "onTaskAppeared callback: taskId=${taskInfo.taskId}, leash=$leash")
+                                        }
+                                        reply?.writeNoException()
+                                        return true
+                                    } else if (code == onTaskVanishedCode) {
+                                        data.enforceInterface("android.window.ITaskOrganizer")
+                                        
+                                        // Read RunningTaskInfo
+                                        val hasTaskInfo = data.readInt() != 0
+                                        val taskInfo = if (hasTaskInfo) {
+                                            android.app.ActivityManager.RunningTaskInfo.CREATOR.createFromParcel(data)
+                                        } else {
+                                            null
+                                        }
+                                        
+                                        if (taskInfo != null) {
+                                            taskLeashes.remove(taskInfo.taskId)
+                                            Log.d(TAG, "onTaskVanished callback: taskId=${taskInfo.taskId}")
+                                        }
+                                        reply?.writeNoException()
+                                        return true
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error in TaskOrganizer transact", e)
+                                }
+                                return super.onTransact(code, data, reply, flags)
+                            }
+                        }
+                        
+                        // Register using the controller: registerOrganizer(ITaskOrganizer organizer)
+                        val registerOrganizerMethod = controller.javaClass.getMethod(
+                            "registerOrganizer",
+                            Class.forName("android.window.ITaskOrganizer")
+                        )
+                        
+                        val initialTasks = registerOrganizerMethod.invoke(controller, myBinder) as? List<*>
+                        if (initialTasks != null) {
+                            for (infoObj in initialTasks) {
+                                if (infoObj == null) continue
+                                try {
+                                    val getTaskInfoMethod = infoObj.javaClass.getMethod("getTaskInfo")
+                                    val getLeashMethod = infoObj.javaClass.getMethod("getLeash")
+                                    val taskInfo = getTaskInfoMethod.invoke(infoObj) as android.app.ActivityManager.RunningTaskInfo
+                                    val leash = getLeashMethod.invoke(infoObj) as android.view.SurfaceControl
+                                    taskLeashes[taskInfo.taskId] = leash
+                                    Log.d(TAG, "Initial task loaded: taskId=${taskInfo.taskId}, leash=$leash")
+                                } catch (ex: Exception) {
+                                    Log.e(TAG, "Error processing initial task info", ex)
+                                }
+                            }
+                        }
+                        
+                        isOrganizerRegistered = true
+                        Log.d(TAG, "Successfully registered ITaskOrganizer dynamically via Shizuku!")
+                    } else {
+                        Log.w(TAG, "ITaskOrganizerController is null!")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register dynamic TaskOrganizer", e)
+            }
+        }
+    }
+
     init {
         ShellExecutor.bypassHiddenApiRestrictions()
     }
@@ -230,6 +365,56 @@ object TaskManager {
 
     fun getRecentTasks(): List<AppTask> = getCombinedTaskState().tasks
     fun getAllTaskBounds(): Map<Int, TaskBounds> = getCombinedTaskState().boundsMap
+
+    fun minimizeTaskSurface(taskId: Int): Boolean {
+        try {
+            val leash = getTaskLeash(taskId)
+            if (leash != null && leash.isValid) {
+                val transaction = android.view.SurfaceControl.Transaction()
+                val hideMethod = transaction.javaClass.getMethod("hide", android.view.SurfaceControl::class.java)
+                val setAlphaMethod = transaction.javaClass.getMethod("setAlpha", android.view.SurfaceControl::class.java, Float::class.javaPrimitiveType)
+                val setPositionMethod = transaction.javaClass.getMethod("setPosition", android.view.SurfaceControl::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType)
+                
+                hideMethod.invoke(transaction, leash)
+                setAlphaMethod.invoke(transaction, leash, 0f)
+                setPositionMethod.invoke(transaction, leash, 100000f, 100000f)
+                transaction.apply()
+                
+                Log.d(TAG, "Successfully minimized task surface reflectively for taskId $taskId")
+                return true
+            } else {
+                Log.w(TAG, "Cannot minimize task surface: leash is null or invalid for taskId $taskId")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error minimizing task surface reflectively for taskId $taskId", e)
+        }
+        return false
+    }
+
+    fun restoreTaskSurface(taskId: Int): Boolean {
+        try {
+            val leash = getTaskLeash(taskId)
+            if (leash != null && leash.isValid) {
+                val transaction = android.view.SurfaceControl.Transaction()
+                val showMethod = transaction.javaClass.getMethod("show", android.view.SurfaceControl::class.java)
+                val setAlphaMethod = transaction.javaClass.getMethod("setAlpha", android.view.SurfaceControl::class.java, Float::class.javaPrimitiveType)
+                val setPositionMethod = transaction.javaClass.getMethod("setPosition", android.view.SurfaceControl::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType)
+                
+                showMethod.invoke(transaction, leash)
+                setAlphaMethod.invoke(transaction, leash, 1f)
+                setPositionMethod.invoke(transaction, leash, 0f, 0f)
+                transaction.apply()
+                
+                Log.d(TAG, "Successfully restored task surface reflectively for taskId $taskId")
+                return true
+            } else {
+                Log.w(TAG, "Cannot restore task surface: leash is null or invalid for taskId $taskId")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error restoring task surface reflectively for taskId $taskId", e)
+        }
+        return false
+    }
 
     fun getFocusedPackage(): String {
         try {

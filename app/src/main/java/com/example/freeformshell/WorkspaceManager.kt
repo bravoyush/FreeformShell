@@ -5,7 +5,7 @@ import android.graphics.Rect
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class WorkspaceApp(val packageName: String, val component: String?, val bounds: Rect)
+data class WorkspaceApp(val packageName: String, val component: String?, val bounds: Rect, val isSnapped: Boolean = false)
 data class WorkspaceGroup(val apps: List<WorkspaceApp>, val displayId: Int, val timestamp: Long = System.currentTimeMillis())
 
 object WorkspaceManager {
@@ -15,13 +15,17 @@ object WorkspaceManager {
 
     fun saveCurrentToHistory(context: Context, displayId: Int, tasks: List<AppTask>, boundsMap: Map<Int, TaskBounds>) {
         val baseBlacklist = emptySet<String>()
+        val activeService = FreeformOverlayService.getInstance()
         val apps = tasks.filter { task ->
             task.isFreeform &&
             !baseBlacklist.any { task.packageName.lowercase().contains(it) } &&
             !FreeformOverlayService.isBlacklisted(context, task.packageName)
         }.mapNotNull { task ->
             val bounds = boundsMap[task.taskId]?.bounds ?: return@mapNotNull null
-            WorkspaceApp(task.packageName, task.activityName, bounds)
+            val isSnapped = activeService?.let { service ->
+                service.dockedTasks.contains(task.taskId) || service.dockedPackages.contains(task.packageName)
+            } ?: false
+            WorkspaceApp(task.packageName, task.activityName, bounds, isSnapped)
         }
         if (apps.isEmpty()) return
         
@@ -96,6 +100,7 @@ object WorkspaceManager {
             appObj.put("t", app.bounds.top)
             appObj.put("r", app.bounds.right)
             appObj.put("b", app.bounds.bottom)
+            appObj.put("snap", app.isSnapped)
             appsArray.put(appObj)
         }
         obj.put("apps", appsArray)
@@ -112,7 +117,8 @@ object WorkspaceManager {
             apps.add(WorkspaceApp(
                 appObj.getString("pkg"),
                 appObj.optString("comp", ""),
-                Rect(appObj.getInt("l"), appObj.getInt("t"), appObj.getInt("r"), appObj.getInt("b"))
+                Rect(appObj.getInt("l"), appObj.getInt("t"), appObj.getInt("r"), appObj.getInt("b")),
+                appObj.optBoolean("snap", false)
             ))
         }
         return WorkspaceGroup(apps, displayId, timestamp)

@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android 14 Overlay & Tapjacking Visualizer</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f121d;
+            --card-bg: rgba(22, 28, 45, 0.7);
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg-dark) 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(15, 18, 29, 0.5);
+            backdrop-filter: blur(12px);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Sidebar Control Panel */
+        .controls-card {
+            flex: 1;
+            max-width: 400px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Toggle Buttons */
+        .mode-toggle {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn-mode {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-mode::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: transparent;
+            transition: background 0.3s;
+        }
+
+        .btn-mode:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .btn-mode.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-mode.active::before {
+            background: var(--accent-blue);
+        }
+
+        .btn-mode.active.multi {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-mode.active.multi::before {
+            background: var(--accent-red);
+        }
+
+        /* Info Display */
+        .info-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .info-panel strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Interactive Sandbox Area */
+        .sandbox-container {
+            flex: 2;
+            background: rgba(5, 7, 12, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+            min-height: 600px;
+        }
+
+        .sandbox-header {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge-mode {
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-mode.multi {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-mode.single {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .sandbox-screen {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1b2035 0%, #0a0c16 100%);
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        /* Mockup Android App Windows */
+        .mock-window {
+            position: absolute;
+            width: 320px;
+            height: 240px;
+            background: #111422;
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: border-color 0.2s;
+            z-index: 10;
+        }
+
+        .mock-window.active {
+            box-shadow: 0 16px 48px rgba(59, 130, 246, 0.25);
+        }
+
+        /* Virtual Title Bar */
+        .mock-title {
+            height: 40px;
+            background: #1a1e32;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            user-select: none;
+        }
+
+        .mock-title-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .mock-title-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .mock-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            background: #131728;
+            padding: 1rem;
+            text-align: center;
+            user-select: none;
+        }
+
+        /* OVERLAYS VISUAL REPRESENTATION */
+
+        /* Mode 1: Multi-Overlay Overlaps (Borders & Handles) */
+        .overlay-element {
+            position: absolute;
+            background: rgba(239, 68, 68, 0.25);
+            border: 1px dashed var(--accent-red);
+            pointer-events: none;
+            display: none;
+            z-index: 20;
+            transition: all 0.15s ease;
+        }
+
+        .overlay-titlebar {
+            background: rgba(239, 68, 68, 0.35);
+            border-bottom: 2px solid var(--accent-red);
+        }
+
+        /* Mode 2: Single Full Screen Overlay with holes */
+        .fullscreen-glass-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(59, 130, 246, 0.12);
+            border: 3px solid var(--accent-blue);
+            box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.2);
+            pointer-events: none;
+            display: none;
+            z-index: 30;
+        }
+
+        /* Visualizing Cutouts in Glass */
+        .glass-cutout {
+            position: absolute;
+            background: rgba(5, 7, 12, 0.1);
+            border: 2px dashed rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            pointer-events: none;
+            display: none;
+            z-index: 31;
+            border-radius: 8px;
+        }
+
+        /* Touch interaction indicator */
+        .touch-ripple {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @keyframes ripple-effect {
+            0% {
+                transform: scale(0.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .ripple-active {
+            animation: ripple-effect 0.5s ease-out;
+        }
+
+        /* Visual warning when touch blocked by Android 14 */
+        .block-warning {
+            position: absolute;
+            background: rgba(239, 68, 68, 0.95);
+            border: 1px solid #ff8080;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -100%);
+            animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: translate(-50%, -70%) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, -100%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Success Visual Indicator */
+        .success-indicator {
+            position: absolute;
+            background: rgba(16, 185, 129, 0.95);
+            border: 1px solid #86efac;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -100%);
+            animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Hint Text Overlay */
+        .hint-text {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 18, 29, 0.8);
+            border: 1px solid var(--glass-border);
+            padding: 0.5rem 1.25rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Android 14 Overlapping Windows & Tapjacking Visualizer</h1>
+        <p>A beautiful interactive simulation mapping touch inputs to overlay structures.</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Control Sidebar -->
+        <div class="controls-card">
+            <div class="mode-toggle">
+                <span class="section-title">Overlay Mode Selection</span>
+
+                <button class="btn-mode multi active" id="btn-multi" onclick="setMode('multi')">
+                    ❌ Current Multi-Overlay
+                </button>
+
+                <button class="btn-mode" id="btn-single" onclick="setMode('single')">
+                    🚀 Single Full-Screen Cutout
+                </button>
+            </div>
+
+            <span class="section-title">How Android 14 Reacts</span>
+            <div class="info-panel" id="mode-desc">
+                <strong style="color: var(--accent-red);">🔴 Tapjacking Filters Triggered</strong>
+                In this mode, each window carries its own invisible resize borders and handles. When App A overlaps App
+                B, the invisible overlays of App B extend over App A's tap area.
+                <br><br>
+                Android 14 detects touch-intercept sheets overlapping another app, flag-marks the touch as "unsafe"
+                (tapjacking prevention), and **completely blocks or delays touches** inside that overlapping space.
+            </div>
+
+            <span class="section-title">Legend</span>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(19, 23, 40, 1); border-color: #3b82f6;"></div>
+                    <span>Native App Windows</span>
+                </div>
+                <div class="legend-item" id="legend-multi-1">
+                    <div class="legend-color"
+                        style="background: rgba(239, 68, 68, 0.4); border-color: var(--accent-red);"></div>
+                    <span>Per-app invisible Touch Strips / Handles</span>
+                </div>
+                <div class="legend-item" id="legend-single-1" style="display: none;">
+                    <div class="legend-color"
+                        style="background: rgba(59, 130, 246, 0.15); border-color: var(--accent-blue);"></div>
+                    <span>Single Screen-wide Transparent Glass</span>
+                </div>
+                <div class="legend-item" id="legend-single-2" style="display: none;">
+                    <div class="legend-color"
+                        style="background: rgba(5, 7, 12, 0.2); border: 2px dashed rgba(59, 130, 246, 0.6);"></div>
+                    <span>Cutout Holes (Passes clicks safely)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Sandbox -->
+        <div class="sandbox-container">
+            <div class="sandbox-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 600;">Interactive Sandbox Screen</span>
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">(Try dragging apps or clicking inside
+                        overlap zones)</span>
+                </div>
+                <span class="badge-mode multi" id="mode-badge">Current Multi-Overlay</span>
+            </div>
+
+            <div class="sandbox-screen" id="screen" onclick="simulateTouch(event)">
+                <!-- Virtual Ripple -->
+                <div class="touch-ripple" id="ripple"></div>
+
+                <!-- App 1 Window -->
+                <div class="mock-window active" id="win1"
+                    style="left: 60px; top: 120px; border: 2px solid var(--accent-blue);">
+                    <div class="mock-title" style="background: #1e293b;">
+                        <span>App A (Foreground Window)</span>
+                        <div class="mock-title-controls">
+                            <div class="mock-title-dot"></div>
+                            <div class="mock-title-dot"></div>
+                        </div>
+                    </div>
+                    <div class="mock-content">
+                        <span style="color: #fff; font-weight: 600; margin-bottom: 0.5rem;">Interactive Grid
+                            Workspace</span>
+                        <span style="font-size: 0.8rem;">Touches here are always direct since App A is on top.</span>
+                    </div>
+                </div>
+
+                <!-- App 2 Window -->
+                <div class="mock-window" id="win2"
+                    style="left: 200px; top: 220px; border: 1px solid var(--glass-border);">
+                    <div class="mock-title" style="background: #1a1e32;">
+                        <span>App B (Background Window)</span>
+                        <div class="mock-title-controls">
+                            <div class="mock-title-dot"></div>
+                            <div class="mock-title-dot"></div>
+                        </div>
+                    </div>
+                    <div class="mock-content">
+                        <span style="color: var(--text-main); font-weight: 600; margin-bottom: 0.5rem;">Target Layout
+                            Panel</span>
+                        <span style="font-size: 0.8rem; color: #f43f5e; font-weight: 600;" id="app-b-status">⚠️ Touches
+                            blocked in overlapping areas!</span>
+                    </div>
+                </div>
+
+                <!-- VISUAL OVERLAY RENDERERS -->
+
+                <!-- Win 1 Overlays (Mode 1) -->
+                <div class="overlay-element overlay-titlebar" id="o1-t"></div>
+                <div class="overlay-element" id="o1-l"></div>
+                <div class="overlay-element" id="o1-r"></div>
+                <div class="overlay-element" id="o1-b"></div>
+
+                <!-- Win 2 Overlays (Mode 1) -->
+                <div class="overlay-element overlay-titlebar" id="o2-t"></div>
+                <div class="overlay-element" id="o2-l"></div>
+                <div class="overlay-element" id="o2-r"></div>
+                <div class="overlay-element" id="o2-b"></div>
+
+                <!-- Single Full Screen Overlay (Mode 2) -->
+                <div class="fullscreen-glass-overlay" id="single-glass"></div>
+                <!-- Cutouts in glass over the main body of apps -->
+                <div class="glass-cutout" id="cutout-a"></div>
+                <div class="glass-cutout" id="cutout-b"></div>
+
+                <div class="hint-text" id="hint">ℹ️ Switch to "Single Full-Screen Cutout" to see how the touch dropouts
+                    are fixed!</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'multi';
+        const screen = document.getElementById('screen');
+        const win1 = document.getElementById('win1');
+        const win2 = document.getElementById('win2');
+
+        // Dragging states
+        let isDragging = null;
+        let startX, startY, winStartX, winStartY;
+
+        // Initialize windows dragging
+        [win1, win2].forEach(win => {
+            const title = win.querySelector('.mock-title');
+            title.addEventListener('mousedown', (e) => {
+                isDragging = win;
+                win1.style.zIndex = 10;
+                win2.style.zIndex = 10;
+                win.style.zIndex = 12; // Elevate active window
+
+                if (win === win1) {
+                    win1.classList.add('active');
+                    win1.style.borderColor = 'var(--accent-blue)';
+                    win2.classList.remove('active');
+                    win2.style.borderColor = 'var(--glass-border)';
+                } else {
+                    win2.classList.add('active');
+                    win2.style.borderColor = 'var(--accent-blue)';
+                    win1.classList.remove('active');
+                    win1.style.borderColor = 'var(--glass-border)';
+                }
+
+                startX = e.clientX;
+                startY = e.clientY;
+                winStartX = parseInt(win.style.left);
+                winStartY = parseInt(win.style.top);
+                e.stopPropagation();
+            });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            // Constrain movement inside workspace
+            const maxL = screen.clientWidth - isDragging.clientWidth;
+            const maxT = screen.clientHeight - isDragging.clientHeight;
+
+            let newL = Math.max(0, Math.min(maxL, winStartX + dx));
+            let newT = Math.max(0, Math.min(maxT, winStartY + dy));
+
+            isDragging.style.left = newL + 'px';
+            isDragging.style.top = newT + 'px';
+
+            updateOverlayLayouts();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = null;
+        });
+
+        // Set mode: Multi vs Single
+        function setMode(mode) {
+            currentMode = mode;
+
+            const btnMulti = document.getElementById('btn-multi');
+            const btnSingle = document.getElementById('btn-single');
+            const modeDesc = document.getElementById('mode-desc');
+            const modeBadge = document.getElementById('mode-badge');
+
+            const lMulti1 = document.getElementById('legend-multi-1');
+            const lSingle1 = document.getElementById('legend-single-1');
+            const lSingle2 = document.getElementById('legend-single-2');
+
+            const appBStatus = document.getElementById('app-b-status');
+            const hint = document.getElementById('hint');
+
+            if (mode === 'multi') {
+                btnMulti.classList.add('active');
+                btnSingle.classList.remove('active');
+                modeBadge.className = 'badge-mode multi';
+                modeBadge.innerText = 'Current Multi-Overlay';
+                appBStatus.innerText = '⚠️ Touches blocked in overlapping areas!';
+                appBStatus.style.color = '#f43f5e';
+                hint.innerText = 'ℹ️ Switch to "Single Full-Screen Cutout" to see how the touch dropouts are fixed!';
+
+                modeDesc.innerHTML = `
+                    <strong style="color: var(--accent-red);">🔴 Tapjacking Filters Triggered</strong>
+                    In this mode, each window carries its own invisible resize borders and handles. When App A overlaps App B, the invisible overlays of App B extend over App A's tap area. 
+                    <br><br>
+                    Android 14 detects touch-intercept sheets overlapping another app, flag-marks the touch as "unsafe" (tapjacking prevention), and **completely blocks or delays touches** inside that overlapping space.
+                `;
+
+                lMulti1.style.display = 'flex';
+                lSingle1.style.display = 'none';
+                lSingle2.style.display = 'none';
+            } else {
+                btnSingle.classList.add('active');
+                btnMulti.classList.remove('active');
+                modeBadge.className = 'badge-mode single';
+                modeBadge.innerText = 'Single Full-Screen Cutout';
+                appBStatus.innerText = '✅ Clicks work everywhere smoothly!';
+                appBStatus.style.color = 'var(--accent-green)';
+                hint.innerText = 'ℹ️ Try tapping inside any app or border to see click pass-through & touch zones!';
+
+                modeDesc.innerHTML = `
+                    <strong style="color: var(--accent-green);">🟢 Bypasses All Security Blocks</strong>
+                    Here, we place just **one screen-wide transparent sheet of glass** over everything. 
+                    <br><br>
+                    We **cut out holes** inside the glass exactly matching the main content of the apps. Clicking inside an app is like clicking straight through the hole.
+                    <br><br>
+                    Since there are **no overlapping overlay windows** on the screen, Android 14's tapjacking protection never triggers, allowing all clicks to proceed instantly with zero lag!
+                `;
+
+                lMulti1.style.display = 'none';
+                lSingle1.style.display = 'flex';
+                lSingle2.style.display = 'flex';
+            }
+
+            updateOverlayLayouts();
+        }
+
+        // Update position of the overlay representations
+        function updateOverlayLayouts() {
+            const elements = document.querySelectorAll('.overlay-element');
+            const glass = document.getElementById('single-glass');
+            const cutoutA = document.getElementById('cutout-a');
+            const cutoutB = document.getElementById('cutout-b');
+
+            if (currentMode === 'multi') {
+                glass.style.display = 'none';
+                cutoutA.style.display = 'none';
+                cutoutB.style.display = 'none';
+
+                elements.forEach(el => el.style.display = 'block');
+
+                // Sync sizes with mock windows
+                syncWinOverlay('win1', 'o1');
+                syncWinOverlay('win2', 'o2');
+            } else {
+                elements.forEach(el => el.style.display = 'none');
+
+                glass.style.display = 'block';
+                cutoutA.style.display = 'block';
+                cutoutB.style.display = 'block';
+
+                // Setup Cutouts (Main body of app, leaving borders touchable)
+                setupCutout('win1', 'cutout-a');
+                setupCutout('win2', 'cutout-b');
+            }
+        }
+
+        function syncWinOverlay(winId, overlayPrefix) {
+            const win = document.getElementById(winId);
+            const l = parseInt(win.style.left);
+            const t = parseInt(win.style.top);
+            const w = win.clientWidth;
+            const h = win.clientHeight;
+            const b = 10; // Virtual border size
+
+            // Title bar overlay
+            const title = document.getElementById(overlayPrefix + '-t');
+            title.style.left = l + 'px';
+            title.style.top = t + 'px';
+            title.style.width = w + 'px';
+            title.style.height = '40px';
+
+            // Left strip
+            const left = document.getElementById(overlayPrefix + '-l');
+            left.style.left = (l - b) + 'px';
+            left.style.top = (t + 40) + 'px';
+            left.style.width = b + 'px';
+            left.style.height = (h - 40) + 'px';
+
+            // Right strip
+            const right = document.getElementById(overlayPrefix + '-r');
+            right.style.left = (l + w) + 'px';
+            right.style.top = (t + 40) + 'px';
+            right.style.width = b + 'px';
+            right.style.height = (h - 40) + 'px';
+
+            // Bottom strip
+            const bottom = document.getElementById(overlayPrefix + '-b');
+            bottom.style.left = l + 'px';
+            bottom.style.top = (t + h) + 'px';
+            bottom.style.width = w + 'px';
+            bottom.style.height = b + 'px';
+        }
+
+        function setupCutout(winId, cutoutId) {
+            const win = document.getElementById(winId);
+            const cutout = document.getElementById(cutoutId);
+
+            const l = parseInt(win.style.left);
+            const t = parseInt(win.style.top);
+            const w = win.clientWidth;
+            const h = win.clientHeight;
+            const borderOffset = 8; // Simulate borders
+
+            // Cutout represents the area inside the borders and below the title bar
+            cutout.style.left = (l + borderOffset) + 'px';
+            cutout.style.top = (t + 40) + 'px'; // Below title bar
+            cutout.style.width = (w - borderOffset * 2) + 'px';
+            cutout.style.height = (h - 40 - borderOffset) + 'px';
+        }
+
+        // Simulate touch and display warnings
+        function simulateTouch(e) {
+            if (e.target.closest('.mock-title')) return; // Ignore title clicks (they are drags)
+
+            const rect = screen.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Trigger visual ripple
+            const ripple = document.getElementById('ripple');
+            ripple.style.left = (clickX - 20) + 'px';
+            ripple.style.top = (clickY - 20) + 'px';
+            ripple.classList.remove('ripple-active');
+            void ripple.offsetWidth; // Trigger reflow
+            ripple.classList.add('ripple-active');
+
+            // Detect if clicked inside overlapping area
+            const win1Rect = win1.getBoundingClientRect();
+            const win2Rect = win2.getBoundingClientRect();
+
+            const w1_l = win1Rect.left - rect.left;
+            const w1_r = win1Rect.right - rect.left;
+            const w1_t = win1Rect.top - rect.top;
+            const w1_b = win1Rect.bottom - rect.top;
+
+            const w2_l = win2Rect.left - rect.left;
+            const w2_r = win2Rect.right - rect.left;
+            const w2_t = win2Rect.top - rect.top;
+            const w2_b = win2Rect.bottom - rect.top;
+
+            // Check if click was inside App B (Background Window)
+            const insideAppB = (clickX >= w2_l && clickX <= w2_r && clickY >= w2_t && clickY <= w2_b);
+            // Check if click was inside App A's visual overlays/borders (in Multi mode)
+            const insideAppAOverlay = currentMode === 'multi' && (
+                // Over Title bar of App A
+                (clickX >= w1_l && clickX <= w1_r && clickY >= w1_t && clickY <= w1_t + 40) ||
+                // Over Left border of App A
+                (clickX >= w1_l - 10 && clickX <= w1_l && clickY >= w1_t + 40 && clickY <= w1_b) ||
+                // Over Right border of App A
+                (clickX >= w1_r && clickX <= w1_r + 10 && clickY >= w1_t + 40 && clickY <= w1_b) ||
+                // Over Bottom border of App A
+                (clickX >= w1_l && clickX <= w1_r && clickY >= w1_b && clickY <= w1_b + 10)
+            );
+
+            // If click inside B, and also overlaps with App A's overlays
+            if (insideAppB && insideAppAOverlay) {
+                if (currentMode === 'multi') {
+                    showStatusBox('🔴 Touch Dropped! (Android 14 Tapjacking Shield)', '#ef4444', clickX, clickY, false);
+                } else {
+                    showStatusBox('🟢 Touch Passed (Clicked through Cutout Hole)', 'var(--accent-green)', clickX, clickY, true);
+                }
+            } else if (insideAppB) {
+                // Clicking normally in App B
+                showStatusBox('🟢 Touch Accepted by App B', 'var(--accent-green)', clickX, clickY, true);
+            } else {
+                // Click in App A or empty space
+                showStatusBox('🟢 Touch Accepted', 'rgba(255,255,255,0.7)', clickX, clickY, true);
+            }
+        }
+
+        function showStatusBox(text, color, x, y, isSuccess) {
+            // Remove any existing status boxes
+            const oldBox = document.querySelector('.block-warning, .success-indicator');
+            if (oldBox) oldBox.remove();
+
+            const box = document.createElement('div');
+            box.className = isSuccess ? 'success-indicator' : 'block-warning';
+            box.innerHTML = text;
+            box.style.left = x + 'px';
+            box.style.top = y + 'px';
+            box.style.background = isSuccess ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)';
+            box.style.borderColor = isSuccess ? '#86efac' : '#ff8080';
+
+            screen.appendChild(box);
+
+            setTimeout(() => {
+                box.style.opacity = '0';
+                box.style.transition = 'opacity 0.5s ease-out';
+                setTimeout(() => box.remove(), 500);
+            }, 1800);
+        }
+
+        // Initialize layouts
+        updateOverlayLayouts();
+    </script>
+</body>
+
+</html>

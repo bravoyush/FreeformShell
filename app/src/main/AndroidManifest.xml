@@ -68,6 +68,35 @@
         <service android:name=".FreeformWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
+        <!-- Freeform Task Manager Widget -->
+        <receiver android:name=".FreeformTaskManagerWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ACTION_REFRESH" />
+                <action android:name="ACTION_ITEM_CLICK" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_task_manager_info" />
+        </receiver>
+
+        <service android:name=".FreeformTaskManagerWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Bento Quick Toolbox Widget -->
+        <receiver android:name=".FreeformQuickToolboxWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ACTION_CLOSE_ALL" />
+                <action android:name="ACTION_RESTART_SHELL" />
+                <action android:name="ACTION_TOGGLE_DISPLAY" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_toolbox_info" />
+        </receiver>
+
+
     </application>
 
 </manifest>

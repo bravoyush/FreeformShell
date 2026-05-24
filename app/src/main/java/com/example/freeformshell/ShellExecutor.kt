@@ -10,6 +10,8 @@ import android.os.Looper
 object ShellExecutor {
     private const val TAG = "ShellExecutor"
 
+    private val reusableRect = android.graphics.Rect()
+
     private var cachedActivityTaskManager: Any? = null
     private var cachedActivityManager: Any? = null
     private val lock = Any()
@@ -23,12 +25,21 @@ object ShellExecutor {
     private var cachedSetFocusedRootTaskMethod: java.lang.reflect.Method? = null
     private var cachedSetFocusedTaskMethod: java.lang.reflect.Method? = null
     private var cachedForceStopPackageMethod: java.lang.reflect.Method? = null
+    private var cachedSetTaskWindowingModeMethod: java.lang.reflect.Method? = null
 
     init {
         bypassHiddenApiRestrictions()
         ShizukuLifecycleManager.register(object : ShizukuLifecycleManager.ConnectionCallback {
             override fun onConnected() {
                 Log.d(TAG, "Shizuku reconnected. Ready to initialize shell.")
+                Thread {
+                    try {
+                        getActivityTaskManager()
+                        getActivityManager()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error pre-resolving managers on connection", e)
+                    }
+                }.start()
             }
             override fun onDisconnected() {
                 Log.w(TAG, "Shizuku disconnected. Closing persistent shell.")
@@ -36,6 +47,14 @@ object ShellExecutor {
                 clearAtmCache()
             }
         })
+        Thread {
+            try {
+                if (Shizuku.pingBinder()) {
+                    getActivityTaskManager()
+                    getActivityManager()
+                }
+            } catch (e: Exception) {}
+        }.start()
     }
 
     private fun getActivityTaskManager(): Any? {
@@ -48,6 +67,16 @@ object ShellExecutor {
                     val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
                     val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
                     cachedActivityTaskManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    
+                    // Diagnostic reflection dump on first load
+                    cachedActivityTaskManager?.let { atm ->
+                        Log.d(TAG, "Successfully resolved IActivityTaskManager proxy. Dumping relevant methods:")
+                        for (m in atm.javaClass.methods) {
+                            if (m.name.contains("moveTask", ignoreCase = true) || m.name.contains("back", ignoreCase = true)) {
+                                Log.d(TAG, "ATM METHOD DUMP: ${m.name} params: ${m.parameterTypes.map { it.name }}")
+                            }
+                        }
+                    }
                     return cachedActivityTaskManager
                 }
             } catch (e: Exception) {
@@ -67,6 +96,16 @@ object ShellExecutor {
                     val stubClass = Class.forName("android.app.IActivityManager\$Stub")
                     val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
                     cachedActivityManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    
+                    // Diagnostic reflection dump on first load
+                    cachedActivityManager?.let { am ->
+                        Log.d(TAG, "Successfully resolved IActivityManager proxy. Dumping relevant methods:")
+                        for (m in am.javaClass.methods) {
+                            if (m.name.contains("moveTask", ignoreCase = true) || m.name.contains("back", ignoreCase = true)) {
+                                Log.d(TAG, "AM METHOD DUMP: ${m.name} params: ${m.parameterTypes.map { it.name }}")
+                            }
+                        }
+                    }
                     return cachedActivityManager
                 }
             } catch (e: Exception) {
@@ -88,7 +127,10 @@ object ShellExecutor {
             cachedSetFocusedRootTaskMethod = null
             cachedSetFocusedTaskMethod = null
             cachedForceStopPackageMethod = null
+            cachedSetTaskWindowingModeMethod = null
         }
+        // Force persistent shell initialization because binder path failed!
+        Thread { initPersistentShell() }.start()
     }
 
     @JvmStatic
@@ -191,9 +233,14 @@ object ShellExecutor {
             activeOverlaysCount = count
             Log.d(TAG, "Active overlays count changed: $activeOverlaysCount")
             handler.removeCallbacks(idleRunnable)
-            if (activeOverlaysCount <= 0) {
-                // Schedule termination of persistent shell after 10 seconds of idle inactivity
-                handler.postDelayed(idleRunnable, 10000)
+            
+            val isBinderFunctional = synchronized(lock) {
+                cachedActivityTaskManager != null && cachedActivityManager != null
+            }
+            
+            if (activeOverlaysCount <= 0 || isBinderFunctional) {
+                // Terminate persistent shell immediately to save system memory
+                Thread { closePersistentShell() }.start()
             } else {
                 // Ensure shell is initialized if overlays are active
                 Thread { initPersistentShell() }.start()
@@ -267,7 +314,7 @@ object ShellExecutor {
 
     fun executeCommand(command: String) = exec(command)
 
-    fun resizeTask(taskId: Int, left: Int, top: Int, right: Int, bottom: Int) {
+    fun resizeTask(taskId: Int, left: Int, top: Int, right: Int, bottom: Int, resizeMode: Int = 2) {
         try {
             val manager = getActivityTaskManager()
             if (manager != null) {
@@ -282,8 +329,11 @@ object ShellExecutor {
                     }
                     cachedResizeTaskMethod!!
                 }
-                val bounds = android.graphics.Rect(left, top, right, bottom)
-                method.invoke(manager, taskId, bounds, 1) // 1 = RESIZE_MODE_USER
+                val bounds = synchronized(reusableRect) {
+                    reusableRect.set(left, top, right, bottom)
+                    reusableRect
+                }
+                method.invoke(manager, taskId, bounds, resizeMode)
                 return
             }
         } catch (e: Exception) {
@@ -402,7 +452,7 @@ object ShellExecutor {
         }
     }
 
-    fun relaunchFreeformTask(taskId: Int, component: String) {
+    fun relaunchFreeformTask(taskId: Int, component: String, displayId: Int = -1) {
         try {
             val manager = getActivityTaskManager()
             if (manager != null) {
@@ -411,6 +461,12 @@ object ShellExecutor {
                     val setLaunchWindowingModeMethod = options.javaClass.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
                     setLaunchWindowingModeMethod.invoke(options, 5) // 5 = WINDOWING_MODE_FREEFORM
                 } catch (e: Exception) {}
+                if (displayId != -1) {
+                    try {
+                        val setLaunchDisplayIdMethod = options.javaClass.getMethod("setLaunchDisplayId", Int::class.javaPrimitiveType)
+                        setLaunchDisplayIdMethod.invoke(options, displayId)
+                    } catch (e: Exception) {}
+                }
 
                 val method = synchronized(lock) {
                     if (cachedStartActivityFromRecentsMethod == null) {
@@ -435,9 +491,10 @@ object ShellExecutor {
 
         triggerShellInteraction()
         val writer = persistentWriter
+        val displaySuffix = if (displayId != -1) " --display $displayId" else ""
         if (writer != null) {
             try {
-                writer.write("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front\n")
+                writer.write("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix\n")
                 writer.flush()
                 return
             } catch (e: Exception) {
@@ -445,43 +502,122 @@ object ShellExecutor {
                 closePersistentShell()
             }
         }
-        exec("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front")
+        exec("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix")
     }
 
-    fun moveTaskToBack(taskId: Int) {
+    fun setTaskWindowingMode(taskId: Int, windowingMode: Int, toTop: Boolean) {
         try {
             val manager = getActivityTaskManager()
             if (manager != null) {
                 val method = synchronized(lock) {
-                    if (cachedMoveTaskToBackMethod == null) {
-                        cachedMoveTaskToBackMethod = manager.javaClass.getMethod(
-                            "moveTaskToBack",
-                            Int::class.javaPrimitiveType
+                    if (cachedSetTaskWindowingModeMethod == null) {
+                        cachedSetTaskWindowingModeMethod = manager.javaClass.getMethod(
+                            "setTaskWindowingMode",
+                            Int::class.javaPrimitiveType,
+                            Int::class.javaPrimitiveType,
+                            Boolean::class.javaPrimitiveType
                         )
                     }
-                    cachedMoveTaskToBackMethod!!
+                    cachedSetTaskWindowingModeMethod!!
                 }
-                method.invoke(manager, taskId)
+                method.invoke(manager, taskId, windowingMode, toTop)
+                Log.d(TAG, "Successfully set task $taskId windowing mode to $windowingMode (toTop=$toTop) via direct Binder call")
                 return
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to move task to back via direct Binder call, falling back to shell", e)
+            Log.e(TAG, "Failed to set task windowing mode via direct Binder call, falling back to shell", e)
             clearAtmCache()
         }
 
+        // Secondary fallback to shell command
         triggerShellInteraction()
         val writer = persistentWriter
         if (writer != null) {
             try {
-                writer.write("cmd activity task move-to-back $taskId\n")
+                writer.write("cmd activity task set-windowing-mode $taskId $windowingMode\n")
+                if (toTop) {
+                    writer.write("cmd activity task movetotop $taskId\n")
+                }
                 writer.flush()
+                Log.d(TAG, "Successfully wrote set-windowing-mode $windowingMode for task $taskId to persistent shell")
                 return
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed writing move-to-back to persistent shell, resetting shell", e)
+            } catch (ex: Exception) {
+                Log.e(TAG, "Failed writing set-windowing-mode to persistent shell, resetting shell", ex)
                 closePersistentShell()
             }
         }
-        exec("cmd activity task move-to-back $taskId")
+        exec("cmd activity task set-windowing-mode $taskId $windowingMode")
+        if (toTop) {
+            exec("cmd activity task movetotop $taskId")
+        }
+    }
+
+    fun moveTaskToBack(taskId: Int) {
+        // Run in a background thread to allow the OS to complete the windowing mode transition 
+        // before invoking moveTaskToBack asynchronously. This avoids race conditions in ATMS/WMS.
+        Thread {
+            Log.d(TAG, "moveTaskToBack background execution started for task $taskId")
+
+            // 1. Convert task to fullscreen (1) first, so it resides in a standard fullscreen stack
+            setTaskWindowingMode(taskId, 1, false) // 1 = WINDOWING_MODE_FULLSCREEN
+            
+            // 2. Allow a tiny delay for the OS to apply the windowing mode transition
+            try {
+                Thread.sleep(150)
+            } catch (e: InterruptedException) {
+                // ignore
+            }
+
+            // 3. Try robust reflective calls against all managers with all signatures
+            val managers = listOfNotNull(getActivityTaskManager(), getActivityManager())
+            for (manager in managers) {
+                // Try 1: moveTaskToBack(int taskId, boolean nonRoot) -> Standard Android 13/14/15 ATM signature
+                try {
+                    val method = manager.javaClass.getMethod(
+                        "moveTaskToBack",
+                        Int::class.javaPrimitiveType,
+                        Boolean::class.javaPrimitiveType
+                    )
+                    method.invoke(manager, taskId, true)
+                    Log.d(TAG, "Successfully moved task $taskId to back via moveTaskToBack(int, boolean) on ${manager.javaClass.simpleName}")
+                    return@Thread
+                } catch (e: Exception) {
+                    Log.d(TAG, "Failed moveTaskToBack(int, boolean) on ${manager.javaClass.simpleName}: ${e.message}")
+                }
+
+                // Try 2: moveTaskToBack(int taskId) -> Standard AOSP ATM/AM signature
+                try {
+                    val method = manager.javaClass.getMethod(
+                        "moveTaskToBack",
+                        Int::class.javaPrimitiveType
+                    )
+                    method.invoke(manager, taskId)
+                    Log.d(TAG, "Successfully moved task $taskId to back via moveTaskToBack(int) on ${manager.javaClass.simpleName}")
+                    return@Thread
+                } catch (e: Exception) {
+                    Log.d(TAG, "Failed moveTaskToBack(int) on ${manager.javaClass.simpleName}: ${e.message}")
+                }
+
+                // Try 3: moveTaskToBack(int taskId, int flags) -> Legacy AM signature
+                try {
+                    val method = manager.javaClass.getMethod(
+                        "moveTaskToBack",
+                        Int::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType
+                    )
+                    method.invoke(manager, taskId, 0)
+                    Log.d(TAG, "Successfully moved task $taskId to back via moveTaskToBack(int, int) on ${manager.javaClass.simpleName}")
+                    return@Thread
+                } catch (e: Exception) {
+                    Log.d(TAG, "Failed moveTaskToBack(int, int) on ${manager.javaClass.simpleName}: ${e.message}")
+                }
+            }
+
+            // 4. Secondary fallback to ADB command if direct Binder reflection fails
+            Log.w(TAG, "All direct Binder reflective calls failed for moveTaskToBack($taskId). Falling back to shell command.")
+            val focusDropRes = executeCommandWithResult("cmd activity set-focused-root-task-with-manager 0")
+            Log.d(TAG, "Focus drop command executed, result: $focusDropRes")
+        }.start()
     }
 
     fun removeTask(taskId: Int) {

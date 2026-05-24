@@ -145,6 +145,36 @@ object ThemeManager {
     fun setDensity(context: Context, displayId: Int, value: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_DENSITY_PREFIX + displayId, value).apply()
 
+    fun getPhysicalDensity(context: Context, displayId: Int, default: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("physical_density_" + displayId, default)
+
+    fun setPhysicalDensity(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("physical_density_" + displayId, value).apply()
+
+    fun getWidth(context: Context, displayId: Int, default: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("width_" + displayId, default)
+
+    fun setWidth(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("width_" + displayId, value).apply()
+
+    fun getHeight(context: Context, displayId: Int, default: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("height_" + displayId, default)
+
+    fun setHeight(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("height_" + displayId, value).apply()
+
+    fun getRefreshRate(context: Context, displayId: Int, default: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("refreshrate_" + displayId, default)
+
+    fun setRefreshRate(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("refreshrate_" + displayId, value).apply()
+
+    fun getRefreshRateMode(context: Context, displayId: Int, default: Int): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("refreshrate_mode_" + displayId, default)
+
+    fun setRefreshRateMode(context: Context, displayId: Int, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("refreshrate_mode_" + displayId, value).apply()
+
     fun getPerAppDensity(context: Context, packageName: String): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("app_density_$packageName", 0)
 
@@ -277,4 +307,10 @@ object ThemeManager {
         prefs.all.keys.filter { it.startsWith("compat_") }.forEach { editor.remove(it) }
         editor.apply()
     }
+
+    fun isGlobalOverlayEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("global_overlay_enabled", true)
+
+    fun setGlobalOverlayEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("global_overlay_enabled", enabled).apply()
 }

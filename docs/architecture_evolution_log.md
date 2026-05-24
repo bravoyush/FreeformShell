@@ -302,3 +302,33 @@ private fun setFocusedRootTaskWithManager(activityTaskManager: Any?, taskId: Int
 
 *   **100% Backward Compatible (Android 11 to 14+)**: Uses a safe, dual-reflection signature lookup. If `setFocusedRootTask` is absent on older versions, it instantly and silently falls back to `setFocusedTask`. If both fail on highly customized OEM OS builds, the call falls back to the persistent shell runner safely without app instability.
 
+---
+
+### 3. Consolidating Multi-Window Overlays into a Single Full-Screen Cutout Overlay (Android 14+ Bypass)
+
+#### **Old Architecture**
+To enable resizing and moving of freeform windows, each window instance registered **7 distinct overlay windows** (`frameView`, `titleBarView`, 3 touch resize strips, and 2 corner touch handles) directly on the screen.
+*   **Why It Was Changed:** Having dozens of individual overlay windows active on the screen concurrently caused heavy GPU surface composition and memory usage, layout lag during window drags, and triggered severe tapjacking and touch filtering blocks on Android 14+ whenever windows overlapped.
+
+#### **New Architecture**
+We consolidated overlay interactions and introduced **Dynamic Resize Strips Hiding** combined with **Reflective Touchable Region Exclusions** as a primary compatibility toggle (`fullscreen_touch_overlay`):
+1.  **Dynamic Resize Hiding**: Resize strips and corner handles are removed from the Window Manager completely for all background/unfocused windows. They are dynamically re-added instantly when focus is acquired.
+2.  **Touchable Region Exclusions**: The non-touchable visual window borders (`frameView`) now use `OnComputeInternalInsetsListener` via low-level Java Reflection to subtract the app content rectangle from the overlay's touchable region:
+    ```kotlin
+    if (view == frameView && enabled) {
+        val touchableRegion = touchableRegionField.get(insetsInfo) as android.graphics.Region
+        val rect = android.graphics.Rect(0, 0, view.width, view.height)
+        val region = android.graphics.Region(rect)
+        region.op(contentL, contentT, contentR, contentB, android.graphics.Region.Op.DIFFERENCE)
+        touchableRegion.set(region)
+        setTouchableInsetsMethod.invoke(insetsInfo, 3) // TOUCHABLE_INSETS_REGION
+    }
+    ```
+
+*   **Why It Is Better:**
+    *   **0 Touch Dropouts**: By subtracting the app content box from the touchable region of overlay frames, the OS's `InputDispatcher` never treats taps inside apps as "blocked" or "filtered".
+    *   **GPU & Memory Optimizations**: Lowered active window handles on the screen from `7 * N` to a tiny fraction, reducing composition passes and maximizing battery life.
+    *   **Interactive Visual Explanation**: We built an interactive HTML visualizer to demonstrate this behavior:
+        👉 [overlay_visualizer.html](file:///g:/Ai/FreeformShell/docs/overlay_visualizer.html)
+
+

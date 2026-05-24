@@ -25,6 +25,13 @@ class SimpleOverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "ACTION_EXIT") {
+            stopSelf()
+        }
+        return START_STICKY
+    }
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "overlay created")

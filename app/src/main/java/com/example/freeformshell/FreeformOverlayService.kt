@@ -47,8 +47,10 @@ class FreeformOverlayService : Service() {
         }
     private val bubbles = java.util.concurrent.ConcurrentHashMap<Int, MinimizedBubble>()
     private val minimizedTasks = java.util.concurrent.CopyOnWriteArraySet<Int>()
+    private val minimizedTimestamps = java.util.concurrent.ConcurrentHashMap<Int, Long>()
+    @Volatile private var lastMinimizationTimestamp: Long = 0L
     internal val dockedTasks = java.util.concurrent.CopyOnWriteArraySet<Int>()
-    private val dockedPackages = java.util.concurrent.CopyOnWriteArraySet<String>()
+    internal val dockedPackages = java.util.concurrent.CopyOnWriteArraySet<String>()
     private val minimizedTaskData = java.util.concurrent.ConcurrentHashMap<Int, TaskBounds>()
     private val activeHandles = java.util.concurrent.ConcurrentHashMap<String, SplitResizeHandle>()
     @Volatile var sortedTaskIds: List<Int> = emptyList()
@@ -57,7 +59,7 @@ class FreeformOverlayService : Service() {
     private val refreshRunnable = Runnable { monitorTasks() }
     private val correctedTaskIds = java.util.concurrent.CopyOnWriteArraySet<Int>()
     // Cache of all freeform tasks we've ever seen — survives across monitor cycles
-    private val knownFreeformTasks = java.util.concurrent.ConcurrentHashMap<Int, Pair<String, String?>>() // taskId -> Pair(Pkg, Component)
+    internal val knownFreeformTasks = java.util.concurrent.ConcurrentHashMap<Int, Pair<String, String?>>() // taskId -> Pair(Pkg, Component)
     private val gracePeriodTasks = java.util.concurrent.ConcurrentHashMap<Int, Int>() // taskId -> missedCycles
     private val visibilityGracePeriodTasks = java.util.concurrent.ConcurrentHashMap<Int, Int>() // taskId -> missedVisibilityCycles
     private val missingTaskCycles = java.util.concurrent.ConcurrentHashMap<Int, Int>() // taskId -> missedCycles
@@ -73,6 +75,16 @@ class FreeformOverlayService : Service() {
     private val pendingDpiReversions = java.util.concurrent.ConcurrentHashMap<Int, Int>()
     private val dpiConfirmationContainers = java.util.concurrent.ConcurrentHashMap<Int, FrameLayout>()
     private val dpiConfirmationRunnables = java.util.concurrent.ConcurrentHashMap<Int, Runnable>()
+
+    private val pendingResolutionReversions = java.util.concurrent.ConcurrentHashMap<Int, Pair<Int, Int>>()
+    private val resolutionConfirmationContainers = java.util.concurrent.ConcurrentHashMap<Int, FrameLayout>()
+    private val resolutionConfirmationRunnables = java.util.concurrent.ConcurrentHashMap<Int, Runnable>()
+
+    private val pendingRefreshReversions = java.util.concurrent.ConcurrentHashMap<Int, Pair<Int, Int>>()
+    private val refreshConfirmationContainers = java.util.concurrent.ConcurrentHashMap<Int, FrameLayout>()
+    private val refreshConfirmationRunnables = java.util.concurrent.ConcurrentHashMap<Int, Runnable>()
+
+    private val refreshRateOverlays = java.util.concurrent.ConcurrentHashMap<Int, android.view.View>()
 
     private val monitorRunnable = object : Runnable {
         override fun run() {
@@ -99,6 +111,14 @@ class FreeformOverlayService : Service() {
         handler.removeCallbacks(fastPollRunnable)
         fastPollCount = 0
         handler.post(fastPollRunnable)
+    }
+
+    fun reloadActiveAppThemes() {
+        handler.post {
+            for (overlay in overlays.values) {
+                overlay.reloadAppTheme()
+            }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -156,9 +176,30 @@ class FreeformOverlayService : Service() {
                     showDpiConfirmationOverlay(displayId, targetDpi, originalDpi)
                 }
             }
+            "ACTION_RESOLUTION_CONFIRMATION" -> {
+                val displayId = intent.getIntExtra("displayId", -1)
+                val targetW = intent.getIntExtra("targetW", -1)
+                val targetH = intent.getIntExtra("targetH", -1)
+                val originalW = intent.getIntExtra("originalW", -1)
+                val originalH = intent.getIntExtra("originalH", -1)
+                if (displayId != -1 && targetW != -1 && targetH != -1 && originalW != -1 && originalH != -1) {
+                    showResolutionConfirmationOverlay(displayId, targetW, targetH, originalW, originalH)
+                }
+            }
+            "ACTION_REFRESH_RATE_CONFIRMATION" -> {
+                val displayId = intent.getIntExtra("displayId", -1)
+                val targetModeId = intent.getIntExtra("targetModeId", -1)
+                val targetFps = intent.getIntExtra("targetFps", -1)
+                val originalModeId = intent.getIntExtra("originalModeId", -1)
+                val originalFps = intent.getIntExtra("originalFps", -1)
+                if (displayId != -1 && targetModeId != -1 && targetFps != -1 && originalModeId != -1 && originalFps != -1) {
+                    showRefreshRateConfirmationOverlay(displayId, targetModeId, targetFps, originalModeId, originalFps)
+                }
+            }
             else -> {
                 isRunning = true
                 handler.post(monitorRunnable)
+                initRefreshRateOverlays()
             }
         }
         return START_STICKY
@@ -207,17 +248,23 @@ class FreeformOverlayService : Service() {
         try {
             val group = WorkspaceManager.jsonToGroup(org.json.JSONObject(json))
             val resolvedDisplayId = if (forceDisplayId != -1) forceDisplayId else group.displayId
-            val autoSnap = ThemeManager.getWorkspaceAutoSnap(this@FreeformOverlayService)
             handler.post { Toast.makeText(this, "Restoring workspace...", Toast.LENGTH_SHORT).show() }
             Thread {
                 ShellExecutor.executeCommand("cmd activity set-resizable 1")
                 group.apps.forEachIndexed { index, app ->
                     val component = app.component ?: (packageManager.getLaunchIntentForPackage(app.packageName)?.component?.flattenToShortString())
                     if (component != null) {
-                        if (autoSnap) {
-                            FreeformOverlayService.setIntendedBounds(app.packageName, app.bounds, resolvedDisplayId)
+                        // Always set intended bounds to restore exact size & bounds coordinates!
+                        FreeformOverlayService.setIntendedBounds(app.packageName, app.bounds, resolvedDisplayId)
+                        
+                        // Automatically update dockedPackages based on isSnapped!
+                        if (app.isSnapped) {
+                            dockedPackages.add(app.packageName)
+                        } else {
+                            dockedPackages.remove(app.packageName)
                         }
-                        ShellExecutor.relaunchFreeformTask(-1, component) // Use -1 to force new launch if needed
+
+                        ShellExecutor.relaunchFreeformTask(-1, component, resolvedDisplayId)
                         Thread.sleep(600)
                     }
                 }
@@ -275,6 +322,14 @@ class FreeformOverlayService : Service() {
             } catch (e: Exception) {}
         }.start()
         
+        loadMinimizedTasksFromPrefs()
+        if (CompatibilityManager.isHybridLeashMinimizationEnabled(this)) {
+            Toast.makeText(
+                this,
+                "Notice: Click or interact with desktop background windows once to initialize their title bars.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
         handler.post(monitorRunnable)
     }
 
@@ -286,7 +341,9 @@ class FreeformOverlayService : Service() {
     }
 
     companion object {
+        @Volatile var primaryDisplayToken: android.os.IBinder? = null
         private var instance: FreeformOverlayService? = null
+        @JvmField var isSplitResizingActive = false
 
         fun getInstance(): FreeformOverlayService? = instance
 
@@ -439,7 +496,8 @@ class FreeformOverlayService : Service() {
             if (docked.isEmpty()) return null
             
             val safe = inst.getSafeAreaRect(displayId)
-            val density = inst.resources.displayMetrics.density
+            val metrics = inst.getRealMetricsForDisplay(displayId)
+            val density = metrics.density
             val threshold = (60 * density).toInt().coerceAtLeast(150)
             val contactThreshold = (32 * density).toInt()
             
@@ -540,6 +598,20 @@ class FreeformOverlayService : Service() {
                 // any cached freeform tasks that weren't detected this cycle
                 val filteredTasks = tasks.filter { !recentlyClosedTaskIds.containsKey(it.taskId) }
                 val detectedTaskIds = filteredTasks.map { it.taskId }.toSet()
+
+                // Intercept newly detected tasks that have pending matching bounds in intendedBounds and apply them instantly
+                for (task in filteredTasks) {
+                    val intended = intendedBounds[task.packageName]
+                    if (intended != null) {
+                        Log.d(TAG, "Intercepted task ${task.taskId} for ${task.packageName}. Restoring intended bounds: $intended")
+                        ShellExecutor.resizeTask(task.taskId, intended.left, intended.top, intended.right, intended.bottom)
+                        val info = taskBoundsMap[task.taskId]
+                        if (info != null) {
+                            info.bounds.set(intended)
+                        }
+                        intendedBounds.remove(task.packageName)
+                    }
+                }
                 
                 // Safety valve: Track missed cycles for cached tasks to clean up closed/killed apps
                 for (cachedId in knownFreeformTasks.keys) {
@@ -592,18 +664,37 @@ class FreeformOverlayService : Service() {
                     taskBoundsMap[task.taskId]?.displayId ?: intendedDisplayId[task.packageName] ?: 0
                 }
 
+                // Explicit display transition interceptor to hard prune cross-display leaks
+                for ((taskId, overlay) in overlays) {
+                    val currentDisplayId = overlay.currentDisplayId
+                    val targetDisplayId = taskBoundsMap[taskId]?.displayId ?: intendedDisplayId[overlay.packageName] ?: 0
+                    if (currentDisplayId != targetDisplayId) {
+                        Log.d(TAG, "Explicitly pruning stale cross-display overlay for task $taskId on display $currentDisplayId (transitioned to $targetDisplayId)")
+                        handler.post {
+                            getDisplayShell(currentDisplayId).hideOverlay(taskId)
+                        }
+                    }
+                }
+
                 val allActiveDisplayIds = tasksByDisplay.keys + displayShells.keys
                 for (displayId in allActiveDisplayIds) {
                     val shell = getDisplayShell(displayId)
                     val displayTasks = tasksByDisplay[displayId] ?: emptyList()
+                    
+                    // FETCH PER-DISPLAY SCALE METRICS
+                    val metrics = getRealMetricsForDisplay(displayId)
+                    val dDensity = metrics.density
+                    val dBorderWidth = (4 * dDensity).toInt()
+                    val dTitleBarHeight = (40 * dDensity).toInt()
+
                     shell.update(
                         displayTasks = displayTasks,
                         taskBoundsMap = taskBoundsMap,
                         focusedPackage = focusedPackage,
                         currentTopTaskId = currentTopTaskId,
-                        density = density,
-                        borderWidth = borderWidth,
-                        titleBarHeight = titleBarHeight,
+                        density = dDensity,
+                        borderWidth = dBorderWidth,
+                        titleBarHeight = dTitleBarHeight,
                         activeTaskIds = activeTaskIds,
                         mergedTasks = mergedTasks,
                         forceRelayer = forceRelayer
@@ -633,10 +724,14 @@ class FreeformOverlayService : Service() {
                     
                     // Clean up bubbles for tasks that no longer exist in recents
                     val deadBubbles = bubbles.keys.filter { id -> mergedTasks.none { it.taskId == id } }
-                    deadBubbles.forEach { id ->
-                        bubbles[id]?.hide()
-                        bubbles.remove(id)
-                        minimizedTasks.remove(id)
+                    if (deadBubbles.isNotEmpty()) {
+                        deadBubbles.forEach { id ->
+                            bubbles[id]?.hide()
+                            bubbles.remove(id)
+                            minimizedTasks.remove(id)
+                            minimizedTimestamps.remove(id)
+                        }
+                        saveMinimizedTasksToPrefs()
                     }
                     ShellExecutor.notifyOverlayCountChanged(overlays.size)
 
@@ -652,6 +747,21 @@ class FreeformOverlayService : Service() {
                     }
                     
                     updateSplitHandles()
+
+                    // Automatically broadcast refresh to all widgets when monitor cycle completes!
+                    try {
+                        val tIntent = android.content.Intent(this@FreeformOverlayService, FreeformTaskManagerWidget::class.java).apply {
+                            action = "ACTION_REFRESH"
+                        }
+                        sendBroadcast(tIntent)
+                        
+                        val wIntent = android.content.Intent(this@FreeformOverlayService, FreeformWidget::class.java).apply {
+                            action = "ACTION_REFRESH"
+                        }
+                        sendBroadcast(wIntent)
+                    } catch (ex: Exception) {
+                        Log.e(TAG, "Failed to broadcast widget refresh", ex)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Monitor loop error", e)
@@ -661,78 +771,187 @@ class FreeformOverlayService : Service() {
         }.start()
     }
 
-    private fun minimizeTask(taskId: Int) {
-        val task = TaskManager.getAllTaskBounds()[taskId]
-        val pkg = task?.packageName
-        val activity = task?.activityName
-        
-        if (pkg != null && activity != null) {
-            minimizedTaskData[taskId] = task
-            
+    private fun saveMinimizedTasksToPrefs() {
+        try {
             val prefs = getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)
-            val useBubbles = prefs.getBoolean("bubble_mode", false)
-
-            if (useBubbles) {
-                // MODERN MINIMIZE: Move task to back
-                ShellExecutor.moveTaskToBack(taskId)
-                minimizedTasks.add(taskId)
-                
-                // Show floating bubble to restore it later
-                handler.post {
-                    if (!bubbles.containsKey(taskId)) {
-                        val bubble = MinimizedBubble(this, taskId, pkg, task.displayId) {
-                            restoreTask(it)
-                        }
-                        bubbles[taskId] = bubble
-                        bubble.show()
-                    }
-                    hideOverlay(taskId)
+            val idStrings = minimizedTasks.map { it.toString() }.toSet()
+            prefs.edit().putStringSet("persisted_minimized_tasks", idStrings).apply()
+            
+            val editor = prefs.edit()
+            for (taskId in minimizedTasks) {
+                val data = minimizedTaskData[taskId]
+                if (data != null) {
+                    val rectStr = "${data.bounds.left},${data.bounds.top},${data.bounds.right},${data.bounds.bottom}"
+                    editor.putString("minimized_data_bounds_$taskId", rectStr)
+                    editor.putInt("minimized_data_display_$taskId", data.displayId)
+                    editor.putInt("minimized_data_winmode_$taskId", data.windowingMode)
+                    editor.putString("minimized_data_pkg_$taskId", data.packageName ?: "")
+                    editor.putString("minimized_data_act_$taskId", data.activityName ?: "")
                 }
-            } else {
-                // DOCK MODE: Scale down to side
-                val dockIndex = dockedTasks.size
-                val dm = resources.displayMetrics
-                val dockW = 260
-                val dockH = 340
-                val dockX = dm.widthPixels - dockW - 40
-                val dockY = 150 + (dockIndex * (dockH + 40))
+            }
+            editor.apply()
+            Log.d(TAG, "Successfully saved ${minimizedTasks.size} minimized tasks to preferences")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving minimized tasks to preferences", e)
+        }
+    }
+
+    private fun loadMinimizedTasksFromPrefs() {
+        try {
+            val prefs = getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)
+            val idStrings = prefs.getStringSet("persisted_minimized_tasks", emptySet()) ?: emptySet()
+            minimizedTasks.clear()
+            minimizedTaskData.clear()
+            
+            for (idStr in idStrings) {
+                val taskId = idStr.toIntOrNull() ?: continue
+                minimizedTasks.add(taskId)
+                minimizedTimestamps[taskId] = System.currentTimeMillis() // Cooldown protection active on start
                 
-                // Ensure freeform and front before docking
-                ShellExecutor.executeCommand("am start -n $activity --windowingMode 5 --activity-reorder-to-front")
-                
-                handler.postDelayed({
-                    ShellExecutor.executeCommand("cmd activity task resize $taskId $dockX $dockY ${dockX + dockW} ${dockY + dockH}")
-                    dockedTasks.add(taskId)
-                    monitorTasks()
-                }, 300)
+                val rectStr = prefs.getString("minimized_data_bounds_$taskId", null)
+                if (rectStr != null) {
+                    val parts = rectStr.split(",")
+                    if (parts.size == 4) {
+                        val left = parts[0].toIntOrNull() ?: 0
+                        val top = parts[1].toIntOrNull() ?: 0
+                        val right = parts[2].toIntOrNull() ?: 0
+                        val bottom = parts[3].toIntOrNull() ?: 0
+                        
+                        val displayId = prefs.getInt("minimized_data_display_$taskId", 0)
+                        val windowingMode = prefs.getInt("minimized_data_winmode_$taskId", 5)
+                        val pkg = prefs.getString("minimized_data_pkg_$taskId", null)
+                        val act = prefs.getString("minimized_data_act_$taskId", null)
+                        
+                        minimizedTaskData[taskId] = TaskBounds(
+                            bounds = android.graphics.Rect(left, top, right, bottom),
+                            displayId = displayId,
+                            windowingMode = windowingMode,
+                            packageName = pkg,
+                            activityName = act,
+                            isVisible = false
+                        )
+                    }
+                }
+            }
+            Log.d(TAG, "Successfully loaded ${minimizedTasks.size} minimized tasks from preferences")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading minimized tasks from preferences", e)
+        }
+    }
+
+    private fun minimizeTask(taskId: Int) {
+        Log.d(TAG, "minimizeTask called for taskId: $taskId")
+        val task = TaskManager.getAllTaskBounds()[taskId]
+        val pkg = task?.packageName ?: overlays[taskId]?.packageName ?: knownFreeformTasks[taskId]?.first
+        val activity = task?.activityName ?: overlays[taskId]?.packageName?.let { knownFreeformTasks[taskId]?.second }
+
+        Log.d(TAG, "minimizeTask resolved pkg: $pkg, activity: $activity")
+
+        // Store whatever data we have in minimizedTaskData
+        if (task != null) {
+            minimizedTaskData[taskId] = task
+        } else if (pkg != null) {
+            minimizedTaskData[taskId] = TaskBounds(
+                bounds = overlays[taskId]?.let { android.graphics.Rect(it.winL, it.winT, it.winL + it.winW, it.winT + it.winH) } ?: android.graphics.Rect(100, 100, 800, 800),
+                displayId = overlays[taskId]?.currentDisplayId ?: 0,
+                windowingMode = 5,
+                packageName = pkg,
+                activityName = activity,
+                isVisible = false
+            )
+        }
+
+        minimizedTasks.add(taskId)
+        minimizedTimestamps[taskId] = System.currentTimeMillis()
+        lastMinimizationTimestamp = System.currentTimeMillis()
+        
+        val isLeashMinimizationEnabled = CompatibilityManager.isHybridLeashMinimizationEnabled(this)
+        val surfaceMinimized = if (isLeashMinimizationEnabled) {
+            TaskManager.minimizeTaskSurface(taskId)
+        } else {
+            false
+        }
+        
+        if (!surfaceMinimized) {
+            Log.w(TAG, "Leash minimization not enabled or failed, falling back to moveTaskToBack")
+            ShellExecutor.moveTaskToBack(taskId)
+        } else {
+            // Concurrently invoke OS-level moveTaskToBack asynchronously to handle focus yield and Recents stack integration
+            ShellExecutor.moveTaskToBack(taskId)
+        }
+
+        val prefs = getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)
+        val useBubbles = prefs.getBoolean("bubble_mode", false)
+
+        if (useBubbles && pkg != null) {
+            val displayId = task?.displayId ?: overlays[taskId]?.currentDisplayId ?: 0
+            handler.post {
+                if (!bubbles.containsKey(taskId)) {
+                    val bubble = MinimizedBubble(this, taskId, pkg, displayId) {
+                        restoreTask(it)
+                    }
+                    bubbles[taskId] = bubble
+                    bubble.show()
+                }
+                hideOverlay(taskId)
+            }
+        } else {
+            handler.post {
+                hideOverlay(taskId)
             }
         }
         
+        saveMinimizedTasksToPrefs()
         handler.postDelayed({ monitorTasks() }, 200)
     }
 
     private fun restoreTask(taskId: Int) {
+        Log.d(TAG, "restoreTask called for taskId: $taskId")
         val data = minimizedTaskData[taskId]
-        val activity = data?.activityName
+        val activity = data?.activityName ?: knownFreeformTasks[taskId]?.second
         val bounds = data?.bounds
 
-        if (activity != null) {
-            // Force re-order to front and ensure freeform mode
-            ShellExecutor.executeCommand("am start -n $activity --windowingMode 5 --activity-reorder-to-front")
+        // 1. Instantly restore leash position and visibility in screen space
+        if (CompatibilityManager.isHybridLeashMinimizationEnabled(this)) {
+            TaskManager.restoreTaskSurface(taskId)
+        }
+
+        // 2. Instant high-performance reflective restoration:
+        Thread {
+            ShellExecutor.setTaskWindowingMode(taskId, 5, true) // 5 = WINDOWING_MODE_FREEFORM, true = bring to front
             
-            // Restore previous window size
             if (bounds != null) {
-                handler.postDelayed({
-                    ShellExecutor.executeCommand("cmd activity task resize $taskId ${bounds.left} ${bounds.top} ${bounds.right} ${bounds.bottom}")
-                }, 500)
+                // Restore bounds with a tiny delay to ensure windowing mode change has completed
+                try {
+                    Thread.sleep(150)
+                } catch (e: Exception) {}
+                ShellExecutor.resizeTask(taskId, bounds.left, bounds.top, bounds.right, bounds.bottom)
             }
+        }.start()
+
+        // Fallback: If reflection is blocked or failed, also trigger intent-based relaunch if activity name is available
+        if (activity != null) {
+            handler.postDelayed({
+                // Only run fallback if the task is still not the top task or has not been restored
+                val currentTop = sortedTaskIds.firstOrNull()
+                if (currentTop != taskId) {
+                    Log.d(TAG, "Running restoreTask activity intent fallback for $activity")
+                    Thread {
+                        ShellExecutor.executeCommand("am start -n $activity --windowingMode 5 --activity-reorder-to-front")
+                    }.start()
+                }
+            }, 400)
         }
         
         minimizedTasks.remove(taskId)
+        minimizedTimestamps.remove(taskId)
+        saveMinimizedTasksToPrefs()
         dockedTasks.remove(taskId)
         minimizedTaskData.remove(taskId)
-        bubbles[taskId]?.hide()
-        bubbles.remove(taskId)
+        handler.post {
+            bubbles[taskId]?.hide()
+            bubbles.remove(taskId)
+        }
         monitorTasks()
     }
 
@@ -771,6 +990,47 @@ class FreeformOverlayService : Service() {
             removeDpiConfirmationOverlay(displayId)
         }
         pendingDpiReversions.clear()
+
+        // Revert any pending unconfirmed resolutions synchronously on service destruction
+        val pendingRes = HashMap(pendingResolutionReversions)
+        for ((displayId, originalSize) in pendingRes) {
+            try {
+                ShellExecutor.executeCommand("wm size ${originalSize.first}x${originalSize.second} -d $displayId")
+                ThemeManager.setWidth(this, displayId, originalSize.first)
+                ThemeManager.setHeight(this, displayId, originalSize.second)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore resolution in onDestroy for display $displayId", e)
+            }
+            removeResolutionConfirmationOverlay(displayId)
+        }
+        pendingResolutionReversions.clear()
+
+        // Revert any pending unconfirmed refresh rates synchronously on service destruction
+        val pendingRefresh = HashMap(pendingRefreshReversions)
+        for ((displayId, originalRate) in pendingRefresh) {
+            try {
+                val originalModeId = originalRate.first
+                val originalFps = originalRate.second
+                ThemeManager.setRefreshRate(this, displayId, originalFps)
+                ThemeManager.setRefreshRateMode(this, displayId, originalModeId)
+                if (originalModeId > 0) {
+                    applyPersistentRefreshRate(displayId, originalModeId)
+                } else {
+                    removePersistentRefreshRate(displayId)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore refresh rate in onDestroy for display $displayId", e)
+            }
+            removeRefreshConfirmationOverlay(displayId)
+        }
+        pendingRefreshReversions.clear()
+
+        // Remove all persistent transparent refresh rate overlays on service destruction
+        val activeOverlays = ArrayList(refreshRateOverlays.keys)
+        for (displayId in activeOverlays) {
+            removePersistentRefreshRate(displayId)
+        }
+        refreshRateOverlays.clear()
 
         displayShells.values.forEach { it.clear() }
         displayShells.clear()
@@ -840,7 +1100,12 @@ class FreeformOverlayService : Service() {
         val targetDisplay = dm.getDisplay(displayId) ?: dm.getDisplay(Display.DEFAULT_DISPLAY)
         val dContext = createDisplayContext(targetDisplay)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try { dContext.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null) } catch (e: Exception) { dContext }
+            try { 
+                dContext.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null) 
+            } catch (e: Exception) { 
+                Log.w(TAG, "createWindowContext failed for display $displayId, falling back to DisplayContext with harvested token mapping", e)
+                dContext 
+            }
         } else {
             dContext
         }
@@ -1095,6 +1360,548 @@ class FreeformOverlayService : Service() {
         }
     }
 
+    private fun removeResolutionConfirmationOverlay(displayId: Int) {
+        resolutionConfirmationRunnables.remove(displayId)?.let { handler.removeCallbacks(it) }
+        resolutionConfirmationContainers.remove(displayId)?.let { container ->
+            try {
+                val displayContext = getDisplayContext(displayId)
+                val wm = displayContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(container)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove Resolution confirmation overlay", e)
+            }
+        }
+    }
+
+    private fun revertResolution(displayId: Int, originalW: Int, originalH: Int) {
+        removeResolutionConfirmationOverlay(displayId)
+        pendingResolutionReversions.remove(displayId)
+        Thread {
+            ShellExecutor.executeCommand("wm size ${originalW}x${originalH} -d $displayId")
+            ThemeManager.setWidth(this, displayId, originalW)
+            ThemeManager.setHeight(this, displayId, originalH)
+        }.start()
+    }
+
+    private fun showResolutionConfirmationOverlay(displayId: Int, targetW: Int, targetH: Int, originalW: Int, originalH: Int) {
+        removeResolutionConfirmationOverlay(displayId)
+        pendingResolutionReversions[displayId] = Pair(originalW, originalH)
+
+        Thread {
+            ShellExecutor.executeCommand("wm size ${targetW}x${targetH} -d $displayId")
+            ThemeManager.setWidth(this, displayId, targetW)
+            ThemeManager.setHeight(this, displayId, targetH)
+        }.start()
+
+        handler.post {
+            val context = getDisplayContext(displayId)
+            val density = context.resources.displayMetrics.density
+            fun dp(value: Float): Int = (value * density).toInt()
+
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val container = FrameLayout(context)
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                dimAmount = 0.5f
+                gravity = Gravity.CENTER
+            }
+
+            val card = FrameLayout(context).apply {
+                val bg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#E6121212"))
+                    cornerRadius = dp(20f).toFloat()
+                    setStroke(dp(1.5f), Color.argb(46, 255, 255, 255))
+                }
+                background = bg
+                val cardPadding = dp(24f)
+                setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
+            }
+
+            val cardParams = FrameLayout.LayoutParams(
+                dp(320f),
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+            container.addView(card, cardParams)
+
+            val contentLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            card.addView(contentLayout, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val titleText = TextView(context).apply {
+                text = "Confirm Resolution"
+                setTextColor(Color.WHITE)
+                textSize = 20f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(titleText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(16f)
+            })
+
+            val messageText = TextView(context).apply {
+                text = "Do you want to keep this resolution?\nReverting in 15 seconds."
+                setTextColor(Color.parseColor("#CCCCCC"))
+                textSize = 14f
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(messageText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(24f)
+            })
+
+            val buttonsRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = 2f
+            }
+            contentLayout.addView(buttonsRow, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val revertButton = TextView(context).apply {
+                text = "Revert"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.argb(38, 255, 255, 255))
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.argb(76, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.argb(38, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    revertResolution(displayId, originalW, originalH)
+                }
+            }
+
+            val keepButton = TextView(context).apply {
+                text = "Keep"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#1A73E8"))
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.parseColor("#1557B0"))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.parseColor("#1A73E8"))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    pendingResolutionReversions.remove(displayId)
+                    removeResolutionConfirmationOverlay(displayId)
+                }
+            }
+
+            revertButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+            keepButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+
+            val revertParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                rightMargin = dp(6f)
+            }
+            
+            val keepParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                leftMargin = dp(6f)
+            }
+            
+            buttonsRow.addView(revertButton, revertParams)
+            buttonsRow.addView(keepButton, keepParams)
+
+            card.alpha = 0f
+            card.scaleX = 0.8f
+            card.scaleY = 0.8f
+            card.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(250)
+                .setInterpolator(OvershootInterpolator(1.2f))
+                .start()
+
+            var remainingSeconds = 15
+            val countdownRunnable = object : Runnable {
+                override fun run() {
+                    remainingSeconds--
+                    if (remainingSeconds <= 0) {
+                        revertResolution(displayId, originalW, originalH)
+                    } else {
+                        messageText.text = "Do you want to keep this resolution?\nReverting in $remainingSeconds seconds."
+                        handler.postDelayed(this, 1000)
+                    }
+                }
+            }
+
+            resolutionConfirmationRunnables[displayId] = countdownRunnable
+            resolutionConfirmationContainers[displayId] = container
+
+            try {
+                wm.addView(container, params)
+                handler.postDelayed(countdownRunnable, 1000)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show Resolution confirmation overlay", e)
+                resolutionConfirmationContainers.remove(displayId)
+                resolutionConfirmationRunnables.remove(displayId)
+            }
+        }
+    }
+
+    private fun removeRefreshConfirmationOverlay(displayId: Int) {
+        refreshConfirmationRunnables.remove(displayId)?.let { handler.removeCallbacks(it) }
+        refreshConfirmationContainers.remove(displayId)?.let { container ->
+            try {
+                val displayContext = getDisplayContext(displayId)
+                val wm = displayContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(container)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove Refresh Rate confirmation overlay", e)
+            }
+        }
+    }
+
+    private fun revertRefreshRate(displayId: Int, originalModeId: Int, originalFps: Int) {
+        removeRefreshConfirmationOverlay(displayId)
+        pendingRefreshReversions.remove(displayId)
+        ThemeManager.setRefreshRate(this, displayId, originalFps)
+        ThemeManager.setRefreshRateMode(this, displayId, originalModeId)
+        if (originalModeId > 0) {
+            applyPersistentRefreshRate(displayId, originalModeId)
+        } else {
+            removePersistentRefreshRate(displayId)
+        }
+    }
+
+    private fun showRefreshRateConfirmationOverlay(displayId: Int, targetModeId: Int, targetFps: Int, originalModeId: Int, originalFps: Int) {
+        removeRefreshConfirmationOverlay(displayId)
+        pendingRefreshReversions[displayId] = Pair(originalModeId, originalFps)
+
+        handler.post {
+            val context = getDisplayContext(displayId)
+            val density = context.resources.displayMetrics.density
+            fun dp(value: Float): Int = (value * density).toInt()
+
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val container = FrameLayout(context)
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                dimAmount = 0.5f
+                gravity = Gravity.CENTER
+                preferredDisplayModeId = targetModeId
+            }
+
+            val card = FrameLayout(context).apply {
+                val bg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#E6121212"))
+                    cornerRadius = dp(20f).toFloat()
+                    setStroke(dp(1.5f), Color.argb(46, 255, 255, 255))
+                }
+                background = bg
+                val cardPadding = dp(24f)
+                setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
+            }
+
+            val cardParams = FrameLayout.LayoutParams(
+                dp(320f),
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+            container.addView(card, cardParams)
+
+            val contentLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            card.addView(contentLayout, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val titleText = TextView(context).apply {
+                text = "Confirm Refresh Rate"
+                setTextColor(Color.WHITE)
+                textSize = 20f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(titleText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(16f)
+            })
+
+            val messageText = TextView(context).apply {
+                text = "Do you want to keep this refresh rate?\nReverting in 15 seconds."
+                setTextColor(Color.parseColor("#CCCCCC"))
+                textSize = 14f
+                gravity = Gravity.CENTER
+            }
+            contentLayout.addView(messageText, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(24f)
+            })
+
+            val buttonsRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = 2f
+            }
+            contentLayout.addView(buttonsRow, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
+
+            val revertButton = TextView(context).apply {
+                text = "Revert"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.argb(38, 255, 255, 255))
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.argb(76, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.argb(38, 255, 255, 255))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    revertRefreshRate(displayId, originalModeId, originalFps)
+                }
+            }
+
+            val keepButton = TextView(context).apply {
+                text = "Keep"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val btnBg = GradientDrawable().apply {
+                    setColor(Color.parseColor("#1A73E8"))
+                    cornerRadius = dp(20f).toFloat()
+                }
+                background = btnBg
+                isClickable = true
+                isFocusable = true
+                
+                setOnTouchListener { v, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            btnBg.setColor(Color.parseColor("#1557B0"))
+                            v.background = btnBg
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            btnBg.setColor(Color.parseColor("#1A73E8"))
+                            v.background = btnBg
+                        }
+                    }
+                    false
+                }
+                
+                setOnClickListener {
+                    pendingRefreshReversions.remove(displayId)
+                    removeRefreshConfirmationOverlay(displayId)
+                    ThemeManager.setRefreshRate(this@FreeformOverlayService, displayId, targetFps)
+                    ThemeManager.setRefreshRateMode(this@FreeformOverlayService, displayId, targetModeId)
+                    applyPersistentRefreshRate(displayId, targetModeId)
+                }
+            }
+
+            revertButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+            keepButton.setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
+
+            val revertParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                rightMargin = dp(6f)
+            }
+            
+            val keepParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                leftMargin = dp(6f)
+            }
+            
+            buttonsRow.addView(revertButton, revertParams)
+            buttonsRow.addView(keepButton, keepParams)
+
+            card.alpha = 0f
+            card.scaleX = 0.8f
+            card.scaleY = 0.8f
+            card.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(250)
+                .setInterpolator(OvershootInterpolator(1.2f))
+                .start()
+
+            var remainingSeconds = 15
+            val countdownRunnable = object : Runnable {
+                override fun run() {
+                    remainingSeconds--
+                    if (remainingSeconds <= 0) {
+                        revertRefreshRate(displayId, originalModeId, originalFps)
+                    } else {
+                        messageText.text = "Do you want to keep this refresh rate?\nReverting in $remainingSeconds seconds."
+                        handler.postDelayed(this, 1000)
+                    }
+                }
+            }
+
+            refreshConfirmationRunnables[displayId] = countdownRunnable
+            refreshConfirmationContainers[displayId] = container
+
+            try {
+                wm.addView(container, params)
+                handler.postDelayed(countdownRunnable, 1000)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show Refresh Rate confirmation overlay", e)
+                refreshConfirmationContainers.remove(displayId)
+                refreshConfirmationRunnables.remove(displayId)
+            }
+        }
+    }
+
+    private fun applyPersistentRefreshRate(displayId: Int, modeId: Int) {
+        removePersistentRefreshRate(displayId)
+        if (modeId <= 0) return
+        
+        handler.post {
+            try {
+                val context = getDisplayContext(displayId)
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val view = View(context)
+                
+                val params = WindowManager.LayoutParams(
+                    1, 1,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.LEFT
+                    x = 0
+                    y = 0
+                    preferredDisplayModeId = modeId
+                }
+                
+                wm.addView(view, params)
+                refreshRateOverlays[displayId] = view
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply persistent refresh rate overlay for display $displayId", e)
+            }
+        }
+    }
+
+    private fun removePersistentRefreshRate(displayId: Int) {
+        refreshRateOverlays.remove(displayId)?.let { view ->
+            try {
+                val context = getDisplayContext(displayId)
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(view)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove persistent refresh rate overlay", e)
+            }
+        }
+    }
+
+    private fun initRefreshRateOverlays() {
+        val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        dm.displays.forEach { d ->
+            val savedModeId = ThemeManager.getRefreshRateMode(this, d.displayId, 0)
+            if (savedModeId > 0) {
+                applyPersistentRefreshRate(d.displayId, savedModeId)
+            }
+        }
+    }
+
     inner class DisplayShell(val displayId: Int) {
         val overlays = java.util.concurrent.ConcurrentHashMap<Int, DragResizeOverlay>()
         private var guideView: View? = null
@@ -1102,6 +1909,9 @@ class FreeformOverlayService : Service() {
         private var snapGuideView: View? = null
 
         fun isEnabled(): Boolean {
+            if (!ThemeManager.isGlobalOverlayEnabled(this@FreeformOverlayService)) {
+                return false
+            }
             return ThemeManager.isDisplayShellEnabled(this@FreeformOverlayService, displayId)
         }
 
@@ -1191,8 +2001,89 @@ class FreeformOverlayService : Service() {
                 }
 
                 if (minimizedTasks.contains(task.taskId)) {
-                    handler.post { hideOverlay(task.taskId) }
-                    continue
+                    val minimizeTime = minimizedTimestamps[task.taskId] ?: 0L
+                    val timeSinceMinimize = System.currentTimeMillis() - minimizeTime
+                    // Prevent unminimizing due to race conditions during the initial transition period (1.5 seconds)
+                    if (timeSinceMinimize > 1500) {
+                        val isTopTask = task.taskId == currentTopTaskId
+                        val isLeashMinimizationEnabled = CompatibilityManager.isHybridLeashMinimizationEnabled(this@FreeformOverlayService)
+                        
+                        if (isLeashMinimizationEnabled) {
+                            // Check if this task became top/visible due to a very recent minimization of another task
+                            val timeSinceLastMinimization = System.currentTimeMillis() - lastMinimizationTimestamp
+                            if (timeSinceLastMinimization < 2500) {
+                                // Focus shift was automatic because another task was minimized, not a direct user activation.
+                                // Keep it minimized and hide overlay.
+                                handler.post { hideOverlay(task.taskId) }
+                                continue
+                            }
+                            
+                            if (isTopTask) { // Only unminimize automatically if it becomes the top-focused task
+                                Log.d(TAG, "Minimized task ${task.taskId} detected as active (top task). Unminimizing natively!")
+                                minimizedTasks.remove(task.taskId)
+                                minimizedTimestamps.remove(task.taskId)
+                                saveMinimizedTasksToPrefs()
+                                
+                                // Restore compositor surface first
+                                TaskManager.restoreTaskSurface(task.taskId)
+                                
+                                // Convert task back to freeform (5) and restore bounds instantly!
+                                val savedBounds = minimizedTaskData[task.taskId]?.bounds
+                                minimizedTaskData.remove(task.taskId)
+                                
+                                Thread {
+                                    ShellExecutor.setTaskWindowingMode(task.taskId, 5, true)
+                                    if (savedBounds != null) {
+                                        try {
+                                            Thread.sleep(150)
+                                        } catch (e: Exception) {}
+                                        ShellExecutor.resizeTask(task.taskId, savedBounds.left, savedBounds.top, savedBounds.right, savedBounds.bottom)
+                                    }
+                                }.start()
+
+                                handler.post {
+                                    bubbles[task.taskId]?.hide()
+                                    bubbles.remove(task.taskId)
+                                }
+                            } else {
+                                handler.post { hideOverlay(task.taskId) }
+                                continue
+                            }
+                        } else {
+                            // Legacy minimization: checks both isTopTask and taskInfo.isVisible, and doesn't manipulate task leashes
+                            if (isTopTask || taskInfo.isVisible) {
+                                Log.d(TAG, "Minimized task ${task.taskId} detected as active/visible (legacy). Unminimizing natively!")
+                                minimizedTasks.remove(task.taskId)
+                                minimizedTimestamps.remove(task.taskId)
+                                saveMinimizedTasksToPrefs()
+                                
+                                // Convert task back to freeform (5) and restore bounds instantly!
+                                val savedBounds = minimizedTaskData[task.taskId]?.bounds
+                                minimizedTaskData.remove(task.taskId)
+                                
+                                Thread {
+                                    ShellExecutor.setTaskWindowingMode(task.taskId, 5, true)
+                                    if (savedBounds != null) {
+                                        try {
+                                            Thread.sleep(150)
+                                        } catch (e: Exception) {}
+                                        ShellExecutor.resizeTask(task.taskId, savedBounds.left, savedBounds.top, savedBounds.right, savedBounds.bottom)
+                                    }
+                                }.start()
+
+                                handler.post {
+                                    bubbles[task.taskId]?.hide()
+                                    bubbles.remove(task.taskId)
+                                }
+                            } else {
+                                handler.post { hideOverlay(task.taskId) }
+                                continue
+                            }
+                        }
+                    } else {
+                        handler.post { hideOverlay(task.taskId) }
+                        continue
+                    }
                 }
 
                 val isTaskVisible = taskInfo.isVisible
@@ -1323,6 +2214,15 @@ class FreeformOverlayService : Service() {
                 val isFocus = task.taskId == currentTopTaskId
 
                 handler.post {
+                    // Prevent cross-display overlay leaks: if another display shell currently holds an overlay
+                    // for this taskId, explicitly hide and prune it.
+                    displayShells.values.forEach { otherShell ->
+                        if (otherShell.displayId != displayId && otherShell.overlays.containsKey(task.taskId)) {
+                            Log.d(TAG, "Pruning cross-display overlay leak for task ${task.taskId} from display ${otherShell.displayId}")
+                            otherShell.hideOverlay(task.taskId)
+                        }
+                    }
+
                     val existing = overlays[task.taskId]
                     if (existing == null || existing.currentDisplayId != displayId) {
                         existing?.hide()
@@ -1559,7 +2459,8 @@ class FreeformOverlayService : Service() {
         if (docked.isEmpty()) return emptyList()
         
         val safe = getSafeAreaRect(displayId)
-        val density = resources.displayMetrics.density
+        val metrics = getRealMetricsForDisplay(displayId)
+        val density = metrics.density
         val threshold = (60 * density).toInt().coerceAtLeast(150)
         
         val configs = mutableListOf<HandleConfig>()
@@ -1770,6 +2671,7 @@ class SplitResizeHandle(
     private var startX = 0f
     private var startY = 0f
     private var startCoord = 0
+    private var currentSplitCoord = 0
     private val activeLeftTasks = mutableListOf<DragResizeOverlay>()
     private val activeRightTasks = mutableListOf<DragResizeOverlay>()
     private val activeTopTasks = mutableListOf<DragResizeOverlay>()
@@ -1824,6 +2726,7 @@ class SplitResizeHandle(
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")
     fun show(initialCoord: Int) {
+        currentSplitCoord = initialCoord
         val touchThickness = (24 * density).toInt()
         val defaultCapsuleThickness = (6 * density).toInt()
         val capsuleLength = (80 * density).toInt()
@@ -1871,6 +2774,7 @@ class SplitResizeHandle(
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     isDragging = true
+                    FreeformOverlayService.isSplitResizingActive = true
                     showCapsule(true)
                     service.notifyHandleDragStateChanged(this, true)
                     startX = event.rawX
@@ -1897,10 +2801,17 @@ class SplitResizeHandle(
                             t.isResizing = true
                             t.isInteracting = true
                             
-                            if (Math.abs((t.preInteractL + t.preInteractW) - startCoord) < contactThreshold) {
-                                activeLeftTasks.add(t)
-                            } else if (Math.abs(t.preInteractL - startCoord) < contactThreshold) {
-                                activeRightTasks.add(t)
+                            val midpoint = t.preInteractL + t.preInteractW / 2
+                            if (midpoint < currentSplitCoord) {
+                                val distRightEdge = Math.abs((t.preInteractL + t.preInteractW) - currentSplitCoord)
+                                if (distRightEdge < contactThreshold) {
+                                    activeLeftTasks.add(t)
+                                }
+                            } else {
+                                val distLeftEdge = Math.abs(t.preInteractL - currentSplitCoord)
+                                if (distLeftEdge < contactThreshold) {
+                                    activeRightTasks.add(t)
+                                }
                             }
                         }
                     } else {
@@ -1913,10 +2824,17 @@ class SplitResizeHandle(
                             t.isResizing = true
                             t.isInteracting = true
                             
-                            if (Math.abs((t.preInteractT + t.preInteractH) - startCoord) < contactThreshold) {
-                                activeTopTasks.add(t)
-                            } else if (Math.abs(t.preInteractT - startCoord) < contactThreshold) {
-                                activeBottomTasks.add(t)
+                            val midpoint = t.preInteractT + t.preInteractH / 2
+                            if (midpoint < currentSplitCoord) {
+                                val distBottomEdge = Math.abs((t.preInteractT + t.preInteractH) - currentSplitCoord)
+                                if (distBottomEdge < contactThreshold) {
+                                    activeTopTasks.add(t)
+                                }
+                            } else {
+                                val distTopEdge = Math.abs(t.preInteractT - currentSplitCoord)
+                                if (distTopEdge < contactThreshold) {
+                                    activeBottomTasks.add(t)
+                                }
                             }
                         }
                     }
@@ -1939,6 +2857,7 @@ class SplitResizeHandle(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     isDragging = false
+                    FreeformOverlayService.isSplitResizingActive = false
                     showCapsule(false)
                     service.notifyHandleDragStateChanged(this, false)
                     
@@ -1991,6 +2910,7 @@ class SplitResizeHandle(
                 }
                 
                 val constrainedX = currentCoord.coerceIn(minX, maxX.coerceAtLeast(minX))
+                currentSplitCoord = constrainedX
                 
                 // Resize all left tasks
                 for (lt in activeLeftTasks) {
@@ -2021,6 +2941,7 @@ class SplitResizeHandle(
                 }
                 
                 val constrainedY = currentCoord.coerceIn(minY, maxY.coerceAtLeast(minY))
+                currentSplitCoord = constrainedY
                 
                 // Resize all top tasks
                 for (tt in activeTopTasks) {
@@ -2047,6 +2968,7 @@ class SplitResizeHandle(
                     val minX = task1.winL + (350 * density).toInt()
                     val maxX = safe.right - (100 * density).toInt()
                     val constrainedX = currentCoord.coerceIn(minX, maxX.coerceAtLeast(minX))
+                    currentSplitCoord = constrainedX
                     
                     task1.winW = constrainedX - task1.winL
                     task1.updateLayouts()
@@ -2056,6 +2978,7 @@ class SplitResizeHandle(
                     val minX = safe.left + (100 * density).toInt()
                     val maxX = (task1.winL + task1.winW) - (350 * density).toInt()
                     val constrainedX = currentCoord.coerceIn(minX, maxX.coerceAtLeast(minX))
+                    currentSplitCoord = constrainedX
                     
                     val rightEdge = task1.winL + task1.winW
                     task1.winL = constrainedX
@@ -2069,6 +2992,7 @@ class SplitResizeHandle(
                     val minY = task1.winT + (200 * density).toInt()
                     val maxY = safe.bottom - (100 * density).toInt()
                     val constrainedY = currentCoord.coerceIn(minY, maxY.coerceAtLeast(minY))
+                    currentSplitCoord = constrainedY
                     
                     task1.winH = constrainedY - task1.winT
                     task1.updateLayouts()
@@ -2078,6 +3002,7 @@ class SplitResizeHandle(
                     val minY = safe.top + (100 * density).toInt()
                     val maxY = (task1.winT + task1.winH) - (200 * density).toInt()
                     val constrainedY = currentCoord.coerceIn(minY, maxY.coerceAtLeast(minY))
+                    currentSplitCoord = constrainedY
                     
                     val bottomEdge = task1.winT + task1.winH
                     task1.winT = constrainedY
@@ -2129,6 +3054,7 @@ class SplitResizeHandle(
 
     fun syncPosition(coord: Int) {
         if (!isDragging) {
+            currentSplitCoord = coord
             val overlapped = checkOverlapWithTopTasks(coord)
             handleView?.visibility = if (overlapped || isTemporarilyHidden) View.GONE else View.VISIBLE
             updateHandlePosition(coord)

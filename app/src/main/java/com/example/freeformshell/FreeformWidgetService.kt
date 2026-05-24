@@ -89,6 +89,9 @@ class FreeformWidgetFactory(private val context: Context) : RemoteViewsService.R
             }
         }
         
+        val dm = context.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+        val extDisplayId = dm.displays.firstOrNull { it.displayId > 0 }?.displayId ?: 1
+
         val fillInPhone = Intent().apply {
             putExtra("EXTRA_GROUP_JSON", WorkspaceManager.groupToJson(group).toString())
             putExtra("EXTRA_TARGET_DISPLAY", 0)
@@ -97,7 +100,7 @@ class FreeformWidgetFactory(private val context: Context) : RemoteViewsService.R
 
         val fillInExternal = Intent().apply {
             putExtra("EXTRA_GROUP_JSON", WorkspaceManager.groupToJson(group).toString())
-            putExtra("EXTRA_TARGET_DISPLAY", 1)
+            putExtra("EXTRA_TARGET_DISPLAY", extDisplayId)
         }
         views.setOnClickFillInIntent(R.id.restore_external, fillInExternal)
 
@@ -114,23 +117,4 @@ class FreeformWidgetFactory(private val context: Context) : RemoteViewsService.R
     override fun getViewTypeCount(): Int = 1
     override fun getItemId(position: Int): Long = position.toLong()
     override fun hasStableIds(): Boolean = true
-}
-
-private fun WorkspaceManager.groupToJson(group: WorkspaceGroup): org.json.JSONObject {
-    val obj = org.json.JSONObject()
-    obj.put("displayId", group.displayId)
-    obj.put("timestamp", group.timestamp)
-    val appsArray = org.json.JSONArray()
-    group.apps.forEach { app ->
-        val appObj = org.json.JSONObject()
-        appObj.put("pkg", app.packageName)
-        appObj.put("comp", app.component)
-        appObj.put("l", app.bounds.left)
-        appObj.put("t", app.bounds.top)
-        appObj.put("r", app.bounds.right)
-        appObj.put("b", app.bounds.bottom)
-        appsArray.put(appObj)
-    }
-    obj.put("apps", appsArray)
-    return obj
 }
