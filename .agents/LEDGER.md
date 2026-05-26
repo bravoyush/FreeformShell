@@ -108,6 +108,10 @@ When making modifications, **you must strictly adhere** to the following Android
 * [x] **Implemented physical density persistence for external displays to lock first-time detected default DPI.**: Automated state synchronization.
 * [x] **Core Architectural & Performance Audit**: Documented overlay parameters, precise cutouts, drag math, Shizuku IPC binder wrappers, dynamic tiling snap zones, and Android 11-15+ compatibility workarounds (saved in `core_architecture_audit.md`).
 * [x] **Android 13+ Hybrid Frame-Pacing Pipeline**: Dynamically switches to `RESIZE_MODE_USER` (1) for uninhibited 120Hz GPU-paced dragging and commits a single final `RESIZE_MODE_FORCED` (2) redraw pass on release to prevent app content distortion and eliminate jitter on Android 13/14 BLAST architectures. (Modified: [CompatibilityManager.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/CompatibilityManager.kt), [ShellExecutor.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/ShellExecutor.kt), [DragResizeOverlay.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt))
+- [x] **Customization Tab & Sidebar Behaviour Overhaul**: Reordered the Customization screen to move "App UI", "Sidebar Behaviour", and "Theme Mode" to the bottom. Added a live `SidebarHoverPreview` animation to demonstrate the auto-expansion effect. Renamed navigation style to "**App UI**" and the sidebar experience to "**Sidebar Behaviour**". Renamed the sidebar "Style" tab to "**Customization**" for better expressive clarity. (Modified: [MainActivity.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/MainActivity.kt), [ExpressiveComponents.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt))
+- [x] **Resolved LocalConfiguration Compilation Error**: Fixed an unresolved reference to `LocalConfiguration` in `MainActivity.kt` by adding the correct `androidx.compose.ui.platform.LocalConfiguration` import. (Modified: [MainActivity.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/MainActivity.kt))
+- [x] **Audit and verify Android Studio AI Agent's new custom Expressive UI navigation styling and sidebar hover expansion preview settings, and successfully verify clean compilation across debug and release builds**: Automated state synchronization. (Modified: CoreUi.kt, ExpressiveComponents.kt, MainActivity.kt, Screens.kt, ThemeManager.kt, )
+
 
 ### 🟡 In Progress / Planned
 
@@ -116,4 +120,4 @@ When making modifications, **you must strictly adhere** to the following Android
 
 ---
 
-*Last Updated: 2026-05-24 by Antigravity (Conducted technical core architecture & performance audit and compatibility feasibility checks under ANDP.)*
+*Last Updated: 2026-05-26 by Antigravity (Audit and verify Android Studio AI Agent's new custom Expressive UI navigation styling and sidebar hover expansion preview settings, and successfully verify clean compilation across debug and release builds)*

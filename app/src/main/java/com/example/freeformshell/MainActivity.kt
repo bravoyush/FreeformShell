@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.text.input.KeyboardType
@@ -253,6 +258,8 @@ fun MainScreen(
     var editingGroup by remember { mutableStateOf<WorkspaceGroup?>(null) }
     var isEditingFavorite by remember { mutableStateOf(false) }
     var refreshWorkspacesKey by remember { mutableStateOf(0) }
+
+    var appUiStyle by remember { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -495,18 +502,20 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") })
-                NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") })
-                NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") })
-                NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") })
-                NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") })
-                NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
-                NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") })
+            if (appUiStyle == 0) {
+                NavigationBar {
+                    NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") })
+                    NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") })
+                    NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") })
+                    NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") })
+                    NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") })
+                    NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
+                    NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") })
+                }
             }
         },
         floatingActionButton = {
-            if (selectedTabIndex == 0) {
+            if (selectedTabIndex == 0 && appUiStyle == 0) {
                 Column(horizontalAlignment = Alignment.End) {
                     FloatingActionButton(onClick = { showSettingsDialog = true }, modifier = Modifier.padding(bottom = 8.dp)) {
                         Icon(Icons.Default.Info, "Info")
@@ -518,77 +527,98 @@ fun MainScreen(
             }
         }
     ) { padding ->
-        when (selectedTabIndex) {
-            0 -> DashboardScreen(
-                padding = padding,
-                availableDisplays = availableDisplays,
-                selectedDisplayId = selectedDisplayId,
-                onSelectDisplay = { selectedDisplayId = it },
-                isShizukuAvailable = isShizukuAvailable,
-                hasOverlayPermission = hasOverlayPermission,
-                launchQueue = launchQueue,
-                onLaunchApp = { showAppPicker = true },
-                onClearQueue = { launchQueue = emptyList() },
-                onLaunchQueue = {
-                    val queue = launchQueue
-                    launchQueue = emptyList()
-                    val displayId = selectedDisplayId
-                    val targetDisplay = availableDisplays.find { it.id == displayId }
-                    val screenW = targetDisplay?.width ?: 1080
-                    val screenH = targetDisplay?.height ?: 2400
-                    
-                    // Requirement: 50% of screen size
-                    val w = screenW / 2
-                    val h = screenH / 2
-                    
-                    scope.launch(Dispatchers.IO) {
-                        ShellExecutor.executeCommand("cmd activity set-resizable 1")
-                        queue.forEachIndexed { index, app ->
-                            val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                            val component = intent?.component?.flattenToShortString() ?: return@forEachIndexed
-                            
-                            val left = 100 + (index * 80)
-                            val top = 200 + (index * 80)
-                            val right = left + w
-                            val bottom = top + h
-                            
-                            FreeformOverlayService.setIntendedBounds(app.packageName, android.graphics.Rect(left, top, right, bottom), displayId)
-                            val launchCmd = "am start-activity --display $displayId --windowingMode 5 --activity-brought-to-front -n $component"
-                            ShellExecutor.executeCommand(launchCmd)
-                            delay(1000)
+        val content: @Composable (PaddingValues) -> Unit = { innerPadding ->
+            when (selectedTabIndex) {
+                0 -> DashboardScreen(
+                    padding = innerPadding,
+                    availableDisplays = availableDisplays,
+                    selectedDisplayId = selectedDisplayId,
+                    onSelectDisplay = { selectedDisplayId = it },
+                    isShizukuAvailable = isShizukuAvailable,
+                    hasOverlayPermission = hasOverlayPermission,
+                    launchQueue = launchQueue,
+                    onLaunchApp = { showAppPicker = true },
+                    onClearQueue = { launchQueue = emptyList() },
+                    onLaunchQueue = {
+                        val queue = launchQueue
+                        launchQueue = emptyList()
+                        val displayId = selectedDisplayId
+                        val targetDisplay = availableDisplays.find { it.id == displayId }
+                        val screenW = targetDisplay?.width ?: 1080
+                        val screenH = targetDisplay?.height ?: 2400
+                        
+                        // Requirement: 50% of screen size
+                        val w = screenW / 2
+                        val h = screenH / 2
+                        
+                        scope.launch(Dispatchers.IO) {
+                            ShellExecutor.executeCommand("cmd activity set-resizable 1")
+                            queue.forEachIndexed { index, app ->
+                                val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                                val component = intent?.component?.flattenToShortString() ?: return@forEachIndexed
+                                
+                                val left = 100 + (index * 80)
+                                val top = 200 + (index * 80)
+                                val right = left + w
+                                val bottom = top + h
+                                
+                                FreeformOverlayService.setIntendedBounds(app.packageName, android.graphics.Rect(left, top, right, bottom), displayId)
+                                val launchCmd = "am start-activity --display $displayId --windowingMode 5 --activity-brought-to-front -n $component"
+                                ShellExecutor.executeCommand(launchCmd)
+                                delay(1000)
+                            }
                         }
-                    }
-                },
-                editingGroup = editingGroup,
-                onEditGroup = { group, isFav ->
-                    editingGroup = group
-                    isEditingFavorite = isFav
-                },
-                refreshWorkspacesKey = refreshWorkspacesKey,
-                onRefreshWorkspaces = { refreshWorkspacesKey++ }
-            )
-            1 -> CustomizationScreen(padding)
-            2 -> TaskManagerScreen(
-                padding = padding,
-                tasks = tasks,
-                isLoading = isLoading,
-                onRefresh = {
-                    scope.launch(Dispatchers.IO) {
-                        isLoading = true
-                        val newTasks = TaskManager.getRecentTasks()
-                        withContext(Dispatchers.Main) { 
-                            tasks = newTasks 
-                            isLoading = false
+                    },
+                    editingGroup = editingGroup,
+                    onEditGroup = { group, isFav ->
+                        editingGroup = group
+                        isEditingFavorite = isFav
+                    },
+                    refreshWorkspacesKey = refreshWorkspacesKey,
+                    onRefreshWorkspaces = { refreshWorkspacesKey++ }
+                )
+                1 -> CustomizationScreen(innerPadding)
+                2 -> TaskManagerScreen(
+                    padding = innerPadding,
+                    tasks = tasks,
+                    isLoading = isLoading,
+                    onRefresh = {
+                        scope.launch(Dispatchers.IO) {
+                            isLoading = true
+                            val newTasks = TaskManager.getRecentTasks()
+                            withContext(Dispatchers.Main) { 
+                                tasks = newTasks 
+                                isLoading = false
+                            }
                         }
+                    },
+                    selectedDisplayId = selectedDisplayId,
+                    onRefreshWorkspaces = { refreshWorkspacesKey++ }
+                )
+                3 -> DisplaySettingsScreen(innerPadding, availableDisplays)
+                4 -> BlacklistScreen(innerPadding)
+                5 -> AppSettingsScreen(innerPadding, availableDisplays)
+                6 -> CompatibilityScreen(innerPadding)
+                7 -> ExpressiveWorkspaceManagerScreen(
+                    padding = innerPadding,
+                    refreshKey = refreshWorkspacesKey,
+                    onRefresh = { refreshWorkspacesKey++ },
+                    onEditGroup = { group, isFav ->
+                        editingGroup = group
+                        isEditingFavorite = isFav
                     }
-                },
-                selectedDisplayId = selectedDisplayId,
-                onRefreshWorkspaces = { refreshWorkspacesKey++ }
+                )
+            }
+        }
+
+        if (appUiStyle == 1) {
+            ExpressiveLayout(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                content = content
             )
-            3 -> DisplaySettingsScreen(padding, availableDisplays)
-            4 -> BlacklistScreen(padding)
-            5 -> AppSettingsScreen(padding, availableDisplays)
-            6 -> CompatibilityScreen(padding)
+        } else {
+            content(padding)
         }
 
         if (showLogDialog) {
@@ -994,152 +1024,154 @@ fun DashboardScreen(
         }
 
         // Workspace Manager Section
-        val favoriteWorkspace = WorkspaceManager.getFavorite(context)
-        val historyWorkspaces = WorkspaceManager.getHistory(context)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Workspace Manager", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text("Save and organize layouts for quick snapping", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        if (favoriteWorkspace == null && historyWorkspaces.isEmpty()) {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
-                    Spacer(Modifier.height(8.dp))
-                    Text("No Saved Workspaces", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Launch apps in freeform mode and arrange them. Then click 'Save Layout to Favorites' to store them here.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
-        } else {
-            // Favorite Workspace Section
-            if (favoriteWorkspace != null) {
-                val group = favoriteWorkspace
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+        if (ThemeManager.getAppUiStyle(context) == 0) {
+            val favoriteWorkspace = WorkspaceManager.getFavorite(context)
+            val historyWorkspaces = WorkspaceManager.getHistory(context)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Workspace Manager", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Save and organize layouts for quick snapping", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (favoriteWorkspace == null && historyWorkspaces.isEmpty()) {
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Star, "Favorite", tint = Color(0xFFFFC107))
-                            Spacer(Modifier.width(8.dp))
-                            Text("FAVORITE WORKSPACE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-                        }
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(8.dp))
-                        
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                            group.apps.forEach { app ->
-                                AppIcon(app.packageName, modifier = Modifier.size(32.dp))
-                            }
-                        }
-                        
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = { onEditGroup(group, true) },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.medium
-                            ) {
-                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Edit")
-                            }
-                            
-                            OutlinedButton(
-                                onClick = {
-                                    WorkspaceManager.removeFavorite(context)
-                                    onRefreshWorkspaces()
-                                    Toast.makeText(context, "Favorite removed", Toast.LENGTH_SHORT).show()
-                                },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.medium
-                            ) {
-                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Remove")
-                            }
-                        }
+                        Text("No Saved Workspaces", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Launch apps in freeform mode and arrange them. Then click 'Save Layout to Favorites' to store them here.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
-            }
-            
-            // History Workspaces Section
-            if (historyWorkspaces.isNotEmpty()) {
-                Text("Workspace History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
-                historyWorkspaces.forEachIndexed { idx, group ->
+            } else {
+                // Favorite Workspace Section
+                if (favoriteWorkspace != null) {
+                    val group = favoriteWorkspace
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        shape = MaterialTheme.shapes.large
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                val label = if (group.displayId == 0) "Phone Workspace" else "External Display ${group.displayId}"
-                                Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.weight(1f))
-                                val diffSec = (System.currentTimeMillis() - group.timestamp) / 1000
-                                val timeStr = when {
-                                    diffSec < 60 -> "Just Now"
-                                    diffSec < 3600 -> "${diffSec / 60}m ago"
-                                    else -> "${diffSec / 3600}h ago"
-                                }
-                                Text(timeStr, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Icon(Icons.Default.Star, "Favorite", tint = Color(0xFFFFC107))
+                                Spacer(Modifier.width(8.dp))
+                                Text("FAVORITE WORKSPACE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(Modifier.height(8.dp))
                             
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                                 group.apps.forEach { app ->
-                                    AppIcon(app.packageName, modifier = Modifier.size(28.dp))
+                                    AppIcon(app.packageName, modifier = Modifier.size(32.dp))
                                 }
                             }
                             
                             Spacer(Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledTonalButton(
-                                    onClick = {
-                                        WorkspaceManager.setFavorite(context, group)
-                                        onRefreshWorkspaces()
-                                        Toast.makeText(context, "Set as Favorite Workspace!", Toast.LENGTH_SHORT).show()
-                                    },
+                                Button(
+                                    onClick = { onEditGroup(group, true) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                     modifier = Modifier.weight(1f),
                                     shape = MaterialTheme.shapes.medium
                                 ) {
-                                    Icon(Icons.Default.StarBorder, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Make Favorite")
-                                }
-                                
-                                Button(
-                                    onClick = { onEditGroup(group, false) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
-                                    shape = MaterialTheme.shapes.medium
-                                ) {
                                     Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Edit")
                                 }
                                 
                                 OutlinedButton(
                                     onClick = {
-                                        val updatedHistory = historyWorkspaces.toMutableList()
-                                        updatedHistory.removeAt(idx)
-                                        WorkspaceManager.saveHistory(context, updatedHistory)
+                                        WorkspaceManager.removeFavorite(context)
                                         onRefreshWorkspaces()
-                                        Toast.makeText(context, "Workspace deleted", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Favorite removed", Toast.LENGTH_SHORT).show()
                                     },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    modifier = Modifier.weight(1f),
                                     shape = MaterialTheme.shapes.medium
                                 ) {
                                     Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Remove")
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // History Workspaces Section
+                if (historyWorkspaces.isNotEmpty()) {
+                    Text("Workspace History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+                    historyWorkspaces.forEachIndexed { idx, group ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val label = if (group.displayId == 0) "Phone Workspace" else "External Display ${group.displayId}"
+                                    Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    val diffSec = (System.currentTimeMillis() - group.timestamp) / 1000
+                                    val timeStr = when {
+                                        diffSec < 60 -> "Just Now"
+                                        diffSec < 3600 -> "${diffSec / 60}m ago"
+                                        else -> "${diffSec / 3600}h ago"
+                                    }
+                                    Text(timeStr, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    group.apps.forEach { app ->
+                                        AppIcon(app.packageName, modifier = Modifier.size(28.dp))
+                                    }
+                                }
+                                
+                                Spacer(Modifier.height(12.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            WorkspaceManager.setFavorite(context, group)
+                                            onRefreshWorkspaces()
+                                            Toast.makeText(context, "Set as Favorite Workspace!", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Icon(Icons.Default.StarBorder, null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Make Favorite")
+                                    }
+                                    
+                                    Button(
+                                        onClick = { onEditGroup(group, false) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                                    }
+                                    
+                                    OutlinedButton(
+                                        onClick = {
+                                            val updatedHistory = historyWorkspaces.toMutableList()
+                                            updatedHistory.removeAt(idx)
+                                            WorkspaceManager.saveHistory(context, updatedHistory)
+                                            onRefreshWorkspaces()
+                                            Toast.makeText(context, "Workspace deleted", Toast.LENGTH_SHORT).show()
+                                        },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
@@ -1380,88 +1412,6 @@ fun TaskManagerScreen(
     }
 }
 
-data class AppInfo(val label: String, val packageName: String, val icon: ImageBitmap? = null, val isSystem: Boolean = false)
-data class DisplayInfo(val id: Int, val name: String, val width: Int, val height: Int, val dpi: Int = 420, val activeDpi: Int = 420, val activeWidth: Int = width, val activeHeight: Int = height, val isRounded: Boolean = true)
-
-@Composable
-fun StatusChip(label: String, color: Color) {
-    Surface(
-        color = color.copy(alpha = 0.2f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = color
-        )
-    }
-}
-
-@Composable
-fun AppIcon(packageName: String, modifier: Modifier = Modifier.size(40.dp)) {
-    val context = LocalContext.current
-    var icon by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
-    
-    LaunchedEffect(packageName) {
-        withContext(Dispatchers.IO) {
-            try {
-                val drawable = context.packageManager.getApplicationIcon(packageName)
-                val bitmap = drawable.toBitmap(
-                    width = 120.coerceAtLeast(1), 
-                    height = 120.coerceAtLeast(1)
-                ).asImageBitmap()
-                withContext(Dispatchers.Main) { icon = bitmap }
-            } catch (e: Exception) {
-                Log.e("AppIcon", "Failed to load icon for $packageName: ${e.message}")
-            }
-        }
-    }
-    
-    if (icon != null) {
-        Image(bitmap = icon!!, contentDescription = null, modifier = modifier)
-    } else {
-        Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.CircleShape))
-    }
-}
-
-@Composable
-fun DisplayShapeIcon(display: DisplayInfo, isEnabled: Boolean = true) {
-    val maxSize = 32.dp
-    val ratio = if (display.height > 0) display.width.toFloat() / display.height.toFloat() else 1f
-    
-    val (w, h) = if (ratio > 1f) {
-        maxSize to (maxSize / ratio)
-    } else {
-        (maxSize * ratio) to maxSize
-    }
-    
-    val colorAlpha = if (isEnabled) 1f else 0.4f
-    val bgAlpha = if (isEnabled) 0.2f else 0.08f
-    
-    Box(
-        modifier = Modifier
-            .size(maxSize)
-            .padding(2.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(w, h)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = bgAlpha),
-                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
-                )
-                .border(
-                    1.5.dp, 
-                    MaterialTheme.colorScheme.primary.copy(alpha = colorAlpha), 
-                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
-                )
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomizationScreen(padding: PaddingValues) {
@@ -1473,6 +1423,8 @@ fun CustomizationScreen(padding: PaddingValues) {
     var borderWidth by remember { mutableStateOf(ThemeManager.getBorderWidth(context)) }
     var titleBarOpacity by remember { mutableStateOf(ThemeManager.getTitleBarOpacity(context).toFloat()) }
     
+    var appUiStyle by remember { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
+
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
         Text("Appearance", style = MaterialTheme.typography.headlineSmall)
         
@@ -1481,14 +1433,7 @@ fun CustomizationScreen(padding: PaddingValues) {
         WindowPreview(roundness, opacity, borderWidth, titleBarOpacity, isPreviewDark)
         
         Spacer(Modifier.height(16.dp))
-        
-        Text("Theme Mode", style = MaterialTheme.typography.titleMedium)
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
-                FilterChip(selected = mode == index, onClick = { mode = index; ThemeManager.setThemeMode(context, index) }, label = { Text(label) })
-            }
-        }
-        
+
         Text("Window Roundness: ${roundness.toInt()}dp", style = MaterialTheme.typography.titleMedium)
         Slider(value = roundness, onValueChange = { roundness = it; ThemeManager.setRoundness(context, it) }, valueRange = 0f..40f)
         
@@ -1740,6 +1685,196 @@ fun CustomizationScreen(padding: PaddingValues) {
                     }
                 }
             }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        if (appUiStyle == 1) {
+            Text("Sidebar Behaviour", style = MaterialTheme.typography.titleLarge)
+            SidebarHoverPreview()
+            
+            val configuration = LocalConfiguration.current
+            val isTablet = configuration.screenWidthDp >= 900
+            
+            Text("Adaptive Configuration", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(if (isTablet) "Tablet Mode Active" else "Phone Mode Active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(12.dp))
+                    
+                    // Phone Settings
+                    Text("Phone Settings", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    var hoverEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandEnabled(context)) }
+                    var autoCollapse by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseEnabled(context)) }
+                    
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Hover Expand", Modifier.weight(1f))
+                        Switch(checked = hoverEnabled, onCheckedChange = { 
+                            hoverEnabled = it
+                            ThemeManager.setSidebarHoverExpandEnabled(context, it)
+                        })
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Auto-Collapse", Modifier.weight(1f))
+                        Switch(checked = autoCollapse, onCheckedChange = { 
+                            autoCollapse = it
+                            ThemeManager.setSidebarAutoCollapseEnabled(context, it)
+                        })
+                    }
+                    
+                    Divider(Modifier.padding(vertical = 12.dp))
+                    
+                    // Tablet Settings
+                    Text("Tablet Settings", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    var hoverTabletEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandTabletEnabled(context)) }
+                    var autoCollapseTablet by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseTabletEnabled(context)) }
+                    
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Hover Expand", Modifier.weight(1f))
+                        Switch(checked = hoverTabletEnabled, onCheckedChange = { 
+                            hoverTabletEnabled = it
+                            ThemeManager.setSidebarHoverExpandTabletEnabled(context, it)
+                        })
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Auto-Collapse", Modifier.weight(1f))
+                        Switch(checked = autoCollapseTablet, onCheckedChange = { 
+                            autoCollapseTablet = it
+                            ThemeManager.setSidebarAutoCollapseTabletEnabled(context, it)
+                        })
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
+        Text("App UI", style = MaterialTheme.typography.titleLarge)
+        Text("Select the primary navigation layout for the shell application.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Classic", "Expressive").forEachIndexed { index, label ->
+                FilterChip(
+                    selected = appUiStyle == index, 
+                    onClick = { 
+                        appUiStyle = index
+                        ThemeManager.setAppUiStyle(context, index)
+                        // Trigger a full recompose of the MainScreen
+                        (context as? MainActivity)?.recreate()
+                    }, 
+                    label = { Text(label) }
+                )
+            }
+        }
+        
+        Spacer(Modifier.height(16.dp))
+
+        Text("Theme Mode", style = MaterialTheme.typography.titleLarge)
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
+                FilterChip(selected = mode == index, onClick = { mode = index; ThemeManager.setThemeMode(context, index) }, label = { Text(label) })
+            }
+        }
+    }
+}
+
+@Composable
+fun SidebarHoverPreview() {
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    // Automatic animation loop
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            isExpanded = true
+            delay(2000)
+            isExpanded = false
+            delay(1000)
+        }
+    }
+    
+    val width by animateDpAsState(
+        targetValue = if (isExpanded) 100.dp else 40.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "width"
+    )
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Hover Expansion Preview", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+            Spacer(Modifier.height(16.dp))
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                // Main Content Mock
+                Box(Modifier.fillMaxSize().padding(start = width + 8.dp, top = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.fillMaxWidth().height(12.dp).background(Color.Gray.copy(0.2f), CircleShape))
+                        Box(Modifier.fillMaxWidth(0.7f).height(12.dp).background(Color.Gray.copy(0.2f), CircleShape))
+                        Box(Modifier.fillMaxWidth(0.9f).height(12.dp).background(Color.Gray.copy(0.2f), CircleShape))
+                    }
+                }
+                
+                // Sidebar Mock
+                Surface(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(width)
+                        .padding(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
+                        horizontalAlignment = if (isExpanded) Alignment.Start else Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Default.Menu, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.height(12.dp))
+                        repeat(4) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                Box(Modifier.size(12.dp).background(Color.White.copy(0.7f), CircleShape))
+                                if (isExpanded) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Box(Modifier.width(40.dp).height(4.dp).background(Color.White.copy(0.4f), CircleShape))
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Cursor Mock
+                val cursorOffset by animateDpAsState(
+                    targetValue = if (isExpanded) 15.dp else 60.dp,
+                    animationSpec = tween(1000),
+                    label = "cursor"
+                )
+                
+                Icon(
+                    Icons.Default.Navigation, 
+                    null, 
+                    tint = MaterialTheme.colorScheme.onSurface, 
+                    modifier = Modifier
+                        .size(20.dp)
+                        .offset(x = cursorOffset, y = 10.dp)
+                        .graphicsLayer(rotationZ = -45f)
+                )
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = if (isExpanded) "Cursor Entered: Sidebar Expanded" else "Cursor Outside: Sidebar Collapsed",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
         }
     }
 }

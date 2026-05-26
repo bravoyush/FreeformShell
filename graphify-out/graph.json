@@ -106,6 +106,24 @@
       "norm_label": "main()"
     },
     {
+      "label": "settings.json",
+      "file_type": "code",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L1",
+      "id": "vscode_settings_json",
+      "community": 57,
+      "norm_label": "settings.json"
+    },
+    {
+      "label": "java.configuration.updateBuildConfiguration",
+      "file_type": "code",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L2",
+      "id": "vscode_settings_java_configuration_updatebuildconfiguration",
+      "community": 57,
+      "norm_label": "java.configuration.updatebuildconfiguration"
+    },
+    {
       "label": "build.gradle.kts",
       "file_type": "code",
       "source_file": "app/build.gradle.kts",
@@ -320,6 +338,60 @@
       "id": "freeformshell_compatibilitymanager_resizestyle",
       "community": 13,
       "norm_label": "resizestyle"
+    },
+    {
+      "label": "CoreUi.kt",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L1",
+      "id": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "community": 5,
+      "norm_label": "coreui.kt"
+    },
+    {
+      "label": "AppInfo",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L26",
+      "id": "freeformshell_coreui_appinfo",
+      "community": 5,
+      "norm_label": "appinfo"
+    },
+    {
+      "label": "DisplayInfo",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L27",
+      "id": "freeformshell_coreui_displayinfo",
+      "community": 5,
+      "norm_label": "displayinfo"
+    },
+    {
+      "label": "StatusChip()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L29",
+      "id": "freeformshell_coreui_statuschip",
+      "community": 5,
+      "norm_label": "statuschip()"
+    },
+    {
+      "label": "AppIcon()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L45",
+      "id": "freeformshell_coreui_appicon",
+      "community": 5,
+      "norm_label": "appicon()"
+    },
+    {
+      "label": "DisplayShapeIcon()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L72",
+      "id": "freeformshell_coreui_displayshapeicon",
+      "community": 5,
+      "norm_label": "displayshapeicon()"
     },
     {
       "label": "DragResizeOverlay.kt",
@@ -844,12 +916,84 @@
       "norm_label": ".getopacity()"
     },
     {
+      "label": "ExpressiveComponents.kt",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L1",
+      "id": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "community": 5,
+      "norm_label": "expressivecomponents.kt"
+    },
+    {
+      "label": "ExpressiveLayout()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L39",
+      "id": "freeformshell_expressivecomponents_expressivelayout",
+      "community": 5,
+      "norm_label": "expressivelayout()"
+    },
+    {
+      "label": "ExpressiveSidebar()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L121",
+      "id": "freeformshell_expressivecomponents_expressivesidebar",
+      "community": 5,
+      "norm_label": "expressivesidebar()"
+    },
+    {
+      "label": "ExpressiveSidebarItem()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L205",
+      "id": "freeformshell_expressivecomponents_expressivesidebaritem",
+      "community": 5,
+      "norm_label": "expressivesidebaritem()"
+    },
+    {
+      "label": "ExpressivePillDock()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L261",
+      "id": "freeformshell_expressivecomponents_expressivepilldock",
+      "community": 5,
+      "norm_label": "expressivepilldock()"
+    },
+    {
+      "label": "ExpressiveWorkspaceManagerScreen()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L313",
+      "id": "freeformshell_expressivecomponents_expressiveworkspacemanagerscreen",
+      "community": 5,
+      "norm_label": "expressiveworkspacemanagerscreen()"
+    },
+    {
+      "label": "WorkspaceCard()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L380",
+      "id": "freeformshell_expressivecomponents_workspacecard",
+      "community": 5,
+      "norm_label": "workspacecard()"
+    },
+    {
+      "label": "SidebarItemData",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L450",
+      "id": "freeformshell_expressivecomponents_sidebaritemdata",
+      "community": 5,
+      "norm_label": "sidebaritemdata"
+    },
+    {
       "label": "FreeformOverlayService.kt",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1",
       "id": "app_src_main_java_com_example_freeformshell_freeformoverlayservice_kt",
-      "community": 0,
+      "community": 53,
       "norm_label": "freeformoverlayservice.kt"
     },
     {
@@ -867,7 +1011,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L36",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_getdisplayshell",
-      "community": 0,
+      "community": 54,
       "norm_label": ".getdisplayshell()"
     },
     {
@@ -876,7 +1020,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L90",
       "id": "freeformshell_freeformoverlayservice_run",
-      "community": 0,
+      "community": 53,
       "norm_label": "run()"
     },
     {
@@ -885,7 +1029,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L110",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_triggerfastpollingsequence",
-      "community": 0,
+      "community": 55,
       "norm_label": ".triggerfastpollingsequence()"
     },
     {
@@ -912,7 +1056,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L126",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_notifyhandledragstatechanged",
-      "community": 0,
+      "community": 55,
       "norm_label": ".notifyhandledragstatechanged()"
     },
     {
@@ -984,7 +1128,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L337",
       "id": "freeformshell_freeformoverlayservice_onreceive",
-      "community": 0,
+      "community": 53,
       "norm_label": "onreceive()"
     },
     {
@@ -993,7 +1137,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L348",
       "id": "freeformshell_freeformoverlayservice_getinstance",
-      "community": 0,
+      "community": 53,
       "norm_label": "getinstance()"
     },
     {
@@ -1002,7 +1146,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L353",
       "id": "freeformshell_freeformoverlayservice_ensureforcecloseloaded",
-      "community": 0,
+      "community": 53,
       "norm_label": "ensureforcecloseloaded()"
     },
     {
@@ -1011,7 +1155,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L367",
       "id": "freeformshell_freeformoverlayservice_toggleforceclose",
-      "community": 0,
+      "community": 53,
       "norm_label": "toggleforceclose()"
     },
     {
@@ -1020,7 +1164,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L385",
       "id": "freeformshell_freeformoverlayservice_shouldforceclose",
-      "community": 0,
+      "community": 53,
       "norm_label": "shouldforceclose()"
     },
     {
@@ -1029,7 +1173,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L392",
       "id": "freeformshell_freeformoverlayservice_requestrefresh",
-      "community": 0,
+      "community": 53,
       "norm_label": "requestrefresh()"
     },
     {
@@ -1038,7 +1182,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L404",
       "id": "freeformshell_freeformoverlayservice_setintendedbounds",
-      "community": 0,
+      "community": 53,
       "norm_label": "setintendedbounds()"
     },
     {
@@ -1047,7 +1191,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L409",
       "id": "freeformshell_freeformoverlayservice_ensureloaded",
-      "community": 0,
+      "community": 53,
       "norm_label": "ensureloaded()"
     },
     {
@@ -1056,7 +1200,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L423",
       "id": "freeformshell_freeformoverlayservice_toggleblacklist",
-      "community": 0,
+      "community": 53,
       "norm_label": "toggleblacklist()"
     },
     {
@@ -1065,7 +1209,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L443",
       "id": "freeformshell_freeformoverlayservice_isblacklisted",
-      "community": 0,
+      "community": 53,
       "norm_label": "isblacklisted()"
     },
     {
@@ -1074,7 +1218,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L449",
       "id": "freeformshell_freeformoverlayservice_showdockguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "showdockguide()"
     },
     {
@@ -1083,7 +1227,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L453",
       "id": "freeformshell_freeformoverlayservice_hidedockguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "hidedockguide()"
     },
     {
@@ -1092,7 +1236,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L457",
       "id": "freeformshell_freeformoverlayservice_showsensitivityguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "showsensitivityguide()"
     },
     {
@@ -1101,7 +1245,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L461",
       "id": "freeformshell_freeformoverlayservice_hidesensitivityguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "hidesensitivityguide()"
     },
     {
@@ -1110,7 +1254,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L465",
       "id": "freeformshell_freeformoverlayservice_showsnapguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "showsnapguide()"
     },
     {
@@ -1119,7 +1263,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L469",
       "id": "freeformshell_freeformoverlayservice_hidesnapguide",
-      "community": 0,
+      "community": 53,
       "norm_label": "hidesnapguide()"
     },
     {
@@ -1128,7 +1272,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L473",
       "id": "freeformshell_freeformoverlayservice_settaskdocked",
-      "community": 0,
+      "community": 53,
       "norm_label": "settaskdocked()"
     },
     {
@@ -1137,7 +1281,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L486",
       "id": "freeformshell_freeformoverlayservice_getpairedtask",
-      "community": 0,
+      "community": 53,
       "norm_label": "getpairedtask()"
     },
     {
@@ -1146,7 +1290,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L531",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_getsafearearect",
-      "community": 0,
+      "community": 55,
       "norm_label": ".getsafearearect()"
     },
     {
@@ -1155,7 +1299,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L562",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_getrealmetricsfordisplay",
-      "community": 0,
+      "community": 56,
       "norm_label": ".getrealmetricsfordisplay()"
     },
     {
@@ -1164,7 +1308,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L572",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_monitortasks",
-      "community": 0,
+      "community": 56,
       "norm_label": ".monitortasks()"
     },
     {
@@ -1173,7 +1317,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L774",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_saveminimizedtaskstoprefs",
-      "community": 0,
+      "community": 56,
       "norm_label": ".saveminimizedtaskstoprefs()"
     },
     {
@@ -1191,7 +1335,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L842",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_minimizetask",
-      "community": 0,
+      "community": 56,
       "norm_label": ".minimizetask()"
     },
     {
@@ -1200,7 +1344,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L908",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_restoretask",
-      "community": 0,
+      "community": 56,
       "norm_label": ".restoretask()"
     },
     {
@@ -1209,7 +1353,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L958",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_hideoverlay",
-      "community": 0,
+      "community": 56,
       "norm_label": ".hideoverlay()"
     },
     {
@@ -1245,7 +1389,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1074",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_updatedockguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".updatedockguide()"
     },
     {
@@ -1254,7 +1398,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1078",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_removedockguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removedockguide()"
     },
     {
@@ -1263,7 +1407,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1082",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_updatesensitivityguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".updatesensitivityguide()"
     },
     {
@@ -1272,7 +1416,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1086",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_removesensitivityguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removesensitivityguide()"
     },
     {
@@ -1281,7 +1425,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1090",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_updatesnapguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".updatesnapguide()"
     },
     {
@@ -1290,7 +1434,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1094",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_removesnapguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removesnapguide()"
     },
     {
@@ -1416,7 +1560,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1905",
       "id": "freeformshell_freeformoverlayservice_displayshell",
-      "community": 0,
+      "community": 54,
       "norm_label": "displayshell"
     },
     {
@@ -1425,7 +1569,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1911",
       "id": "freeformshell_freeformoverlayservice_displayshell_isenabled",
-      "community": 0,
+      "community": 54,
       "norm_label": ".isenabled()"
     },
     {
@@ -1434,7 +1578,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L1918",
       "id": "freeformshell_freeformoverlayservice_displayshell_update",
-      "community": 0,
+      "community": 56,
       "norm_label": ".update()"
     },
     {
@@ -1443,7 +1587,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2286",
       "id": "freeformshell_freeformoverlayservice_displayshell_hideoverlay",
-      "community": 0,
+      "community": 56,
       "norm_label": ".hideoverlay()"
     },
     {
@@ -1452,7 +1596,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2292",
       "id": "freeformshell_freeformoverlayservice_displayshell_clear",
-      "community": 0,
+      "community": 54,
       "norm_label": ".clear()"
     },
     {
@@ -1461,7 +1605,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2300",
       "id": "freeformshell_freeformoverlayservice_displayshell_removedockguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removedockguide()"
     },
     {
@@ -1470,7 +1614,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2312",
       "id": "freeformshell_freeformoverlayservice_displayshell_removesensitivityguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removesensitivityguide()"
     },
     {
@@ -1479,7 +1623,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2324",
       "id": "freeformshell_freeformoverlayservice_displayshell_removesnapguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".removesnapguide()"
     },
     {
@@ -1488,7 +1632,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2336",
       "id": "freeformshell_freeformoverlayservice_displayshell_updatedockguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".updatedockguide()"
     },
     {
@@ -1497,7 +1641,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2377",
       "id": "freeformshell_freeformoverlayservice_displayshell_updatesensitivityguide",
-      "community": 0,
+      "community": 53,
       "norm_label": ".updatesensitivityguide()"
     },
     {
@@ -1506,7 +1650,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2409",
       "id": "freeformshell_freeformoverlayservice_displayshell_updatesnapguide",
-      "community": 0,
+      "community": 54,
       "norm_label": ".updatesnapguide()"
     },
     {
@@ -1515,7 +1659,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2457",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_findhandleconfigs",
-      "community": 0,
+      "community": 55,
       "norm_label": ".findhandleconfigs()"
     },
     {
@@ -1524,7 +1668,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2569",
       "id": "freeformshell_freeformoverlayservice_freeformoverlayservice_updatesplithandles",
-      "community": 0,
+      "community": 55,
       "norm_label": ".updatesplithandles()"
     },
     {
@@ -1533,7 +1677,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2637",
       "id": "freeformshell_freeformoverlayservice_handleconfig",
-      "community": 0,
+      "community": 53,
       "norm_label": "handleconfig"
     },
     {
@@ -1542,7 +1686,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2646",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle",
-      "community": 0,
+      "community": 55,
       "norm_label": "splitresizehandle"
     },
     {
@@ -1551,7 +1695,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2680",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_getsmartbounds",
-      "community": 0,
+      "community": 55,
       "norm_label": ".getsmartbounds()"
     },
     {
@@ -1560,7 +1704,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2727",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_show",
-      "community": 0,
+      "community": 55,
       "norm_label": ".show()"
     },
     {
@@ -1569,7 +1713,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L2894",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_resizesplit",
-      "community": 0,
+      "community": 55,
       "norm_label": ".resizesplit()"
     },
     {
@@ -1578,7 +1722,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3018",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_updatehandleposition",
-      "community": 0,
+      "community": 55,
       "norm_label": ".updatehandleposition()"
     },
     {
@@ -1587,7 +1731,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3027",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_checkoverlapwithtoptasks",
-      "community": 0,
+      "community": 55,
       "norm_label": ".checkoverlapwithtoptasks()"
     },
     {
@@ -1596,7 +1740,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3055",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_syncposition",
-      "community": 0,
+      "community": 55,
       "norm_label": ".syncposition()"
     },
     {
@@ -1605,7 +1749,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3064",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_showcapsule",
-      "community": 0,
+      "community": 55,
       "norm_label": ".showcapsule()"
     },
     {
@@ -1614,7 +1758,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3083",
       "id": "freeformshell_freeformoverlayservice_splitresizehandle_hide",
-      "community": 0,
+      "community": 56,
       "norm_label": ".hide()"
     },
     {
@@ -1623,7 +1767,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3096",
       "id": "freeformshell_freeformoverlayservice_snappingsensitivityguideview",
-      "community": 0,
+      "community": 53,
       "norm_label": "snappingsensitivityguideview"
     },
     {
@@ -1632,7 +1776,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L3115",
       "id": "freeformshell_freeformoverlayservice_snappingsensitivityguideview_ondraw",
-      "community": 0,
+      "community": 53,
       "norm_label": ".ondraw()"
     },
     {
@@ -2089,7 +2233,7 @@
       "label": "MainActivity",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L61",
+      "source_location": "L66",
       "id": "freeformshell_mainactivity_mainactivity",
       "community": 5,
       "norm_label": "mainactivity"
@@ -2098,7 +2242,7 @@
       "label": ".onCreate()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L67",
+      "source_location": "L72",
       "id": "freeformshell_mainactivity_mainactivity_oncreate",
       "community": 5,
       "norm_label": ".oncreate()"
@@ -2107,7 +2251,7 @@
       "label": ".onDestroy()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L190",
+      "source_location": "L195",
       "id": "freeformshell_mainactivity_mainactivity_ondestroy",
       "community": 5,
       "norm_label": ".ondestroy()"
@@ -2116,7 +2260,7 @@
       "label": "MainScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L196",
+      "source_location": "L201",
       "id": "freeformshell_mainactivity_mainscreen",
       "community": 5,
       "norm_label": "mainscreen()"
@@ -2125,7 +2269,7 @@
       "label": "DashboardScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L816",
+      "source_location": "L846",
       "id": "freeformshell_mainactivity_dashboardscreen",
       "community": 5,
       "norm_label": "dashboardscreen()"
@@ -2134,70 +2278,34 @@
       "label": "TaskManagerScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1155",
+      "source_location": "L1187",
       "id": "freeformshell_mainactivity_taskmanagerscreen",
       "community": 5,
       "norm_label": "taskmanagerscreen()"
     },
     {
-      "label": "AppInfo",
-      "file_type": "code",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1383",
-      "id": "freeformshell_mainactivity_appinfo",
-      "community": 5,
-      "norm_label": "appinfo"
-    },
-    {
-      "label": "DisplayInfo",
-      "file_type": "code",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1384",
-      "id": "freeformshell_mainactivity_displayinfo",
-      "community": 5,
-      "norm_label": "displayinfo"
-    },
-    {
-      "label": "StatusChip()",
-      "file_type": "code",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1386",
-      "id": "freeformshell_mainactivity_statuschip",
-      "community": 5,
-      "norm_label": "statuschip()"
-    },
-    {
-      "label": "AppIcon()",
-      "file_type": "code",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1402",
-      "id": "freeformshell_mainactivity_appicon",
-      "community": 5,
-      "norm_label": "appicon()"
-    },
-    {
-      "label": "DisplayShapeIcon()",
-      "file_type": "code",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1429",
-      "id": "freeformshell_mainactivity_displayshapeicon",
-      "community": 5,
-      "norm_label": "displayshapeicon()"
-    },
-    {
       "label": "CustomizationScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1465",
+      "source_location": "L1415",
       "id": "freeformshell_mainactivity_customizationscreen",
       "community": 5,
       "norm_label": "customizationscreen()"
     },
     {
+      "label": "SidebarHoverPreview()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1782",
+      "id": "freeformshell_mainactivity_sidebarhoverpreview",
+      "community": 5,
+      "norm_label": "sidebarhoverpreview()"
+    },
+    {
       "label": "WindowPreview()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1747",
+      "source_location": "L1882",
       "id": "freeformshell_mainactivity_windowpreview",
       "community": 5,
       "norm_label": "windowpreview()"
@@ -2206,7 +2314,7 @@
       "label": "DisplaySettingsScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1815",
+      "source_location": "L1950",
       "id": "freeformshell_mainactivity_displaysettingsscreen",
       "community": 5,
       "norm_label": "displaysettingsscreen()"
@@ -2215,7 +2323,7 @@
       "label": "AppSettingsScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L2440",
+      "source_location": "L2575",
       "id": "freeformshell_mainactivity_appsettingsscreen",
       "community": 5,
       "norm_label": "appsettingsscreen()"
@@ -2224,7 +2332,7 @@
       "label": "CompatibilityScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L2936",
+      "source_location": "L3071",
       "id": "freeformshell_mainactivity_compatibilityscreen",
       "community": 5,
       "norm_label": "compatibilityscreen()"
@@ -2233,7 +2341,7 @@
       "label": "BlacklistScreen()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L3236",
+      "source_location": "L3371",
       "id": "freeformshell_mainactivity_blacklistscreen",
       "community": 5,
       "norm_label": "blacklistscreen()"
@@ -2242,7 +2350,7 @@
       "label": "PillPreviewCard()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L3356",
+      "source_location": "L3491",
       "id": "freeformshell_mainactivity_pillpreviewcard",
       "community": 5,
       "norm_label": "pillpreviewcard()"
@@ -2676,7 +2784,7 @@
       "source_file": "app/src/main/java/com/example/freeformshell/TaskManager.kt",
       "source_location": "L7",
       "id": "freeformshell_taskmanager_taskbounds",
-      "community": 0,
+      "community": 7,
       "norm_label": "taskbounds"
     },
     {
@@ -2800,7 +2908,7 @@
       "label": ".showShadows()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L25",
+      "source_location": "L33",
       "id": "freeformshell_thememanager_thememanager_showshadows",
       "community": 1,
       "norm_label": ".showshadows()"
@@ -2809,7 +2917,7 @@
       "label": ".setShowShadows()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L28",
+      "source_location": "L36",
       "id": "freeformshell_thememanager_thememanager_setshowshadows",
       "community": 1,
       "norm_label": ".setshowshadows()"
@@ -2818,7 +2926,7 @@
       "label": ".getWindowTheme()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L31",
+      "source_location": "L39",
       "id": "freeformshell_thememanager_thememanager_getwindowtheme",
       "community": 1,
       "norm_label": ".getwindowtheme()"
@@ -2827,16 +2935,160 @@
       "label": ".setWindowTheme()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L34",
+      "source_location": "L42",
       "id": "freeformshell_thememanager_thememanager_setwindowtheme",
       "community": 1,
       "norm_label": ".setwindowtheme()"
     },
     {
+      "label": ".getAppUiStyle()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L45",
+      "id": "freeformshell_thememanager_thememanager_getappuistyle",
+      "community": 1,
+      "norm_label": ".getappuistyle()"
+    },
+    {
+      "label": ".setAppUiStyle()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L48",
+      "id": "freeformshell_thememanager_thememanager_setappuistyle",
+      "community": 1,
+      "norm_label": ".setappuistyle()"
+    },
+    {
+      "label": ".getExpressiveThemeType()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L51",
+      "id": "freeformshell_thememanager_thememanager_getexpressivethemetype",
+      "community": 1,
+      "norm_label": ".getexpressivethemetype()"
+    },
+    {
+      "label": ".setExpressiveThemeType()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L54",
+      "id": "freeformshell_thememanager_thememanager_setexpressivethemetype",
+      "community": 1,
+      "norm_label": ".setexpressivethemetype()"
+    },
+    {
+      "label": ".getExpressiveThemeColor()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L57",
+      "id": "freeformshell_thememanager_thememanager_getexpressivethemecolor",
+      "community": 1,
+      "norm_label": ".getexpressivethemecolor()"
+    },
+    {
+      "label": ".setExpressiveThemeColor()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L60",
+      "id": "freeformshell_thememanager_thememanager_setexpressivethemecolor",
+      "community": 1,
+      "norm_label": ".setexpressivethemecolor()"
+    },
+    {
+      "label": ".getExpressiveThemeImage()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L63",
+      "id": "freeformshell_thememanager_thememanager_getexpressivethemeimage",
+      "community": 1,
+      "norm_label": ".getexpressivethemeimage()"
+    },
+    {
+      "label": ".setExpressiveThemeImage()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L66",
+      "id": "freeformshell_thememanager_thememanager_setexpressivethemeimage",
+      "community": 1,
+      "norm_label": ".setexpressivethemeimage()"
+    },
+    {
+      "label": ".isSidebarHoverExpandEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L69",
+      "id": "freeformshell_thememanager_thememanager_issidebarhoverexpandenabled",
+      "community": 1,
+      "norm_label": ".issidebarhoverexpandenabled()"
+    },
+    {
+      "label": ".setSidebarHoverExpandEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L72",
+      "id": "freeformshell_thememanager_thememanager_setsidebarhoverexpandenabled",
+      "community": 1,
+      "norm_label": ".setsidebarhoverexpandenabled()"
+    },
+    {
+      "label": ".isSidebarHoverExpandTabletEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L75",
+      "id": "freeformshell_thememanager_thememanager_issidebarhoverexpandtabletenabled",
+      "community": 1,
+      "norm_label": ".issidebarhoverexpandtabletenabled()"
+    },
+    {
+      "label": ".setSidebarHoverExpandTabletEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L78",
+      "id": "freeformshell_thememanager_thememanager_setsidebarhoverexpandtabletenabled",
+      "community": 1,
+      "norm_label": ".setsidebarhoverexpandtabletenabled()"
+    },
+    {
+      "label": ".isSidebarAutoCollapseEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L81",
+      "id": "freeformshell_thememanager_thememanager_issidebarautocollapseenabled",
+      "community": 1,
+      "norm_label": ".issidebarautocollapseenabled()"
+    },
+    {
+      "label": ".setSidebarAutoCollapseEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L84",
+      "id": "freeformshell_thememanager_thememanager_setsidebarautocollapseenabled",
+      "community": 1,
+      "norm_label": ".setsidebarautocollapseenabled()"
+    },
+    {
+      "label": ".isSidebarAutoCollapseTabletEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L87",
+      "id": "freeformshell_thememanager_thememanager_issidebarautocollapsetabletenabled",
+      "community": 1,
+      "norm_label": ".issidebarautocollapsetabletenabled()"
+    },
+    {
+      "label": ".setSidebarAutoCollapseTabletEnabled()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L90",
+      "id": "freeformshell_thememanager_thememanager_setsidebarautocollapsetabletenabled",
+      "community": 1,
+      "norm_label": ".setsidebarautocollapsetabletenabled()"
+    },
+    {
       "label": ".getThemeMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L42",
+      "source_location": "L98",
       "id": "freeformshell_thememanager_thememanager_getthememode",
       "community": 1,
       "norm_label": ".getthememode()"
@@ -2845,7 +3097,7 @@
       "label": ".setThemeMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L45",
+      "source_location": "L101",
       "id": "freeformshell_thememanager_thememanager_setthememode",
       "community": 1,
       "norm_label": ".setthememode()"
@@ -2854,7 +3106,7 @@
       "label": ".getAccentColor()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L48",
+      "source_location": "L104",
       "id": "freeformshell_thememanager_thememanager_getaccentcolor",
       "community": 1,
       "norm_label": ".getaccentcolor()"
@@ -2863,7 +3115,7 @@
       "label": ".setAccentColor()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L51",
+      "source_location": "L107",
       "id": "freeformshell_thememanager_thememanager_setaccentcolor",
       "community": 1,
       "norm_label": ".setaccentcolor()"
@@ -2872,7 +3124,7 @@
       "label": ".getTitleBg()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L54",
+      "source_location": "L110",
       "id": "freeformshell_thememanager_thememanager_gettitlebg",
       "community": 1,
       "norm_label": ".gettitlebg()"
@@ -2881,7 +3133,7 @@
       "label": ".setTitleBg()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L63",
+      "source_location": "L119",
       "id": "freeformshell_thememanager_thememanager_settitlebg",
       "community": 1,
       "norm_label": ".settitlebg()"
@@ -2890,7 +3142,7 @@
       "label": ".getTextColor()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L68",
+      "source_location": "L124",
       "id": "freeformshell_thememanager_thememanager_gettextcolor",
       "community": 1,
       "norm_label": ".gettextcolor()"
@@ -2899,7 +3151,7 @@
       "label": ".setTextColor()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L77",
+      "source_location": "L133",
       "id": "freeformshell_thememanager_thememanager_settextcolor",
       "community": 0,
       "norm_label": ".settextcolor()"
@@ -2908,7 +3160,7 @@
       "label": ".getRoundness()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L82",
+      "source_location": "L138",
       "id": "freeformshell_thememanager_thememanager_getroundness",
       "community": 1,
       "norm_label": ".getroundness()"
@@ -2917,7 +3169,7 @@
       "label": ".setRoundness()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L85",
+      "source_location": "L141",
       "id": "freeformshell_thememanager_thememanager_setroundness",
       "community": 1,
       "norm_label": ".setroundness()"
@@ -2926,7 +3178,7 @@
       "label": ".getOpacity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L88",
+      "source_location": "L144",
       "id": "freeformshell_thememanager_thememanager_getopacity",
       "community": 1,
       "norm_label": ".getopacity()"
@@ -2935,7 +3187,7 @@
       "label": ".setOpacity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L91",
+      "source_location": "L147",
       "id": "freeformshell_thememanager_thememanager_setopacity",
       "community": 1,
       "norm_label": ".setopacity()"
@@ -2944,7 +3196,7 @@
       "label": ".getTitleBarOpacity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L94",
+      "source_location": "L150",
       "id": "freeformshell_thememanager_thememanager_gettitlebaropacity",
       "community": 1,
       "norm_label": ".gettitlebaropacity()"
@@ -2953,7 +3205,7 @@
       "label": ".setTitleBarOpacity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L97",
+      "source_location": "L153",
       "id": "freeformshell_thememanager_thememanager_settitlebaropacity",
       "community": 1,
       "norm_label": ".settitlebaropacity()"
@@ -2962,7 +3214,7 @@
       "label": ".isDragTintEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L100",
+      "source_location": "L156",
       "id": "freeformshell_thememanager_thememanager_isdragtintenabled",
       "community": 1,
       "norm_label": ".isdragtintenabled()"
@@ -2971,7 +3223,7 @@
       "label": ".setDragTintEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L103",
+      "source_location": "L159",
       "id": "freeformshell_thememanager_thememanager_setdragtintenabled",
       "community": 1,
       "norm_label": ".setdragtintenabled()"
@@ -2980,7 +3232,7 @@
       "label": ".getBorderWidth()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L106",
+      "source_location": "L162",
       "id": "freeformshell_thememanager_thememanager_getborderwidth",
       "community": 1,
       "norm_label": ".getborderwidth()"
@@ -2989,7 +3241,7 @@
       "label": ".setBorderWidth()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L109",
+      "source_location": "L165",
       "id": "freeformshell_thememanager_thememanager_setborderwidth",
       "community": 1,
       "norm_label": ".setborderwidth()"
@@ -2998,7 +3250,7 @@
       "label": ".getDockPosition()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L112",
+      "source_location": "L168",
       "id": "freeformshell_thememanager_thememanager_getdockposition",
       "community": 1,
       "norm_label": ".getdockposition()"
@@ -3007,7 +3259,7 @@
       "label": ".setDockPosition()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L115",
+      "source_location": "L171",
       "id": "freeformshell_thememanager_thememanager_setdockposition",
       "community": 1,
       "norm_label": ".setdockposition()"
@@ -3016,7 +3268,7 @@
       "label": ".getDockSize()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L118",
+      "source_location": "L174",
       "id": "freeformshell_thememanager_thememanager_getdocksize",
       "community": 1,
       "norm_label": ".getdocksize()"
@@ -3025,7 +3277,7 @@
       "label": ".setDockSize()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L121",
+      "source_location": "L177",
       "id": "freeformshell_thememanager_thememanager_setdocksize",
       "community": 1,
       "norm_label": ".setdocksize()"
@@ -3034,7 +3286,7 @@
       "label": ".getSnapSensitivity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L124",
+      "source_location": "L180",
       "id": "freeformshell_thememanager_thememanager_getsnapsensitivity",
       "community": 1,
       "norm_label": ".getsnapsensitivity()"
@@ -3043,7 +3295,7 @@
       "label": ".setSnapSensitivity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L127",
+      "source_location": "L183",
       "id": "freeformshell_thememanager_thememanager_setsnapsensitivity",
       "community": 1,
       "norm_label": ".setsnapsensitivity()"
@@ -3052,7 +3304,7 @@
       "label": ".usePillForSnapped()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L130",
+      "source_location": "L186",
       "id": "freeformshell_thememanager_thememanager_usepillforsnapped",
       "community": 1,
       "norm_label": ".usepillforsnapped()"
@@ -3061,7 +3313,7 @@
       "label": ".setPillForSnapped()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L133",
+      "source_location": "L189",
       "id": "freeformshell_thememanager_thememanager_setpillforsnapped",
       "community": 1,
       "norm_label": ".setpillforsnapped()"
@@ -3070,7 +3322,7 @@
       "label": ".getAppLaunchDisplay()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L136",
+      "source_location": "L192",
       "id": "freeformshell_thememanager_thememanager_getapplaunchdisplay",
       "community": 1,
       "norm_label": ".getapplaunchdisplay()"
@@ -3079,7 +3331,7 @@
       "label": ".setAppLaunchDisplay()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L139",
+      "source_location": "L195",
       "id": "freeformshell_thememanager_thememanager_setapplaunchdisplay",
       "community": 1,
       "norm_label": ".setapplaunchdisplay()"
@@ -3088,7 +3340,7 @@
       "label": ".getDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L142",
+      "source_location": "L198",
       "id": "freeformshell_thememanager_thememanager_getdensity",
       "community": 1,
       "norm_label": ".getdensity()"
@@ -3097,7 +3349,7 @@
       "label": ".setDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L145",
+      "source_location": "L201",
       "id": "freeformshell_thememanager_thememanager_setdensity",
       "community": 1,
       "norm_label": ".setdensity()"
@@ -3106,7 +3358,7 @@
       "label": ".getPhysicalDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L148",
+      "source_location": "L204",
       "id": "freeformshell_thememanager_thememanager_getphysicaldensity",
       "community": 1,
       "norm_label": ".getphysicaldensity()"
@@ -3115,7 +3367,7 @@
       "label": ".setPhysicalDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L151",
+      "source_location": "L207",
       "id": "freeformshell_thememanager_thememanager_setphysicaldensity",
       "community": 1,
       "norm_label": ".setphysicaldensity()"
@@ -3124,7 +3376,7 @@
       "label": ".getWidth()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L154",
+      "source_location": "L210",
       "id": "freeformshell_thememanager_thememanager_getwidth",
       "community": 1,
       "norm_label": ".getwidth()"
@@ -3133,7 +3385,7 @@
       "label": ".setWidth()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L157",
+      "source_location": "L213",
       "id": "freeformshell_thememanager_thememanager_setwidth",
       "community": 1,
       "norm_label": ".setwidth()"
@@ -3142,7 +3394,7 @@
       "label": ".getHeight()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L160",
+      "source_location": "L216",
       "id": "freeformshell_thememanager_thememanager_getheight",
       "community": 1,
       "norm_label": ".getheight()"
@@ -3151,7 +3403,7 @@
       "label": ".setHeight()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L163",
+      "source_location": "L219",
       "id": "freeformshell_thememanager_thememanager_setheight",
       "community": 1,
       "norm_label": ".setheight()"
@@ -3160,7 +3412,7 @@
       "label": ".getRefreshRate()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L166",
+      "source_location": "L222",
       "id": "freeformshell_thememanager_thememanager_getrefreshrate",
       "community": 1,
       "norm_label": ".getrefreshrate()"
@@ -3169,7 +3421,7 @@
       "label": ".setRefreshRate()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L169",
+      "source_location": "L225",
       "id": "freeformshell_thememanager_thememanager_setrefreshrate",
       "community": 1,
       "norm_label": ".setrefreshrate()"
@@ -3178,7 +3430,7 @@
       "label": ".getRefreshRateMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L172",
+      "source_location": "L228",
       "id": "freeformshell_thememanager_thememanager_getrefreshratemode",
       "community": 1,
       "norm_label": ".getrefreshratemode()"
@@ -3187,7 +3439,7 @@
       "label": ".setRefreshRateMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L175",
+      "source_location": "L231",
       "id": "freeformshell_thememanager_thememanager_setrefreshratemode",
       "community": 1,
       "norm_label": ".setrefreshratemode()"
@@ -3196,7 +3448,7 @@
       "label": ".getPerAppDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L178",
+      "source_location": "L234",
       "id": "freeformshell_thememanager_thememanager_getperappdensity",
       "community": 1,
       "norm_label": ".getperappdensity()"
@@ -3205,7 +3457,7 @@
       "label": ".setPerAppDensity()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L181",
+      "source_location": "L237",
       "id": "freeformshell_thememanager_thememanager_setperappdensity",
       "community": 1,
       "norm_label": ".setperappdensity()"
@@ -3214,7 +3466,7 @@
       "label": ".useTabletMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L184",
+      "source_location": "L240",
       "id": "freeformshell_thememanager_thememanager_usetabletmode",
       "community": 1,
       "norm_label": ".usetabletmode()"
@@ -3223,7 +3475,7 @@
       "label": ".setUseTabletMode()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L187",
+      "source_location": "L243",
       "id": "freeformshell_thememanager_thememanager_setusetabletmode",
       "community": 1,
       "norm_label": ".setusetabletmode()"
@@ -3232,7 +3484,7 @@
       "label": ".realtimeResize()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L190",
+      "source_location": "L246",
       "id": "freeformshell_thememanager_thememanager_realtimeresize",
       "community": 1,
       "norm_label": ".realtimeresize()"
@@ -3241,7 +3493,7 @@
       "label": ".setRealtimeResize()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L193",
+      "source_location": "L249",
       "id": "freeformshell_thememanager_thememanager_setrealtimeresize",
       "community": 1,
       "norm_label": ".setrealtimeresize()"
@@ -3250,7 +3502,7 @@
       "label": ".instantResizeNoAnim()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L196",
+      "source_location": "L252",
       "id": "freeformshell_thememanager_thememanager_instantresizenoanim",
       "community": 1,
       "norm_label": ".instantresizenoanim()"
@@ -3259,7 +3511,7 @@
       "label": ".setInstantResizeNoAnim()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L199",
+      "source_location": "L255",
       "id": "freeformshell_thememanager_thememanager_setinstantresizenoanim",
       "community": 1,
       "norm_label": ".setinstantresizenoanim()"
@@ -3268,7 +3520,7 @@
       "label": ".getPillAutoShrink()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L213",
+      "source_location": "L269",
       "id": "freeformshell_thememanager_thememanager_getpillautoshrink",
       "community": 1,
       "norm_label": ".getpillautoshrink()"
@@ -3277,7 +3529,7 @@
       "label": ".setPillAutoShrink()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L216",
+      "source_location": "L272",
       "id": "freeformshell_thememanager_thememanager_setpillautoshrink",
       "community": 1,
       "norm_label": ".setpillautoshrink()"
@@ -3286,7 +3538,7 @@
       "label": ".getPillInactiveScale()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L219",
+      "source_location": "L275",
       "id": "freeformshell_thememanager_thememanager_getpillinactivescale",
       "community": 1,
       "norm_label": ".getpillinactivescale()"
@@ -3295,7 +3547,7 @@
       "label": ".setPillInactiveScale()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L222",
+      "source_location": "L278",
       "id": "freeformshell_thememanager_thememanager_setpillinactivescale",
       "community": 1,
       "norm_label": ".setpillinactivescale()"
@@ -3304,7 +3556,7 @@
       "label": ".getWorkspaceAutoSnap()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L225",
+      "source_location": "L281",
       "id": "freeformshell_thememanager_thememanager_getworkspaceautosnap",
       "community": 1,
       "norm_label": ".getworkspaceautosnap()"
@@ -3313,7 +3565,7 @@
       "label": ".setWorkspaceAutoSnap()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L228",
+      "source_location": "L284",
       "id": "freeformshell_thememanager_thememanager_setworkspaceautosnap",
       "community": 1,
       "norm_label": ".setworkspaceautosnap()"
@@ -3322,7 +3574,7 @@
       "label": ".getPairedScalingGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L231",
+      "source_location": "L287",
       "id": "freeformshell_thememanager_thememanager_getpairedscalingglobal",
       "community": 1,
       "norm_label": ".getpairedscalingglobal()"
@@ -3331,7 +3583,7 @@
       "label": ".setPairedScalingGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L234",
+      "source_location": "L290",
       "id": "freeformshell_thememanager_thememanager_setpairedscalingglobal",
       "community": 1,
       "norm_label": ".setpairedscalingglobal()"
@@ -3340,7 +3592,7 @@
       "label": ".getPairedScaling()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L237",
+      "source_location": "L293",
       "id": "freeformshell_thememanager_thememanager_getpairedscaling",
       "community": 1,
       "norm_label": ".getpairedscaling()"
@@ -3349,7 +3601,7 @@
       "label": ".setPairedScaling()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L240",
+      "source_location": "L296",
       "id": "freeformshell_thememanager_thememanager_setpairedscaling",
       "community": 1,
       "norm_label": ".setpairedscaling()"
@@ -3358,7 +3610,7 @@
       "label": ".getHideOnLauncherActive()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L243",
+      "source_location": "L299",
       "id": "freeformshell_thememanager_thememanager_gethideonlauncheractive",
       "community": 1,
       "norm_label": ".gethideonlauncheractive()"
@@ -3367,7 +3619,7 @@
       "label": ".setHideOnLauncherActive()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L246",
+      "source_location": "L302",
       "id": "freeformshell_thememanager_thememanager_sethideonlauncheractive",
       "community": 1,
       "norm_label": ".sethideonlauncheractive()"
@@ -3376,7 +3628,7 @@
       "label": ".getDockLauncherPackage()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L249",
+      "source_location": "L305",
       "id": "freeformshell_thememanager_thememanager_getdocklauncherpackage",
       "community": 1,
       "norm_label": ".getdocklauncherpackage()"
@@ -3385,7 +3637,7 @@
       "label": ".setDockLauncherPackage()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L252",
+      "source_location": "L308",
       "id": "freeformshell_thememanager_thememanager_setdocklauncherpackage",
       "community": 1,
       "norm_label": ".setdocklauncherpackage()"
@@ -3394,7 +3646,7 @@
       "label": ".getTiledSwapGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L255",
+      "source_location": "L311",
       "id": "freeformshell_thememanager_thememanager_gettiledswapglobal",
       "community": 1,
       "norm_label": ".gettiledswapglobal()"
@@ -3403,7 +3655,7 @@
       "label": ".setTiledSwapGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L258",
+      "source_location": "L314",
       "id": "freeformshell_thememanager_thememanager_settiledswapglobal",
       "community": 1,
       "norm_label": ".settiledswapglobal()"
@@ -3412,7 +3664,7 @@
       "label": ".getTiledSwap()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L261",
+      "source_location": "L317",
       "id": "freeformshell_thememanager_thememanager_gettiledswap",
       "community": 1,
       "norm_label": ".gettiledswap()"
@@ -3421,7 +3673,7 @@
       "label": ".setTiledSwap()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L264",
+      "source_location": "L320",
       "id": "freeformshell_thememanager_thememanager_settiledswap",
       "community": 1,
       "norm_label": ".settiledswap()"
@@ -3430,7 +3682,7 @@
       "label": ".getPillShrinkStyle()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L267",
+      "source_location": "L323",
       "id": "freeformshell_thememanager_thememanager_getpillshrinkstyle",
       "community": 1,
       "norm_label": ".getpillshrinkstyle()"
@@ -3439,7 +3691,7 @@
       "label": ".setPillShrinkStyle()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L270",
+      "source_location": "L326",
       "id": "freeformshell_thememanager_thememanager_setpillshrinkstyle",
       "community": 1,
       "norm_label": ".setpillshrinkstyle()"
@@ -3448,7 +3700,7 @@
       "label": ".isDisplayShellEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L273",
+      "source_location": "L329",
       "id": "freeformshell_thememanager_thememanager_isdisplayshellenabled",
       "community": 1,
       "norm_label": ".isdisplayshellenabled()"
@@ -3457,7 +3709,7 @@
       "label": ".setDisplayShellEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L276",
+      "source_location": "L332",
       "id": "freeformshell_thememanager_thememanager_setdisplayshellenabled",
       "community": 1,
       "norm_label": ".setdisplayshellenabled()"
@@ -3466,7 +3718,7 @@
       "label": ".getVisualCornerHandlesGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L279",
+      "source_location": "L335",
       "id": "freeformshell_thememanager_thememanager_getvisualcornerhandlesglobal",
       "community": 1,
       "norm_label": ".getvisualcornerhandlesglobal()"
@@ -3475,7 +3727,7 @@
       "label": ".setVisualCornerHandlesGlobal()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L282",
+      "source_location": "L338",
       "id": "freeformshell_thememanager_thememanager_setvisualcornerhandlesglobal",
       "community": 1,
       "norm_label": ".setvisualcornerhandlesglobal()"
@@ -3484,7 +3736,7 @@
       "label": ".getVisualCornerHandles()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L285",
+      "source_location": "L341",
       "id": "freeformshell_thememanager_thememanager_getvisualcornerhandles",
       "community": 1,
       "norm_label": ".getvisualcornerhandles()"
@@ -3493,7 +3745,7 @@
       "label": ".setVisualCornerHandles()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L288",
+      "source_location": "L344",
       "id": "freeformshell_thememanager_thememanager_setvisualcornerhandles",
       "community": 1,
       "norm_label": ".setvisualcornerhandles()"
@@ -3502,7 +3754,7 @@
       "label": ".getCompFix()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L295",
+      "source_location": "L351",
       "id": "freeformshell_thememanager_thememanager_getcompfix",
       "community": 1,
       "norm_label": ".getcompfix()"
@@ -3511,7 +3763,7 @@
       "label": ".setCompFix()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L299",
+      "source_location": "L355",
       "id": "freeformshell_thememanager_thememanager_setcompfix",
       "community": 1,
       "norm_label": ".setcompfix()"
@@ -3520,7 +3772,7 @@
       "label": ".resetCompFixes()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L304",
+      "source_location": "L360",
       "id": "freeformshell_thememanager_thememanager_resetcompfixes",
       "community": 1,
       "norm_label": ".resetcompfixes()"
@@ -3529,7 +3781,7 @@
       "label": ".isGlobalOverlayEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L311",
+      "source_location": "L367",
       "id": "freeformshell_thememanager_thememanager_isglobaloverlayenabled",
       "community": 1,
       "norm_label": ".isglobaloverlayenabled()"
@@ -3538,7 +3790,7 @@
       "label": ".setGlobalOverlayEnabled()",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
-      "source_location": "L314",
+      "source_location": "L370",
       "id": "freeformshell_thememanager_thememanager_setglobaloverlayenabled",
       "community": 1,
       "norm_label": ".setglobaloverlayenabled()"
@@ -4213,7 +4465,7 @@
       "label": "\ud83d\ude80 How to Bootstrap This Session (Token Saving Entry)",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L48",
+      "source_location": "L26",
       "id": "agents_handoff_how_to_bootstrap_this_session_token_saving_entry",
       "community": 27,
       "norm_label": "\ud83d\ude80 how to bootstrap this session (token saving entry)"
@@ -4222,7 +4474,7 @@
       "label": "\ud83c\udfaf Next Tasks On the Horizon",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L61",
+      "source_location": "L39",
       "id": "agents_handoff_next_tasks_on_the_horizon",
       "community": 27,
       "norm_label": "\ud83c\udfaf next tasks on the horizon"
@@ -4231,7 +4483,7 @@
       "label": "\ud83d\udc65 Project Team Roles & Roster",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L71",
+      "source_location": "L48",
       "id": "agents_handoff_project_team_roles_roster",
       "community": 27,
       "norm_label": "\ud83d\udc65 project team roles & roster"
@@ -4303,7 +4555,7 @@
       "label": "\ud83d\udfe1 In Progress / Planned",
       "file_type": "document",
       "source_file": ".agents/LEDGER.md",
-      "source_location": "L112",
+      "source_location": "L116",
       "id": "agents_ledger_in_progress_planned",
       "community": 23,
       "norm_label": "\ud83d\udfe1 in progress / planned"
@@ -6721,6 +6973,51 @@
       "norm_label": "manual verification"
     },
     {
+      "label": "AppInfo",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1383",
+      "community": 5,
+      "norm_label": "appinfo",
+      "id": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "label": "DisplayInfo",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1384",
+      "community": 5,
+      "norm_label": "displayinfo",
+      "id": "freeformshell_mainactivity_displayinfo"
+    },
+    {
+      "label": "StatusChip()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1386",
+      "community": 5,
+      "norm_label": "statuschip()",
+      "id": "freeformshell_mainactivity_statuschip"
+    },
+    {
+      "label": "AppIcon()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1402",
+      "community": 5,
+      "norm_label": "appicon()",
+      "id": "freeformshell_mainactivity_appicon"
+    },
+    {
+      "label": "DisplayShapeIcon()",
+      "file_type": "code",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1429",
+      "community": 5,
+      "norm_label": "displayshapeicon()",
+      "id": "freeformshell_mainactivity_displayshapeicon"
+    },
+    {
       "label": "ResizeStyle",
       "file_type": "code",
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
@@ -7061,7 +7358,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 2,
       "norm_label": "high-performance shell throttling",
       "id": "core_logic_high_performance_shell_throttling"
     },
@@ -7230,7 +7527,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 2,
       "norm_label": "programmatic active focus routing",
       "id": "architecture_evolution_programmatic_focus_routing"
     },
@@ -7361,7 +7658,7 @@
       "file_type": "code",
       "source_file": "FreeformOverlayService.kt",
       "source_location": "L1",
-      "community": 0,
+      "community": 53,
       "norm_label": "freeformoverlayservice.kt",
       "id": "freeformoverlayservice_kt"
     },
@@ -7646,6 +7943,16 @@
       "confidence_score": 1.0,
       "source": "sync_ledger_sync_ledger_main",
       "target": "sync_ledger_sync_ledger_generate_handoff"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "vscode_settings_json",
+      "target": "vscode_settings_java_configuration_updatebuildconfiguration",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8064,6 +8371,210 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "target": "freeformshell_coreui_appinfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "target": "freeformshell_coreui_displayinfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "target": "freeformshell_coreui_statuschip",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "target": "freeformshell_coreui_appicon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/CoreUi.kt",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_coreui_kt",
+      "target": "freeformshell_coreui_displayshapeicon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L493",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_coreui_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L3007",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_coreui_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L3388",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_blacklistscreen",
+      "target": "freeformshell_coreui_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L317",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_coreui_displayinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L2646",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_coreui_displayinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L835",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_coreui_statuschip"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L898",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_dashboardscreen",
+      "target": "freeformshell_coreui_statuschip"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L414",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_workspacecard",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L654",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L976",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_dashboardscreen",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1301",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_taskmanagerscreen",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L3039",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L3477",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_blacklistscreen",
+      "target": "freeformshell_coreui_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L928",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_dashboardscreen",
+      "target": "freeformshell_coreui_displayshapeicon"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
       "source_location": "L34",
       "weight": 1.0,
@@ -8347,9 +8858,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
       "source_location": "L760",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_dragresizeoverlay_dragresizeoverlay",
-      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_reloadapptheme",
-      "confidence_score": 1.0
+      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_reloadapptheme"
     },
     {
       "relation": "method",
@@ -9277,9 +9788,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
       "source_location": "L764",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_dragresizeoverlay_dragresizeoverlay_reloadapptheme",
-      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_updatecolors",
-      "confidence_score": 1.0
+      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_updatecolors"
     },
     {
       "relation": "calls",
@@ -9398,9 +9909,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
       "source_location": "L762",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_dragresizeoverlay_dragresizeoverlay_reloadapptheme",
-      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_extractapptheme",
-      "confidence_score": 1.0
+      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_extractapptheme"
     },
     {
       "relation": "calls",
@@ -9420,9 +9931,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt",
       "source_location": "L765",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_dragresizeoverlay_dragresizeoverlay_reloadapptheme",
-      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_updatelayouts",
-      "confidence_score": 1.0
+      "target": "freeformshell_dragresizeoverlay_dragresizeoverlay_updatelayouts"
     },
     {
       "relation": "calls",
@@ -9840,6 +10351,153 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_expressivelayout",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L121",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_expressivesidebar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L205",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_expressivesidebaritem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L261",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_expressivepilldock",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L313",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_expressiveworkspacemanagerscreen",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L380",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_workspacecard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L450",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_expressivecomponents_kt",
+      "target": "freeformshell_expressivecomponents_sidebaritemdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L97",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_expressivelayout",
+      "target": "freeformshell_expressivecomponents_expressivesidebar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L115",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_expressivelayout",
+      "target": "freeformshell_expressivecomponents_expressivepilldock",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L615",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_expressivecomponents_expressivelayout"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L175",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_expressivesidebar",
+      "target": "freeformshell_expressivecomponents_sidebaritemdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L191",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_expressivesidebar",
+      "target": "freeformshell_expressivecomponents_expressivesidebaritem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt",
+      "source_location": "L365",
+      "weight": 1.0,
+      "source": "freeformshell_expressivecomponents_expressiveworkspacemanagerscreen",
+      "target": "freeformshell_expressivecomponents_workspacecard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L602",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_expressivecomponents_expressiveworkspacemanagerscreen"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L28",
       "weight": 1.0,
@@ -10103,9 +10761,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt",
       "source_location": "L116",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_freeformoverlayservice_freeformoverlayservice",
-      "target": "freeformshell_freeformoverlayservice_freeformoverlayservice_reloadactiveappthemes",
-      "confidence_score": 1.0
+      "target": "freeformshell_freeformoverlayservice_freeformoverlayservice_reloadactiveappthemes"
     },
     {
       "relation": "method",
@@ -13076,61 +13734,21 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1003",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_appinfo"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1004",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_displayinfo"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1006",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_statuschip"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1022",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1049",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_displayshapeicon"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L1082",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
       "target": "freeformshell_mainactivity_customizationscreen"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1782",
+      "weight": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_sidebarhoverpreview",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13191,6 +13809,56 @@
       "confidence_score": 1.0,
       "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
       "target": "freeformshell_mainactivity_pillpreviewcard"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1003",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1004",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_displayinfo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1006",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_statuschip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1022",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_appicon"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1049",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
+      "target": "freeformshell_mainactivity_displayshapeicon"
     },
     {
       "relation": "contains",
@@ -13288,28 +13956,6 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "MainActivity.kt",
-      "source_location": "L270",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_mainscreen",
-      "target": "freeformshell_mainactivity_displayinfo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L314",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_mainscreen",
-      "target": "freeformshell_mainactivity_appinfo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
       "source_location": "L349",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -13385,28 +14031,6 @@
     {
       "relation": "calls",
       "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L446",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_mainscreen",
-      "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L627",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_mainscreen",
-      "target": "freeformshell_mainactivity_statuschip"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "MainActivity.kt",
@@ -13425,6 +14049,50 @@
       "weight": 1.0,
       "source": "freeformshell_mainactivity_mainscreen",
       "target": "freeformshell_workspacemanager_workspacegroup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L270",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_mainactivity_displayinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L314",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L446",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_mainactivity_appicon"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L627",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_mainscreen",
+      "target": "freeformshell_mainactivity_statuschip"
     },
     {
       "relation": "calls",
@@ -13515,17 +14183,6 @@
     {
       "relation": "calls",
       "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
-      "source_location": "L1097",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_taskmanagerscreen",
-      "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
@@ -13549,106 +14206,12 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L2158",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1097",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_appsettingsscreen",
-      "target": "freeformshell_mainactivity_appinfo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L2497",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_blacklistscreen",
-      "target": "freeformshell_mainactivity_appinfo"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1050",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "mainactivity_kt",
-      "target": "freeformshell_mainactivity_appinfo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1691",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_appsettingsscreen",
-      "target": "freeformshell_mainactivity_displayinfo"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1051",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "mainactivity_kt",
-      "target": "freeformshell_mainactivity_displayinfo"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1053",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "mainactivity_kt",
-      "target": "freeformshell_mainactivity_statuschip"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L2190",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "source": "freeformshell_mainactivity_taskmanagerscreen",
       "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L2586",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "freeformshell_mainactivity_blacklistscreen",
-      "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1069",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "mainactivity_kt",
-      "target": "freeformshell_mainactivity_appicon"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "MainActivity.kt",
-      "source_location": "L1096",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "mainactivity_kt",
-      "target": "freeformshell_mainactivity_displayshapeicon"
     },
     {
       "relation": "calls",
@@ -13673,6 +14236,17 @@
       "target": "freeformshell_mainactivity_pillpreviewcard"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
+      "source_location": "L1694",
+      "weight": 1.0,
+      "source": "freeformshell_mainactivity_customizationscreen",
+      "target": "freeformshell_mainactivity_sidebarhoverpreview",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "MainActivity.kt",
@@ -13693,6 +14267,39 @@
       "target": "freeformshell_mainactivity_windowpreview"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L2158",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L1691",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_mainactivity_displayinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L2190",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_appsettingsscreen",
+      "target": "freeformshell_mainactivity_appicon"
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "MainActivity.kt",
@@ -13711,6 +14318,28 @@
       "confidence_score": 1.0,
       "source": "mainactivity_kt",
       "target": "freeformshell_mainactivity_compatibilityscreen"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L2497",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_blacklistscreen",
+      "target": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L2586",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "freeformshell_mainactivity_blacklistscreen",
+      "target": "freeformshell_mainactivity_appicon"
     },
     {
       "relation": "contains",
@@ -15253,6 +15882,166 @@
       "confidence_score": 1.0,
       "source": "freeformshell_thememanager_thememanager",
       "target": "freeformshell_thememanager_thememanager_setwindowtheme"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_getappuistyle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L48",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setappuistyle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_getexpressivethemetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setexpressivethemetype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_getexpressivethemecolor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setexpressivethemecolor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_getexpressivethemeimage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setexpressivethemeimage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_issidebarhoverexpandenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setsidebarhoverexpandenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L75",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_issidebarhoverexpandtabletenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setsidebarhoverexpandtabletenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L81",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_issidebarautocollapseenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setsidebarautocollapseenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_issidebarautocollapsetabletenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/src/main/java/com/example/freeformshell/ThemeManager.kt",
+      "source_location": "L90",
+      "weight": 1.0,
+      "source": "freeformshell_thememanager_thememanager",
+      "target": "freeformshell_thememanager_thememanager_setsidebarautocollapsetabletenabled",
+      "confidence_score": 1.0
     },
     {
       "relation": "method",
@@ -19621,6 +20410,56 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "MainActivity.kt",
+      "source_location": "L1050",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "mainactivity_kt",
+      "target": "freeformshell_mainactivity_appinfo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L1051",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "mainactivity_kt",
+      "target": "freeformshell_mainactivity_displayinfo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L1053",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "mainactivity_kt",
+      "target": "freeformshell_mainactivity_statuschip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L1069",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "mainactivity_kt",
+      "target": "freeformshell_mainactivity_appicon"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
+      "source_location": "L1096",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "mainactivity_kt",
+      "target": "freeformshell_mainactivity_displayshapeicon"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "MainActivity.kt",
       "source_location": "L1364",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -20031,5 +20870,5 @@
       "source_file": "docs/core_logic.md"
     }
   ],
-  "built_at_commit": "733d07b744394101e0bd4ab5b39c1e6e4c24c7c1"
+  "built_at_commit": "54bb0977725c233aa2da3ea2342340630d8c858c"
 }

@@ -17,7 +17,15 @@ object ThemeManager {
     private const val KEY_OPACITY = "window_opacity"
     private const val KEY_BORDER_WIDTH = "border_width"
     private const val KEY_PILL_FOR_SNAPPED = "pill_for_snapped"
-    private var KEY_WINDOW_THEME = "window_theme" // 0: Classic, 1: Dynamic
+    private const val KEY_WINDOW_THEME = "window_theme" // 0: Classic, 1: Dynamic
+    private const val KEY_APP_UI_STYLE = "app_ui_style" // 0: Classic, 1: Expressive
+    private const val KEY_EXPRESSIVE_THEME_TYPE = "expr_theme_type" // 0: System, 1: Mono, 2: Custom, 3: Image
+    private const val KEY_EXPRESSIVE_THEME_COLOR = "expr_theme_color"
+    private const val KEY_EXPRESSIVE_THEME_IMAGE = "expr_theme_image"
+    private const val KEY_SIDEBAR_HOVER_EXPAND = "sidebar_hover_expand"
+    private const val KEY_SIDEBAR_HOVER_EXPAND_TABLET = "sidebar_hover_expand_tablet"
+    private const val KEY_SIDEBAR_AUTO_COLLAPSE = "sidebar_auto_collapse"
+    private const val KEY_SIDEBAR_AUTO_COLLAPSE_TABLET = "sidebar_auto_collapse_tablet"
     private const val KEY_USE_TABLET_MODE = "use_tablet_mode"
     private const val KEY_APP_LAUNCH_DISPLAY = "app_launch_display" // 0: Phone, 1: Secondary, 2: Auto
     private const val KEY_SHOW_SHADOWS = "show_shadows"
@@ -33,6 +41,54 @@ object ThemeManager {
 
     fun setWindowTheme(context: Context, theme: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_WINDOW_THEME, theme).apply()
+
+    fun getAppUiStyle(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_APP_UI_STYLE, 0)
+
+    fun setAppUiStyle(context: Context, style: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_APP_UI_STYLE, style).apply()
+
+    fun getExpressiveThemeType(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_EXPRESSIVE_THEME_TYPE, 0)
+
+    fun setExpressiveThemeType(context: Context, type: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_EXPRESSIVE_THEME_TYPE, type).apply()
+
+    fun getExpressiveThemeColor(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_EXPRESSIVE_THEME_COLOR, android.graphics.Color.parseColor("#6750A4"))
+
+    fun setExpressiveThemeColor(context: Context, color: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_EXPRESSIVE_THEME_COLOR, color).apply()
+
+    fun getExpressiveThemeImage(context: Context): String? =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_EXPRESSIVE_THEME_IMAGE, null)
+
+    fun setExpressiveThemeImage(context: Context, uri: String) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(KEY_EXPRESSIVE_THEME_IMAGE, uri).apply()
+
+    fun isSidebarHoverExpandEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_HOVER_EXPAND, true)
+
+    fun setSidebarHoverExpandEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_HOVER_EXPAND, enabled).apply()
+
+    fun isSidebarHoverExpandTabletEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_HOVER_EXPAND_TABLET, false)
+
+    fun setSidebarHoverExpandTabletEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_HOVER_EXPAND_TABLET, enabled).apply()
+
+    fun isSidebarAutoCollapseEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_AUTO_COLLAPSE, true)
+
+    fun setSidebarAutoCollapseEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_AUTO_COLLAPSE, enabled).apply()
+
+    fun isSidebarAutoCollapseTabletEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_AUTO_COLLAPSE_TABLET, false)
+
+    fun setSidebarAutoCollapseTabletEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_AUTO_COLLAPSE_TABLET, enabled).apply()
     
     // Dock / Safe Area (Per Display)
     private const val KEY_DOCK_POS_PREFIX = "dock_position_" // 0: None, 1: Top, 2: Bottom, 3: Left, 4: Right

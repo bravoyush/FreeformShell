@@ -1,16 +1,16 @@
-# Graph Report - FreeformShell  (2026-05-24)
+# Graph Report - FreeformShell  (2026-05-26)
 
 ## Corpus Check
-- 51 files · ~153,702 words
+- 54 files · ~155,821 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 819 nodes · 1208 edges · 53 communities (39 shown, 14 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.81)
+- 852 nodes · 1260 edges · 58 communities (41 shown, 17 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `733d07b7`
+- Built from commit: `54bb0977`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -65,44 +65,48 @@
 - [[_COMMUNITY_Community 48|Community 48]]
 - [[_COMMUNITY_Community 49|Community 49]]
 - [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 57|Community 57]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `ThemeManager` - 85 edges
+1. `ThemeManager` - 101 edges
 2. `DragResizeOverlay` - 61 edges
 3. `FreeformOverlayService` - 51 edges
 4. `ShellExecutor` - 25 edges
-5. `CompatibilityManager` - 21 edges
-6. `🆕 What's New Since v1.1?` - 19 edges
-7. `MainScreen()` - 17 edges
+5. `MainScreen()` - 23 edges
+6. `CompatibilityManager` - 21 edges
+7. `🆕 What's New Since v1.1?` - 19 edges
 8. `TaskManager` - 14 edges
 9. `FreeformShell 🚀` - 14 edges
 10. `DisplayShell` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `DragResizeOverlay` --rationale_for--> `High-Performance Shell Throttling`  [EXTRACTED]
-  app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/core_logic.md
 - `DragResizeOverlay` --rationale_for--> `Dynamic Screen-to-View Occlusion Clipping`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
 - `DragResizeOverlay` --rationale_for--> `Dynamic Tiling Grid Engine`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
-- `DragResizeOverlay` --rationale_for--> `Programmatic Active Focus Routing`  [EXTRACTED]
-  app/src/main/java/com/example/freeformshell/DragResizeOverlay.kt → docs/architecture_evolution_log.md
 - `FreeformOverlayService` --rationale_for--> `Android 14 Hidden API Exemption`  [EXTRACTED]
   app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt → docs/architecture_evolution_log.md
+- `ShellExecutor` --rationale_for--> `High-Performance Shell Throttling`  [EXTRACTED]
+  app/src/main/java/com/example/freeformshell/ShellExecutor.kt → docs/core_logic.md
+- `ShellExecutor` --rationale_for--> `Programmatic Active Focus Routing`  [EXTRACTED]
+  app/src/main/java/com/example/freeformshell/ShellExecutor.kt → docs/architecture_evolution_log.md
 
 ## Hyperedges (group relationships)
 - **Window Drag and Resize Interaction Loop** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_freeformoverlayservice_freeformoverlayservice, freeformshell_shellexecutor_shellexecutor [INFERRED 0.95]
 - **Dynamic Tiling and Docking Grid System** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_workspacemanager_workspacemanager, core_logic_smart_snap_corner_restraints, core_logic_touch_aware_edge_snap_thresholds [INFERRED 0.95]
 
-## Communities (53 total, 14 thin omitted)
+## Communities (58 total, 17 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.06
-Nodes (29): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, DisplayShell, ensureForceCloseLoaded(), ensureLoaded(), FreeformOverlayService (+21 more)
+Cohesion: 0.14
+Nodes (5): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, FreeformOverlayService
 
 ### Community 2 - "Community 2"
 Cohesion: 0.07
-Nodes (14): State-Aware Edge Hold Timer, Interaction Window Hiding, Handle Isolation, Jitter-Free Title Bar Pinning, Smart Snap Corner Restraints & Edge Hold Delays, Snapping Exit & Window Scaling Rules, Touch-Aware Edge Snap Thresholds, dismissActiveSnapMenu() (+6 more)
+Nodes (16): State-Aware Edge Hold Timer, Interaction Window Hiding, Programmatic Active Focus Routing, Handle Isolation, High-Performance Shell Throttling, Jitter-Free Title Bar Pinning, Smart Snap Corner Restraints & Edge Hold Delays, Snapping Exit & Window Scaling Rules (+8 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -113,8 +117,8 @@ Cohesion: 0.05
 Nodes (39): 10. Tiled Layout Swap, 11. Launcher & Dock Avoidance, 12. Drag & Resize Tint Overlay, 13. Title Bar Opacity Control, 14. Pill Shrink Style Picker, 15. Real-time Resize Toggle, 16. Instant Shell Resizing (Disable System Animations), 17. Force Close per App (+31 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.12
-Nodes (24): Android 14 Hidden API Exemption, Dynamic Tiling Grid Engine, AppIcon(), AppInfo, AppSettingsScreen(), BlacklistScreen(), CompatibilityScreen(), CustomizationScreen() (+16 more)
+Cohesion: 0.09
+Nodes (37): Android 14 Hidden API Exemption, Dynamic Tiling Grid Engine, AppIcon(), AppInfo, DisplayInfo, DisplayShapeIcon(), StatusChip(), ExpressiveLayout() (+29 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.08
@@ -122,11 +126,11 @@ Nodes (34): 1. Compile the App, 📊 1. Dashboard & Diagnostics, 1️⃣ Step 1:
 
 ### Community 7 - "Community 7"
 Cohesion: 0.09
-Nodes (9): Containers Dump (dumpsys activity containers), Recents Dump (dumpsys activity recents), Tasks Dump (dumpsys activity tasks), Windows Dump (dumpsys window), FreeformTaskManagerWidgetFactory, FreeformTaskManagerWidgetService, AppTask, CombinedTaskState (+1 more)
+Nodes (10): Containers Dump (dumpsys activity containers), Recents Dump (dumpsys activity recents), Tasks Dump (dumpsys activity tasks), Windows Dump (dumpsys window), FreeformTaskManagerWidgetFactory, FreeformTaskManagerWidgetService, AppTask, CombinedTaskState (+2 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.21
-Nodes (7): Persistent Interactive Shell Session, Programmatic Active Focus Routing, High-Performance Shell Throttling, CommandResult, onConnected(), onDisconnected(), ShellExecutor
+Cohesion: 0.24
+Nodes (5): Persistent Interactive Shell Session, CommandResult, onConnected(), onDisconnected(), ShellExecutor
 
 ### Community 9 - "Community 9"
 Cohesion: 0.10
@@ -240,25 +244,29 @@ Nodes (3): artifactType, updatedAt, version
 Cohesion: 0.67
 Nodes (4): 🤝 Agent Handoff Brief, 🤖 AI Operational Guidelines, 📑 Repository State Ledger, Safe Presets & Glassmorphic DPI Overlay
 
+### Community 53 - "Community 53"
+Cohesion: 0.16
+Nodes (21): ensureForceCloseLoaded(), ensureLoaded(), getInstance(), getPairedTask(), HandleConfig, hideDockGuide(), hideSensitivityGuide(), hideSnapGuide() (+13 more)
+
 ## Knowledge Gaps
-- **207 isolated node(s):** `ResizeStyle`, `artifactType`, `updatedAt`, `version`, `artifactType` (+202 more)
+- **208 isolated node(s):** `java.configuration.updateBuildConfiguration`, `ResizeStyle`, `artifactType`, `updatedAt`, `version` (+203 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `ThemeManager` connect `Community 1` to `Community 0`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 8`, `Community 5`?**
+  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Why does `DragResizeOverlay` connect `Community 2` to `Community 56`, `Community 0`, `Community 5`?**
   _High betweenness centrality (0.079) - this node is a cross-community bridge._
-- **Why does `FreeformOverlayService` connect `Community 0` to `Community 5`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **What connects `ResizeStyle`, `artifactType`, `updatedAt` to the rest of the system?**
-  _218 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `FreeformOverlayService` connect `Community 0` to `Community 5`, `Community 53`, `Community 54`, `Community 55`, `Community 56`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Are the 8 inferred relationships involving `MainScreen()` (e.g. with `DisplayInfo` and `AppInfo`) actually correct?**
+  _`MainScreen()` has 8 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `java.configuration.updateBuildConfiguration`, `ResizeStyle`, `artifactType` to the rest of the system?**
+  _219 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.05531914893617021 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14112903225806453 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.023529411764705882 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.07155399473222125 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.019801980198019802 - nodes in this community are weakly interconnected._
