@@ -407,5 +407,67 @@ object ThemeManager {
             }
         }.start()
     }
+
+    // ── Lock Screen / Keyguard Customizations ───────────────────────────────────
+    fun getLockWallpaperTheme(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("lock_wallpaper_theme", 0)
+
+    fun setLockWallpaperTheme(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("lock_wallpaper_theme", value).apply()
+
+    fun getLockBlurRadius(context: Context): Float =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat("lock_blur_radius", 25f)
+
+    fun setLockBlurRadius(context: Context, value: Float) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat("lock_blur_radius", value).apply()
+
+    fun getLockClockPreset(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("lock_clock_preset", 0)
+
+    fun setLockClockPreset(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("lock_clock_preset", value).apply()
+
+    fun isLockSyncDismissEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_sync_dismiss", true)
+
+    fun setLockSyncDismissEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_sync_dismiss", value).apply()
+
+    fun isLockKeypadScramblerEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_keypad_scrambler", false)
+
+    fun setLockKeypadScramblerEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_keypad_scrambler", value).apply()
+
+    fun isLockKeyboardBypassEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_keyboard_bypass", false)
+
+    fun setLockKeyboardBypassEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_keyboard_bypass", value).apply()
+
+    fun getLockNotificationsMode(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("lock_notifications_mode", 1) // default: icons only
+
+    fun setLockNotificationsMode(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("lock_notifications_mode", value).apply()
+
+    fun isLockAodEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_aod_enabled", false)
+
+    fun setLockAodEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_aod_enabled", value).apply()
+
+    fun isLockWeatherWidgetEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_weather_widget", true)
+
+    fun setLockWeatherWidgetEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_weather_widget", value).apply()
+
+    fun isLockCalendarWidgetEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_calendar_widget", false)
+
+    fun setLockCalendarWidgetEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_calendar_widget", value).apply()
 }
+
 

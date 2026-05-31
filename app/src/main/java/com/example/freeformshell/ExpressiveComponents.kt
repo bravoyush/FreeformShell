@@ -202,6 +202,7 @@ fun ExpressiveSidebar(
                 add(SidebarItemData(4, Icons.Default.Block, "Blacklist"))
                 add(SidebarItemData(8, Icons.Default.Videocam, "Capture"))
                 add(SidebarItemData(5, Icons.Default.Settings, "Settings"))
+                add(SidebarItemData(10, Icons.Default.Lock, "Lock Screen"))
                 add(SidebarItemData(6, Icons.Default.Build, "Compat"))
             }
 
@@ -301,6 +302,7 @@ fun ExpressivePillDock(
         add(4 to Icons.Default.Block)
         add(8 to Icons.Default.Videocam)
         add(5 to Icons.Default.Settings)
+        add(10 to Icons.Default.Lock)
         add(6 to Icons.Default.Build)
     }
 
@@ -426,54 +428,123 @@ fun WorkspaceCard(
         else 
             CardDefaults.elevatedCardColors()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isFavorite) Icons.Default.Star else Icons.Default.History, 
-                    null, 
-                    tint = if (isFavorite) Color(0xFFFFC107) else Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (group.displayId == 0) "Phone Workspace" else "External Display ${group.displayId}", 
-                    style = MaterialTheme.typography.titleMedium, 
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                group.apps.take(6).forEach { app ->
-                    AppIcon(app.packageName, modifier = Modifier.size(32.dp))
-                }
-                if (group.apps.size > 6) {
-                    Box(Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
-                        Text("+${group.apps.size - 6}", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { onEdit(group, isFavorite) }, modifier = Modifier.weight(1f), shape = CircleShape) {
-                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left Content Column (Metadata & Controls)
+            Column(modifier = Modifier.weight(1.3f).padding(end = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isFavorite) Icons.Default.Star else Icons.Default.History, 
+                        null, 
+                        tint = if (isFavorite) Color(0xFFFFC107) else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text("Edit")
+                    Text(
+                        if (group.displayId == 0) "Phone Workspace" else "External Display ${group.displayId}", 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                if (!isFavorite) {
-                    FilledTonalIconButton(onClick = { WorkspaceManager.setFavorite(context, group); onRefresh() }) {
-                        Icon(Icons.Default.StarBorder, null)
+                
+                Spacer(Modifier.height(12.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    group.apps.take(4).forEach { app ->
+                        AppIcon(app.packageName, modifier = Modifier.size(28.dp))
+                    }
+                    if (group.apps.size > 4) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), 
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("+${group.apps.size - 4}", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
-                IconButton(onClick = {
-                    if (isFavorite) WorkspaceManager.removeFavorite(context)
-                    else {
-                        val history = WorkspaceManager.getHistory(context).toMutableList()
-                        history.removeAll { it.timestamp == group.timestamp }
-                        WorkspaceManager.saveHistory(context, history)
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onEdit(group, isFavorite) },
+                        shape = CircleShape,
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Edit", fontSize = 12.sp)
                     }
-                    onRefresh()
-                }) {
-                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                    if (!isFavorite) {
+                        FilledTonalIconButton(
+                            onClick = { WorkspaceManager.setFavorite(context, group); onRefresh() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.StarBorder, null, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    IconButton(
+                        onClick = {
+                            if (isFavorite) WorkspaceManager.removeFavorite(context)
+                            else {
+                                val history = WorkspaceManager.getHistory(context).toMutableList()
+                                history.removeAll { it.timestamp == group.timestamp }
+                                WorkspaceManager.saveHistory(context, history)
+                            }
+                            onRefresh()
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            // Right Bento Column (Mini visualizer)
+            val isPortrait = group.displayId == 0
+            val miniW = if (isPortrait) 64.dp else 120.dp
+            val miniH = if (isPortrait) 120.dp else 68.dp
+            
+            Box(
+                modifier = Modifier
+                    .width(132.dp)
+                    .height(132.dp)
+                    .background(Color.Black.copy(alpha = 0.05f), RoundedCornerShape(18.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(miniW, miniH)
+                        .background(Color.White.copy(alpha = 0.03f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f))
+                ) {
+                    val screenW = if (isPortrait) 1080f else 1920f
+                    val screenH = if (isPortrait) 2400f else 1080f
+                    val scaleX = miniW.value / screenW
+                    val scaleY = miniH.value / screenH
+
+                    group.apps.forEach { app ->
+                        val appL = (app.bounds.left * scaleX).dp
+                        val appT = (app.bounds.top * scaleY).dp
+                        val appW = ((app.bounds.right - app.bounds.left) * scaleX).dp
+                        val appH = ((app.bounds.bottom - app.bounds.top) * scaleY).dp
+
+                        Box(
+                            modifier = Modifier
+                                .offset(appL, appT)
+                                .size(appW, appH)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(2.dp))
+                                .border(0.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                        )
+                    }
                 }
             }
         }

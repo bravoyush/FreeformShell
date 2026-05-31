@@ -1,16 +1,16 @@
 # Graph Report - FreeformShell  (2026-05-31)
 
 ## Corpus Check
-- 66 files · ~291,276 words
+- 69 files · ~296,274 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1118 nodes · 1751 edges · 64 communities (46 shown, 18 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 60 edges (avg confidence: 0.81)
+- 1159 nodes · 1805 edges · 65 communities (47 shown, 18 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 65 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c291fbc3`
+- Built from commit: `188653ab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -76,14 +76,15 @@
 - [[_COMMUNITY_Community 61|Community 61]]
 - [[_COMMUNITY_Community 62|Community 62]]
 - [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `ThemeManager` - 107 edges
+1. `ThemeManager` - 127 edges
 2. `DragResizeOverlay` - 61 edges
 3. `FreeformOverlayService` - 53 edges
 4. `ScreenRecordControllerOverlay` - 32 edges
-5. `ShellExecutor` - 27 edges
-6. `MainScreen()` - 25 edges
+5. `MainScreen()` - 27 edges
+6. `ShellExecutor` - 27 edges
 7. `CompatibilityManager` - 21 edges
 8. `AnnotationOverlay` - 20 edges
 9. `PhoneMirrorManager` - 19 edges
@@ -105,11 +106,11 @@
 - **Window Drag and Resize Interaction Loop** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_freeformoverlayservice_freeformoverlayservice, freeformshell_shellexecutor_shellexecutor [INFERRED 0.95]
 - **Dynamic Tiling and Docking Grid System** — freeformshell_dragresizeoverlay_dragresizeoverlay, freeformshell_workspacemanager_workspacemanager, core_logic_smart_snap_corner_restraints, core_logic_touch_aware_edge_snap_thresholds [INFERRED 0.95]
 
-## Communities (64 total, 18 thin omitted)
+## Communities (65 total, 18 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
-Nodes (30): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, DisplayShell, ensureForceCloseLoaded(), ensureLoaded(), FreeformOverlayService (+22 more)
+Nodes (31): Background Thread Concurrency Lock & Drag Sync Bypass, Dynamic Screen-to-View Occlusion Clipping, Persistent SharedPreferences Blacklist, Rendering Integrity & Flicker Prevention, DisplayShell, ensureForceCloseLoaded(), ensureLoaded(), FreeformOverlayService (+23 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.07
@@ -125,7 +126,7 @@ Nodes (39): 10. Tiled Layout Swap, 11. Launcher & Dock Avoidance, 12. Drag & Res
 
 ### Community 5 - "Community 5"
 Cohesion: 0.07
-Nodes (47): Android 14 Hidden API Exemption, Dynamic Tiling Grid Engine, AppIcon(), AppInfo, DisplayInfo, DisplayShapeIcon(), StatusChip(), ExpressiveLayout() (+39 more)
+Nodes (50): Android 14 Hidden API Exemption, Dynamic Tiling Grid Engine, AppIcon(), AppInfo, DisplayInfo, DisplayShapeIcon(), StatusChip(), ExpressiveLayout() (+42 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.08
@@ -133,7 +134,7 @@ Nodes (34): 1. Compile the App, 📊 1. Dashboard & Diagnostics, 1️⃣ Step 1:
 
 ### Community 7 - "Community 7"
 Cohesion: 0.09
-Nodes (10): Containers Dump (dumpsys activity containers), Recents Dump (dumpsys activity recents), Tasks Dump (dumpsys activity tasks), Windows Dump (dumpsys window), FreeformTaskManagerWidgetFactory, FreeformTaskManagerWidgetService, AppTask, CombinedTaskState (+2 more)
+Nodes (9): Containers Dump (dumpsys activity containers), Recents Dump (dumpsys activity recents), Tasks Dump (dumpsys activity tasks), Windows Dump (dumpsys window), FreeformTaskManagerWidgetFactory, FreeformTaskManagerWidgetService, AppTask, CombinedTaskState (+1 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.21
@@ -279,6 +280,10 @@ Nodes (5): PhoneMirrorManager, fillModifier(), FloatingMirrorWindow(), PhoneMirr
 Cohesion: 0.46
 Nodes (7): enforce_retention_policy(), get_current_branch(), get_current_version(), get_files_to_backup(), main(), Checks if there are more than 5 backup folders of the same version in the backup, run_command()
 
+### Community 64 - "Community 64"
+Cohesion: 0.21
+Nodes (5): DesktopKeyguardService, DesktopLockScreenContent(), injectPinToHost(), KeyguardServiceLifecycleOwner, KeypadButton()
+
 ## Knowledge Gaps
 - **211 isolated node(s):** `java.configuration.updateBuildConfiguration`, `Tool`, `ShapeType`, `ResizeStyle`, `WallpaperLoadStatus` (+206 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -287,17 +292,17 @@ Nodes (7): enforce_retention_policy(), get_current_branch(), get_current_version
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ScreenRecordControllerOverlay` connect `Community 53` to `Community 0`, `Community 59`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 8`, `Community 52`, `Community 5`?**
-  _High betweenness centrality (0.093) - this node is a cross-community bridge._
 - **Why does `ThemeManager` connect `Community 1` to `Community 53`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+  _High betweenness centrality (0.095) - this node is a cross-community bridge._
+- **Why does `ScreenRecordControllerOverlay` connect `Community 53` to `Community 0`, `Community 59`?**
+  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+- **Why does `DragResizeOverlay` connect `Community 2` to `Community 0`, `Community 8`, `Community 52`, `Community 5`?**
+  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+- **Are the 11 inferred relationships involving `MainScreen()` (e.g. with `DisplayInfo` and `AppInfo`) actually correct?**
+  _`MainScreen()` has 11 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Checks if there are more than 5 backup folders of the same version in the backup`, `java.configuration.updateBuildConfiguration`, `Tool` to the rest of the system?**
   _223 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.050693069306930696 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.050087361677344205 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.018691588785046728 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.07412587412587412 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.015748031496062992 - nodes in this community are weakly interconnected._

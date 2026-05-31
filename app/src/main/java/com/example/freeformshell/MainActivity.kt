@@ -588,7 +588,15 @@ fun MainScreen(
         }
         
         CompositionLocalProvider(LocalDensity provides customDensity) {
-            Scaffold(
+            if (editingGroup != null) {
+                WorkspaceSandboxEditor(
+                    group = editingGroup!!,
+                    isFavorite = isEditingFavorite,
+                    onBack = { editingGroup = null },
+                    onRefresh = { refreshWorkspacesKey++ }
+                )
+            } else {
+                Scaffold(
                 bottomBar = {
                     if (appUiStyle == 0) {
                         NavigationBar {
@@ -603,6 +611,7 @@ fun MainScreen(
                             NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") }, alwaysShowLabel = showLabels)
                             NavigationBarItem(selected = selectedTabIndex == 8, onClick = { selectedTabIndex = 8 }, icon = { Icon(Icons.Default.Videocam, null) }, label = { Text("Capture") }, alwaysShowLabel = showLabels)
                             NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 10, onClick = { selectedTabIndex = 10 }, icon = { Icon(Icons.Default.Lock, null) }, label = { Text("Lock") }, alwaysShowLabel = showLabels)
                             NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") }, alwaysShowLabel = showLabels)
                         }
                     }
@@ -718,6 +727,7 @@ fun MainScreen(
                             }
                         )
                         8 -> CaptureScreen(innerPadding, availableDisplays)
+                        10 -> LockScreenSettingsScreen(innerPadding)
                     }
                 }
 
@@ -853,91 +863,6 @@ fun MainScreen(
             )
         }
 
-        if (editingGroup != null) {
-            val group = editingGroup!!
-            var appsList by remember(editingGroup) { mutableStateOf(group.apps) }
-            
-            AlertDialog(
-                onDismissRequest = { editingGroup = null },
-                title = { Text("Edit Workspace Layout", style = MaterialTheme.typography.titleLarge) },
-                text = {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                        items(appsList.size) { index ->
-                            val app = appsList[index]
-                            var leftStr by remember(app) { mutableStateOf(app.bounds.left.toString()) }
-                            var topStr by remember(app) { mutableStateOf(app.bounds.top.toString()) }
-                            var rightStr by remember(app) { mutableStateOf(app.bounds.right.toString()) }
-                            var bottomStr by remember(app) { mutableStateOf(app.bounds.bottom.toString()) }
-                            
-                            Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        AppIcon(app.packageName, modifier = Modifier.size(32.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Text(app.packageName.substringAfterLast("."), fontWeight = FontWeight.Bold, maxLines = 1)
-                                            Text(app.packageName, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
-                                        }
-                                        IconButton(onClick = {
-                                            appsList = appsList.filterIndexed { i, _ -> i != index }
-                                        }) {
-                                            Icon(Icons.Default.Delete, "Remove App", tint = Color.Red)
-                                        }
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                    Text("Window Position Coordinates:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                    Spacer(Modifier.height(4.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedTextField(value = leftStr, onValueChange = { leftStr = it }, label = { Text("Left") }, modifier = Modifier.weight(1f))
-                                        OutlinedTextField(value = topStr, onValueChange = { topStr = it }, label = { Text("Top") }, modifier = Modifier.weight(1f))
-                                    }
-                                    Spacer(Modifier.height(4.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedTextField(value = rightStr, onValueChange = { rightStr = it }, label = { Text("Right") }, modifier = Modifier.weight(1f))
-                                        OutlinedTextField(value = bottomStr, onValueChange = { bottomStr = it }, label = { Text("Bottom") }, modifier = Modifier.weight(1f))
-                                    }
-                                    
-                                    LaunchedEffect(leftStr, topStr, rightStr, bottomStr) {
-                                        val l = leftStr.toIntOrNull() ?: app.bounds.left
-                                        val t = topStr.toIntOrNull() ?: app.bounds.top
-                                        val r = rightStr.toIntOrNull() ?: app.bounds.right
-                                        val b = bottomStr.toIntOrNull() ?: app.bounds.bottom
-                                        appsList = appsList.mapIndexed { i, a ->
-                                            if (i == index) WorkspaceApp(a.packageName, a.component, android.graphics.Rect(l, t, r, b)) else a
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        val updatedGroup = WorkspaceGroup(appsList, group.displayId, group.timestamp)
-                        if (isEditingFavorite) {
-                            WorkspaceManager.setFavorite(context, updatedGroup)
-                        } else {
-                            val history = WorkspaceManager.getHistory(context).toMutableList()
-                            val idx = history.indexOfFirst { it.timestamp == group.timestamp }
-                            if (idx != -1) {
-                                history[idx] = updatedGroup
-                                WorkspaceManager.saveHistory(context, history)
-                            }
-                        }
-                        editingGroup = null
-                        refreshWorkspacesKey++
-                        Toast.makeText(context, "Workspace updated successfully!", Toast.LENGTH_SHORT).show()
-                    }) { Text("Save Changes") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { editingGroup = null }) { Text("Cancel") }
-                }
-            )
-        }
-
         if (showSettingsDialog) {
             AlertDialog(onDismissRequest = { showSettingsDialog = false }, title = { Text("Permissions & Settings") },
                 text = {
@@ -994,6 +919,7 @@ fun MainScreen(
                 confirmButton = { TextButton(onClick = { showSettingsDialog = false }) { Text("Close") } }
             )
         }
+    }
     }
 }
 }

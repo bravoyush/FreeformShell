@@ -318,6 +318,29 @@ class FreeformOverlayService : Service() {
         val filter = android.content.IntentFilter(android.content.Intent.ACTION_SCREEN_OFF)
         registerReceiver(screenOffReceiver, filter)
 
+        // Deploy keyguard lock screen overlays on startup if phone is already locked
+        try {
+            val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+            if (km.isKeyguardLocked) {
+                Log.d(TAG, "Handset is locked on service startup. Deploying keyguard overlays on external displays.")
+                val dm = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                dm.displays.forEach { display ->
+                    if (display.displayId > 0) {
+                        val keyguardIntent = android.content.Intent(this, DesktopKeyguardService::class.java).apply {
+                            putExtra("EXTRA_DISPLAY_ID", display.displayId)
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(keyguardIntent)
+                        } else {
+                            startService(keyguardIntent)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check keyguard status on startup", e)
+        }
+
         isRunning = true
         
         // Register JVM Shutdown Hook for recovery on sudden crash or VM exit
@@ -360,6 +383,27 @@ class FreeformOverlayService : Service() {
         override fun onReceive(context: Context?, intent: android.content.Intent?) {
             // Safety Valve: Stop monitoring or other lightweight cleanup
             lastTopPackage = null
+            
+            context?.let { ctx ->
+                Log.d("FreeformOverlayService", "Handset screen off. Deploying lock screen overlays on secondary displays.")
+                val dm = ctx.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                dm.displays.forEach { display ->
+                    if (display.displayId > 0) {
+                        val keyguardIntent = android.content.Intent(ctx, DesktopKeyguardService::class.java).apply {
+                            putExtra("EXTRA_DISPLAY_ID", display.displayId)
+                        }
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                ctx.startForegroundService(keyguardIntent)
+                            } else {
+                                ctx.startService(keyguardIntent)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("FreeformOverlayService", "Failed to start DesktopKeyguardService on screen off", e)
+                        }
+                    }
+                }
+            }
         }
     }
 
