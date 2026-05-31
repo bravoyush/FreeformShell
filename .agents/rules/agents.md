@@ -27,3 +27,5 @@ Before finishing your session:
 1.  Update the checklists and active status logs in [.agents/LEDGER.md](file:///g:/Ai/FreeformShell/.agents/LEDGER.md).
 2.  Overwrite [.agents/HANDOFF.md](file:///g:/Ai/FreeformShell/.agents/HANDOFF.md) with a clear handoff brief for the next model or developer, detailing active state, completed work, and upcoming targets.
 3.  Run `graphify update .` to keep the AST indices fresh (costs 0 API tokens).
+4.  Run versioned backup: Execute `python .agents/skills/backup/backup.py` to create a non-destructive version and time-stamped archive under `g:\Ai\Freeform Backup\<branch>\<version>_<timestamp>` and apply the 5-backup retention limit (moving old ones to `old/`).
+

@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformOverlayService.kt": {
-    "mtime": 1779646573.9370248,
-    "ast_hash": "c5c5adc9c1f5c1eacbae374849b5f4cf",
+    "mtime": 1780207157.0637589,
+    "ast_hash": "a94ad8f267453b51e9516dff1fb457f2",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformWidget.kt": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MainActivity.kt": {
-    "mtime": 1779704811.0873928,
-    "ast_hash": "7a69d1122cd5aff8fcc6dfe52d3561b3",
+    "mtime": 1780221530.7647169,
+    "ast_hash": "557d712a37d8d8fc487828f4b5af7125",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MinimizedBubble.kt": {
@@ -50,8 +50,8 @@
     "semantic_hash": "4fd15caf71d0b7c54e58c252aa804698"
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ShellExecutor.kt": {
-    "mtime": 1779646573.9456582,
-    "ast_hash": "3fec968eb84a1aa09dec3489e6cde9b2",
+    "mtime": 1779968167.545126,
+    "ast_hash": "6045b7770bc26fc25b18f509c5742d43",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\SimpleOverlayService.kt": {
@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ThemeManager.kt": {
-    "mtime": 1779700826.8567762,
-    "ast_hash": "0b77bdf10fd181aab071757515e1cfe0",
+    "mtime": 1780220341.3471665,
+    "ast_hash": "8a9d255b5451afab98e84472637647c1",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceManager.kt": {
@@ -175,18 +175,18 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\HANDOFF.md": {
-    "mtime": 1779743906.1377442,
-    "ast_hash": "cad6b465c20469029a17dcd1b4499313",
+    "mtime": 1779903219.6064663,
+    "ast_hash": "8766b5669b76aeca06709146d218da17",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\LEDGER.md": {
-    "mtime": 1779743906.135739,
-    "ast_hash": "54e077f4c20d94a0d3e8e2926acc5578",
+    "mtime": 1780165723.4797528,
+    "ast_hash": "c6a7f3f21099845254d3b866f650a619",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\rules\\agents.md": {
-    "mtime": 1779646573.9251306,
-    "ast_hash": "6675e3197d5cf3d8da9c929a694f6810",
+    "mtime": 1780165243.0795894,
+    "ast_hash": "bc94fd284677e1064b641e972a8fd64a",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\CONTRIBUTING.md": {
@@ -260,13 +260,13 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\skills\\handoff_andp\\SKILL.md": {
-    "mtime": 1779646573.9271252,
-    "ast_hash": "1d761690dc5c65bfee2155e4705ddf4b",
+    "mtime": 1780165232.7742085,
+    "ast_hash": "725d653299887ed7e4d34bdbd0841331",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\workflows\\handoff_andp.md": {
-    "mtime": 1779646573.9299407,
-    "ast_hash": "3be224406ebb88ba09dbb3b1c274523a",
+    "mtime": 1780165224.7710853,
+    "ast_hash": "771daec16ad9bd05379b74fe8ee85d81",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\skills\\sync_ledger\\sync_ledger.py": {
@@ -295,8 +295,83 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ExpressiveComponents.kt": {
-    "mtime": 1779703713.5560327,
-    "ast_hash": "944a37be947f5c7c32f6d471748e1fd2",
+    "mtime": 1779901742.679809,
+    "ast_hash": "e3d3313ced734a40963333752d914c5b",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FacecamOverlay.kt": {
+    "mtime": 1780198145.4596624,
+    "ast_hash": "2ca1c5c7f9bcc4450ddb405ade1f1699",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ScreenRecordControllerOverlay.kt": {
+    "mtime": 1780198134.0942776,
+    "ast_hash": "d2fd05989e2e3f20926283293160e5b7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ScreenRecordManager.kt": {
+    "mtime": 1780197246.8311617,
+    "ast_hash": "b461c69c58264aca29e2fe53dcb63e55",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\SnippingOverlay.kt": {
+    "mtime": 1780198140.1853626,
+    "ast_hash": "512f279652ded81a5f3bc93f17dd40d0",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\AnnotationOverlay.kt": {
+    "mtime": 1779862751.6222801,
+    "ast_hash": "5368b4be33dc66ea1dca34c84a4576d7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DesktopSettingsScreen.kt": {
+    "mtime": 1780209221.5011714,
+    "ast_hash": "e109c7e49c2906e1de33d42f73f3fe25",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorManager.kt": {
+    "mtime": 1780197234.0580995,
+    "ast_hash": "0a648ec3859eb6a5beb202c8acbd9054",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorService.kt": {
+    "mtime": 1779969745.2162244,
+    "ast_hash": "1a6df5910a60350651fd4985335f44aa",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\logcat_output_1.txt": {
+    "mtime": 1779967388.9541948,
+    "ast_hash": "b81938d8cd2e68582d75a03e1c74d7d8",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\logcat_output_2.txt": {
+    "mtime": 1779967845.0616698,
+    "ast_hash": "d1deac3480c61e2dcb8c2c9d2c722e1f",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\logcat_output_3.txt": {
+    "mtime": 1779967884.7835104,
+    "ast_hash": "3235329d757ee355cac1218a00a96f30",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\.agents\\skills\\backup\\backup.py": {
+    "mtime": 1780165461.1594765,
+    "ast_hash": "95bcbc40630bb1f9a42fa58c7ffb1af3",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorActivity.kt": {
+    "mtime": 1780198710.7549067,
+    "ast_hash": "11cb65573b6b880558846e3983d5f706",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorOverlayService.kt": {
+    "mtime": 1780199330.4647324,
+    "ast_hash": "0c47c1cd7c742c7cba8924f467d154ea",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MirrorShortcutHelper.kt": {
+    "mtime": 1780198683.5815618,
+    "ast_hash": "2dd23b6768d89174f809760720af4113",
     "semantic_hash": ""
   }
 }

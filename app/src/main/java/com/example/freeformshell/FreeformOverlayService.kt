@@ -71,6 +71,7 @@ class FreeformOverlayService : Service() {
     @Volatile var currentFocusedPackage: String = ""
     private var systemDefaultDensity = -1
     private val TAG = "FreeformOverlayService"
+    private var recordControllerOverlay: ScreenRecordControllerOverlay? = null
 
     private val pendingDpiReversions = java.util.concurrent.ConcurrentHashMap<Int, Int>()
     private val dpiConfirmationContainers = java.util.concurrent.ConcurrentHashMap<Int, FrameLayout>()
@@ -154,6 +155,13 @@ class FreeformOverlayService : Service() {
         when (intent?.action) {
             "ACTION_SHOW_ALL" -> bringAllToFront()
             "ACTION_EXIT" -> stopSelf()
+            "ACTION_START_CAPTURE_CONTROL" -> {
+                val displayId = intent.getIntExtra("displayId", 0)
+                showCaptureControlOverlay(displayId)
+            }
+            "ACTION_STOP_CAPTURE_CONTROL" -> {
+                hideCaptureControlOverlay()
+            }
             "ACTION_RELAUNCH_SINGLE" -> {
                 val taskId = intent.getIntExtra("EXTRA_TASK_ID", -1)
                 val component = intent.getStringExtra("EXTRA_COMPONENT")
@@ -203,6 +211,21 @@ class FreeformOverlayService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    private fun showCaptureControlOverlay(displayId: Int) {
+        handler.post {
+            recordControllerOverlay?.hide()
+            recordControllerOverlay = ScreenRecordControllerOverlay(this, displayId)
+            recordControllerOverlay?.show()
+        }
+    }
+
+    private fun hideCaptureControlOverlay() {
+        handler.post {
+            recordControllerOverlay?.hide()
+            recordControllerOverlay = null
+        }
     }
 
     private fun bringAllToFront() {
@@ -972,6 +995,9 @@ class FreeformOverlayService : Service() {
         isRunning = false
         instance = null
         handler.removeCallbacks(monitorRunnable)
+        
+        recordControllerOverlay?.hide()
+        recordControllerOverlay = null
         
         getSharedPreferences("freeform_theme_prefs", Context.MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -3100,31 +3126,73 @@ class SnappingSensitivityGuideView(context: Context, private val density: Float)
             invalidate()
         }
     
-    private val paint = android.graphics.Paint().apply {
+    private val fillPaint = android.graphics.Paint().apply {
+        style = android.graphics.Paint.Style.FILL
+        isAntiAlias = true
+    }
+    
+    private val linePaint = android.graphics.Paint().apply {
         style = android.graphics.Paint.Style.STROKE
-        color = android.graphics.Color.argb(100, 156, 39, 176) // Translucent purple border highlight
+        strokeWidth = 2f * density
         isAntiAlias = true
     }
     
     private val cornerPaint = android.graphics.Paint().apply {
         style = android.graphics.Paint.Style.FILL
-        color = android.graphics.Color.argb(140, 156, 39, 176) // Deeper translucent purple corners
         isAntiAlias = true
     }
 
+    private fun getAccentColor(): Int {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.getColor(android.R.color.system_accent1_600)
+            } else {
+                ThemeManager.getAccentColor(context, android.graphics.Color.parseColor("#8E2DE2"))
+            }
+        } catch (e: Exception) {
+            ThemeManager.getAccentColor(context, android.graphics.Color.parseColor("#8E2DE2"))
+        }
+    }
+
     override fun onDraw(canvas: android.graphics.Canvas) {
+        if (sizePx <= 0) return
+        
         val w = width.toFloat()
         val h = height.toFloat()
+        val s = sizePx.toFloat()
         
-        paint.strokeWidth = sizePx.toFloat()
+        val accent = getAccentColor()
+        val r = android.graphics.Color.red(accent)
+        val g = android.graphics.Color.green(accent)
+        val b = android.graphics.Color.blue(accent)
         
-        val halfStroke = sizePx.toFloat() / 2f
-        canvas.drawRect(halfStroke, halfStroke, w - halfStroke, h - halfStroke, paint)
+        fillPaint.color = android.graphics.Color.argb(35, r, g, b)
+        linePaint.color = android.graphics.Color.argb(160, r, g, b)
+        cornerPaint.color = android.graphics.Color.argb(90, r, g, b)
         
-        // Corner squares representing the corner-snapping zones
-        canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerPaint)
-        canvas.drawRect(w - sizePx, 0f, w, sizePx.toFloat(), cornerPaint)
-        canvas.drawRect(0f, h - sizePx, sizePx.toFloat(), h, cornerPaint)
-        canvas.drawRect(w - sizePx, h - sizePx, w, h, cornerPaint)
+        // 1. Draw edge snapping zone overlay around all four sides
+        // Top edge band
+        canvas.drawRect(0f, 0f, w, s, fillPaint)
+        // Bottom edge band
+        canvas.drawRect(0f, h - s, w, h, fillPaint)
+        // Left edge band (excluding top/bottom to avoid double drawing)
+        canvas.drawRect(0f, s, s, h - s, fillPaint)
+        // Right edge band (excluding top/bottom)
+        canvas.drawRect(w - s, s, w, h - s, fillPaint)
+        
+        // 2. Draw thin inner guideline border threshold
+        canvas.drawRect(s, s, w - s, h - s, linePaint)
+        
+        // 3. Draw premium rounded-corner indicators for corner-snapping zones
+        val cornerRadius = 12f * density
+        
+        // Top Left Corner
+        canvas.drawRoundRect(0f, 0f, s, s, cornerRadius, cornerRadius, cornerPaint)
+        // Top Right Corner
+        canvas.drawRoundRect(w - s, 0f, w, s, cornerRadius, cornerRadius, cornerPaint)
+        // Bottom Left Corner
+        canvas.drawRoundRect(0f, h - s, s, h, cornerRadius, cornerRadius, cornerPaint)
+        // Bottom Right Corner
+        canvas.drawRoundRect(w - s, h - s, w, h, cornerRadius, cornerRadius, cornerPaint)
     }
 }

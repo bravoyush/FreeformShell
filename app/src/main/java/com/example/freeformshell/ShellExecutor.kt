@@ -36,6 +36,7 @@ object ShellExecutor {
                     try {
                         getActivityTaskManager()
                         getActivityManager()
+                        exec("cmd appops set com.example.freeformshell PROJECT_MEDIA allow")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error pre-resolving managers on connection", e)
                     }
@@ -52,6 +53,7 @@ object ShellExecutor {
                 if (Shizuku.pingBinder()) {
                     getActivityTaskManager()
                     getActivityManager()
+                    exec("cmd appops set com.example.freeformshell PROJECT_MEDIA allow")
                 }
             } catch (e: Exception) {}
         }.start()
@@ -278,7 +280,6 @@ object ShellExecutor {
 
     data class CommandResult(val first: String, val second: String, val third: Int)
 
-    @Synchronized
     fun executeCommandWithResult(command: String): CommandResult {
         Log.d(TAG, "Shell: $command")
         if (!Shizuku.pingBinder()) {
@@ -370,6 +371,38 @@ object ShellExecutor {
             }
         }
         exec("input tap $x $y")
+    }
+
+    fun injectSwipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Int = 300) {
+        triggerShellInteraction()
+        val writer = persistentWriter
+        if (writer != null) {
+            try {
+                writer.write("input swipe $x1 $y1 $x2 $y2 $duration\n")
+                writer.flush()
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed writing input swipe to persistent shell, resetting shell", e)
+                closePersistentShell()
+            }
+        }
+        exec("input swipe $x1 $y1 $x2 $y2 $duration")
+    }
+
+    fun injectKeyEvent(keyCode: Int) {
+        triggerShellInteraction()
+        val writer = persistentWriter
+        if (writer != null) {
+            try {
+                writer.write("input keyevent $keyCode\n")
+                writer.flush()
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed writing input keyevent to persistent shell, resetting shell", e)
+                closePersistentShell()
+            }
+        }
+        exec("input keyevent $keyCode")
     }
 
     fun moveTaskToFront(taskId: Int) {

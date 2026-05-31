@@ -2,12 +2,17 @@ package com.example.freeformshell
 
 import android.content.Context
 import android.content.Intent
+import java.io.File
+import androidx.compose.foundation.BorderStroke
 import android.util.Log
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
 import android.content.SharedPreferences
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -34,6 +39,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +71,9 @@ import rikka.shizuku.Shizuku
 import android.hardware.display.DisplayManager
 import android.view.Display
 import android.widget.Toast
+import android.media.ThumbnailUtils
+import android.provider.MediaStore
+import android.util.Size
 
 class MainActivity : ComponentActivity() {
 
@@ -71,6 +83,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Dynamically update pinned dynamic Mirror shortcut if it exists on the home screen
+        try {
+            MirrorShortcutHelper.updatePinnedMirrorShortcutIfExist(this)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to update dynamic wallpaper shortcut", e)
+        }
         
         // Global Crash Interceptor to catch Compose hover & layout bugs on Android 12
         try {
@@ -196,6 +215,11 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         Shizuku.removeRequestPermissionResultListener(onPermissionResultListener)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -254,12 +278,53 @@ fun MainScreen(
     var launchHeight by remember { mutableStateOf("") }
 
     var selectedTabIndex by remember { mutableStateOf(0) }
+    var isDesktopModeEnabled by remember { mutableStateOf(ThemeManager.isForceDesktopModeEnabled(context)) }
+
+    val activity = context as? ComponentActivity
+    
+    var hasCameraPermission by remember { 
+        mutableStateOf(context.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) 
+    }
+    var hasMicPermission by remember { 
+        mutableStateOf(context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) 
+    }
+    
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCameraPermission = isGranted
+    }
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasMicPermission = isGranted
+    }
+
+    LaunchedEffect(showSettingsDialog) {
+        if (showSettingsDialog) {
+            hasCameraPermission = context.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            hasMicPermission = context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            isShizukuAvailable = Shizuku.pingBinder()
+            hasShizukuPermission = isShizukuAvailable && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+            hasOverlayPermission = Settings.canDrawOverlays(context)
+        }
+    }
+    LaunchedEffect(activity?.intent) {
+        val intent = activity?.intent
+        if (intent != null && (intent.action == "ACTION_OPEN_CAPTURE_TAB" || intent.getBooleanExtra("open_capture_tab", false) == true)) {
+            selectedTabIndex = 8
+            intent.action = null
+            intent.putExtra("open_capture_tab", false)
+        }
+    }
 
     var editingGroup by remember { mutableStateOf<WorkspaceGroup?>(null) }
     var isEditingFavorite by remember { mutableStateOf(false) }
     var refreshWorkspacesKey by remember { mutableStateOf(0) }
 
     var appUiStyle by remember { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
+    var appUiScale by remember { mutableStateOf(ThemeManager.getAppUiScale(context)) }
+    var autoUiScalingEnabled by remember { mutableStateOf(ThemeManager.isAutoUiScalingEnabled(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -500,126 +565,171 @@ fun MainScreen(
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            if (appUiStyle == 0) {
-                NavigationBar {
-                    NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") })
-                    NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") })
-                    NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") })
-                    NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") })
-                    NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") })
-                    NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
-                    NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") })
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val windowWidth = maxWidth
+        val windowHeight = maxHeight
+        
+        val currentDensity = LocalDensity.current
+        val customDensity = remember(currentDensity, windowWidth, windowHeight, appUiScale, autoUiScalingEnabled) {
+            val baseScale = if (autoUiScalingEnabled) {
+                when {
+                    windowWidth < 450.dp || windowHeight < 450.dp -> 0.76f
+                    windowWidth < 650.dp || windowHeight < 600.dp -> 0.86f
+                    else -> 1f
                 }
+            } else {
+                1f
             }
-        },
-        floatingActionButton = {
-            if (selectedTabIndex == 0 && appUiStyle == 0) {
-                Column(horizontalAlignment = Alignment.End) {
-                    FloatingActionButton(onClick = { showSettingsDialog = true }, modifier = Modifier.padding(bottom = 8.dp)) {
-                        Icon(Icons.Default.Info, "Info")
-                    }
-                    FloatingActionButton(onClick = { showLogDialog = true }) {
-                        Icon(Icons.Default.List, "Logs")
-                    }
-                }
-            }
-        }
-    ) { padding ->
-        val content: @Composable (PaddingValues) -> Unit = { innerPadding ->
-            when (selectedTabIndex) {
-                0 -> DashboardScreen(
-                    padding = innerPadding,
-                    availableDisplays = availableDisplays,
-                    selectedDisplayId = selectedDisplayId,
-                    onSelectDisplay = { selectedDisplayId = it },
-                    isShizukuAvailable = isShizukuAvailable,
-                    hasOverlayPermission = hasOverlayPermission,
-                    launchQueue = launchQueue,
-                    onLaunchApp = { showAppPicker = true },
-                    onClearQueue = { launchQueue = emptyList() },
-                    onLaunchQueue = {
-                        val queue = launchQueue
-                        launchQueue = emptyList()
-                        val displayId = selectedDisplayId
-                        val targetDisplay = availableDisplays.find { it.id == displayId }
-                        val screenW = targetDisplay?.width ?: 1080
-                        val screenH = targetDisplay?.height ?: 2400
-                        
-                        // Requirement: 50% of screen size
-                        val w = screenW / 2
-                        val h = screenH / 2
-                        
-                        scope.launch(Dispatchers.IO) {
-                            ShellExecutor.executeCommand("cmd activity set-resizable 1")
-                            queue.forEachIndexed { index, app ->
-                                val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                                val component = intent?.component?.flattenToShortString() ?: return@forEachIndexed
-                                
-                                val left = 100 + (index * 80)
-                                val top = 200 + (index * 80)
-                                val right = left + w
-                                val bottom = top + h
-                                
-                                FreeformOverlayService.setIntendedBounds(app.packageName, android.graphics.Rect(left, top, right, bottom), displayId)
-                                val launchCmd = "am start-activity --display $displayId --windowingMode 5 --activity-brought-to-front -n $component"
-                                ShellExecutor.executeCommand(launchCmd)
-                                delay(1000)
-                            }
-                        }
-                    },
-                    editingGroup = editingGroup,
-                    onEditGroup = { group, isFav ->
-                        editingGroup = group
-                        isEditingFavorite = isFav
-                    },
-                    refreshWorkspacesKey = refreshWorkspacesKey,
-                    onRefreshWorkspaces = { refreshWorkspacesKey++ }
-                )
-                1 -> CustomizationScreen(innerPadding)
-                2 -> TaskManagerScreen(
-                    padding = innerPadding,
-                    tasks = tasks,
-                    isLoading = isLoading,
-                    onRefresh = {
-                        scope.launch(Dispatchers.IO) {
-                            isLoading = true
-                            val newTasks = TaskManager.getRecentTasks()
-                            withContext(Dispatchers.Main) { 
-                                tasks = newTasks 
-                                isLoading = false
-                            }
-                        }
-                    },
-                    selectedDisplayId = selectedDisplayId,
-                    onRefreshWorkspaces = { refreshWorkspacesKey++ }
-                )
-                3 -> DisplaySettingsScreen(innerPadding, availableDisplays)
-                4 -> BlacklistScreen(innerPadding)
-                5 -> AppSettingsScreen(innerPadding, availableDisplays)
-                6 -> CompatibilityScreen(innerPadding)
-                7 -> ExpressiveWorkspaceManagerScreen(
-                    padding = innerPadding,
-                    refreshKey = refreshWorkspacesKey,
-                    onRefresh = { refreshWorkspacesKey++ },
-                    onEditGroup = { group, isFav ->
-                        editingGroup = group
-                        isEditingFavorite = isFav
-                    }
-                )
-            }
-        }
-
-        if (appUiStyle == 1) {
-            ExpressiveLayout(
-                selectedTabIndex = selectedTabIndex,
-                onTabSelected = { selectedTabIndex = it },
-                content = content
+            val scaleFactor = baseScale * appUiScale
+            Density(
+                density = currentDensity.density * scaleFactor,
+                fontScale = currentDensity.fontScale * scaleFactor
             )
-        } else {
-            content(padding)
         }
+        
+        CompositionLocalProvider(LocalDensity provides customDensity) {
+            Scaffold(
+                bottomBar = {
+                    if (appUiStyle == 0) {
+                        NavigationBar {
+                            val showLabels = windowWidth >= 520.dp
+                            NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") }, alwaysShowLabel = showLabels)
+                            if (isDesktopModeEnabled) {
+                                NavigationBarItem(selected = selectedTabIndex == 9, onClick = { selectedTabIndex = 9 }, icon = { Icon(Icons.Default.Monitor, null) }, label = { Text("Desktop") }, alwaysShowLabel = showLabels)
+                            }
+                            NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 8, onClick = { selectedTabIndex = 8 }, icon = { Icon(Icons.Default.Videocam, null) }, label = { Text("Capture") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, alwaysShowLabel = showLabels)
+                            NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") }, alwaysShowLabel = showLabels)
+                        }
+                    }
+                },
+                floatingActionButton = {
+                    if (selectedTabIndex == 0 && appUiStyle == 0) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            FloatingActionButton(onClick = { showSettingsDialog = true }, modifier = Modifier.padding(bottom = 8.dp)) {
+                                Icon(Icons.Default.Info, "Info")
+                            }
+                            FloatingActionButton(onClick = { showLogDialog = true }) {
+                                Icon(Icons.Default.List, "Logs")
+                            }
+                        }
+                    }
+                }
+            ) { padding ->
+                val content: @Composable (PaddingValues) -> Unit = { innerPadding ->
+                    when (selectedTabIndex) {
+                        0 -> DashboardScreen(
+                            padding = innerPadding,
+                            availableDisplays = availableDisplays,
+                            selectedDisplayId = selectedDisplayId,
+                            onSelectDisplay = { selectedDisplayId = it },
+                            isShizukuAvailable = isShizukuAvailable,
+                            hasOverlayPermission = hasOverlayPermission,
+                            launchQueue = launchQueue,
+                            onLaunchApp = { showAppPicker = true },
+                            onClearQueue = { launchQueue = emptyList() },
+                            onLaunchQueue = {
+                                val queue = launchQueue
+                                launchQueue = emptyList()
+                                val displayId = selectedDisplayId
+                                val targetDisplay = availableDisplays.find { it.id == displayId }
+                                val screenW = targetDisplay?.width ?: 1080
+                                val screenH = targetDisplay?.height ?: 2400
+                                
+                                // Requirement: 50% of screen size
+                                val w = screenW / 2
+                                val h = screenH / 2
+                                
+                                scope.launch(Dispatchers.IO) {
+                                    ShellExecutor.executeCommand("cmd activity set-resizable 1")
+                                    queue.forEachIndexed { index, app ->
+                                        val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                                        val component = intent?.component?.flattenToShortString() ?: return@forEachIndexed
+                                        
+                                        val left = 100 + (index * 80)
+                                        val top = 200 + (index * 80)
+                                        val right = left + w
+                                        val bottom = top + h
+                                        
+                                        FreeformOverlayService.setIntendedBounds(app.packageName, android.graphics.Rect(left, top, right, bottom), displayId)
+                                        val launchCmd = "am start-activity --display $displayId --windowingMode 5 --activity-brought-to-front -n $component"
+                                        ShellExecutor.executeCommand(launchCmd)
+                                        delay(1000)
+                                    }
+                                }
+                            },
+                            editingGroup = editingGroup,
+                            onEditGroup = { group, isFav ->
+                                editingGroup = group
+                                isEditingFavorite = isFav
+                            },
+                            refreshWorkspacesKey = refreshWorkspacesKey,
+                            onRefreshWorkspaces = { refreshWorkspacesKey++ },
+                            onDesktopModeToggled = { isDesktopModeEnabled = it },
+                            onShowPermissions = { showSettingsDialog = true },
+                            onShowLogs = { showLogDialog = true }
+                        )
+                        1 -> CustomizationScreen(
+                            padding = innerPadding,
+                            appUiScale = appUiScale,
+                            onAppUiScaleChange = { 
+                                appUiScale = it
+                                ThemeManager.setAppUiScale(context, it)
+                            },
+                            autoUiScalingEnabled = autoUiScalingEnabled,
+                            onAutoUiScalingToggle = { 
+                                autoUiScalingEnabled = it
+                                ThemeManager.setAutoUiScalingEnabled(context, it)
+                            }
+                        )
+                        2 -> TaskManagerScreen(
+                            padding = innerPadding,
+                            tasks = tasks,
+                            isLoading = isLoading,
+                            onRefresh = {
+                                scope.launch(Dispatchers.IO) {
+                                    isLoading = true
+                                    val newTasks = TaskManager.getRecentTasks()
+                                    withContext(Dispatchers.Main) { 
+                                        tasks = newTasks 
+                                        isLoading = false
+                                    }
+                                }
+                            },
+                            selectedDisplayId = selectedDisplayId,
+                            onRefreshWorkspaces = { refreshWorkspacesKey++ }
+                        )
+                        3 -> DisplaySettingsScreen(innerPadding, availableDisplays)
+                        9 -> DesktopSettingsScreen(innerPadding, availableDisplays)
+                        4 -> BlacklistScreen(innerPadding)
+                        5 -> AppSettingsScreen(innerPadding, availableDisplays)
+                        6 -> CompatibilityScreen(innerPadding)
+                        7 -> ExpressiveWorkspaceManagerScreen(
+                            padding = innerPadding,
+                            refreshKey = refreshWorkspacesKey,
+                            onRefresh = { refreshWorkspacesKey++ },
+                            onEditGroup = { group, isFav ->
+                                editingGroup = group
+                                isEditingFavorite = isFav
+                            }
+                        )
+                        8 -> CaptureScreen(innerPadding, availableDisplays)
+                    }
+                }
+
+                if (appUiStyle == 1) {
+                    ExpressiveLayout(
+                        selectedTabIndex = selectedTabIndex,
+                        onTabSelected = { selectedTabIndex = it },
+                        content = content
+                    )
+                } else {
+                    content(padding)
+                }
 
         if (showLogDialog) {
             AlertDialog(onDismissRequest = { showLogDialog = false }, title = { Text("System Console Logs") },
@@ -831,16 +941,62 @@ fun MainScreen(
         if (showSettingsDialog) {
             AlertDialog(onDismissRequest = { showSettingsDialog = false }, title = { Text("Permissions & Settings") },
                 text = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                         ListItem(headlineContent = { Text("Shizuku Service") }, trailingContent = { StatusChip(label = "Bind", color = if (isShizukuAvailable) Color.Green else Color.Red) })
                         ListItem(headlineContent = { Text("Shizuku Permission") }, trailingContent = { StatusChip(label = "Granted", color = if (hasShizukuPermission) Color.Green else Color.Red) }, modifier = Modifier.clickable { if (!hasShizukuPermission && isShizukuAvailable) onRequestShizukuPermission() })
                         ListItem(headlineContent = { Text("Display Overlays") }, trailingContent = { StatusChip(label = "Granted", color = if (hasOverlayPermission) Color.Green else Color.Red) }, modifier = Modifier.clickable { if (!hasOverlayPermission) onRequestOverlayPermission() })
+                        
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        ListItem(
+                            headlineContent = { Text("Camera Access (Optional)") },
+                            supportingContent = { Text("Used for Facecam PIP overlay support during display capture & broadcast.", style = MaterialTheme.typography.bodySmall, color = Color.Gray) },
+                            trailingContent = { StatusChip(label = if (hasCameraPermission) "Granted" else "Request", color = if (hasCameraPermission) Color.Green else Color.Red) },
+                            modifier = Modifier.clickable {
+                                if (hasCameraPermission) {
+                                    Toast.makeText(context, "Optional: To revoke/disable camera, please do so from system Settings.", Toast.LENGTH_LONG).show()
+                                    try {
+                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "Failed opening Details Settings", e)
+                                    }
+                                } else {
+                                    cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                                }
+                            }
+                        )
+                        
+                        ListItem(
+                            headlineContent = { Text("Microphone Access (Optional)") },
+                            supportingContent = { Text("Used for mic voiceover audio synchronization during display recording.", style = MaterialTheme.typography.bodySmall, color = Color.Gray) },
+                            trailingContent = { StatusChip(label = if (hasMicPermission) "Granted" else "Request", color = if (hasMicPermission) Color.Green else Color.Red) },
+                            modifier = Modifier.clickable {
+                                if (hasMicPermission) {
+                                    Toast.makeText(context, "Optional: To revoke/disable microphone, please do so from system Settings.", Toast.LENGTH_LONG).show()
+                                    try {
+                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "Failed opening Details Settings", e)
+                                    }
+                                } else {
+                                    micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
+                        )
                     }
                 },
                 confirmButton = { TextButton(onClick = { showSettingsDialog = false }) { Text("Close") } }
             )
         }
     }
+}
+}
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -859,7 +1015,10 @@ fun DashboardScreen(
     editingGroup: WorkspaceGroup?,
     onEditGroup: (WorkspaceGroup, Boolean) -> Unit,
     refreshWorkspacesKey: Int,
-    onRefreshWorkspaces: () -> Unit
+    onRefreshWorkspaces: () -> Unit,
+    onDesktopModeToggled: (Boolean) -> Unit,
+    onShowPermissions: () -> Unit = {},
+    onShowLogs: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -879,18 +1038,58 @@ fun DashboardScreen(
         }
     }
     
+    val isExpressive = ThemeManager.getAppUiStyle(context) == 1
+
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text(
-            "Freeform Console", 
-            style = MaterialTheme.typography.displaySmall, 
-            fontWeight = FontWeight.ExtraBold, 
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            "Desktop experience for mobile", 
-            style = MaterialTheme.typography.bodyMedium, 
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Freeform Console", 
+                    style = MaterialTheme.typography.displaySmall, 
+                    fontWeight = FontWeight.ExtraBold, 
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Desktop experience for mobile", 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (isExpressive) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(
+                        onClick = onShowPermissions,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info, 
+                            contentDescription = "Permissions Status", 
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onShowLogs,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.List, 
+                            contentDescription = "System Console Logs", 
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -899,6 +1098,190 @@ fun DashboardScreen(
             StatusChip(label = "Overlay", color = if (hasOverlayPermission) Color(0xFF4CAF50) else Color(0xFFF44336))
         }
  
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Big Premium Force Desktop Mode Toggle Button ---
+        var isDesktopModeActive by remember { mutableStateOf(ThemeManager.isForceDesktopModeEnabled(context)) }
+        var showDesktopWarning by remember { mutableStateOf(false) }
+
+        Card(
+            onClick = { showDesktopWarning = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .shadow(8.dp, shape = RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDesktopModeActive) 
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                else 
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            shape = RoundedCornerShape(20.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 2.dp,
+                color = if (isDesktopModeActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(
+                            color = if (isDesktopModeActive) 
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else 
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isDesktopModeActive) Icons.Default.Monitor else Icons.Default.TvOff,
+                        contentDescription = null,
+                        tint = if (isDesktopModeActive) MaterialTheme.colorScheme.primary else Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isDesktopModeActive) "Force Desktop Mode: ACTIVE" else "Force Desktop Mode: INACTIVE",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isDesktopModeActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (isDesktopModeActive) 
+                            "Secondary display environment is enabled. Tap to disable."
+                        else 
+                            "Enable desktop environment on external displays programmatically. Tap to activate.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isDesktopModeActive) 
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        else 
+                            Color.Gray
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = if (isDesktopModeActive) MaterialTheme.colorScheme.primary else Color.Gray
+                )
+            }
+        }
+
+        if (showDesktopWarning) {
+            val nextState = !isDesktopModeActive
+            val value = if (nextState) 1 else 0
+            val cmd = "settings put global force_desktop_mode_on_external_displays $value"
+            AlertDialog(
+                onDismissRequest = { showDesktopWarning = false },
+                icon = { Icon(Icons.Default.Monitor, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp)) },
+                title = {
+                    Text(
+                        text = if (nextState) "Enable Desktop Mode?" else "Disable Desktop Mode?",
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Runs:\n$cmd\n\nSome devices apply this immediately after replug or a few seconds. Others need a SystemUI restart or reboot.",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                },
+                confirmButton = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Primary: apply only (no restart) — works on-the-fly on many devices
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showDesktopWarning = false
+                                isDesktopModeActive = nextState
+                                onDesktopModeToggled(nextState)
+                                scope.launch(Dispatchers.IO) {
+                                    val result = ShellExecutor.executeCommandWithResult(cmd)
+                                    val msg = if (result.third == 0)
+                                        "Desktop Mode ${if (nextState) "enabled" else "disabled"}. Replug display or wait a few seconds."
+                                    else
+                                        "Command failed (exit ${result.third}): ${result.second.take(120)}"
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Check, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Apply Only (No Restart)")
+                        }
+
+                        // Restart SystemUI after applying
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showDesktopWarning = false
+                                isDesktopModeActive = nextState
+                                onDesktopModeToggled(nextState)
+                                scope.launch(Dispatchers.IO) {
+                                    ShellExecutor.executeCommandWithResult(cmd)
+                                    ShellExecutor.executeCommandWithResult("killall com.android.systemui")
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Refresh, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Apply + Restart SystemUI")
+                        }
+
+                        // Reboot after applying
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showDesktopWarning = false
+                                isDesktopModeActive = nextState
+                                onDesktopModeToggled(nextState)
+                                scope.launch(Dispatchers.IO) {
+                                    ShellExecutor.executeCommandWithResult(cmd)
+                                    ShellExecutor.executeCommandWithResult("reboot")
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.PowerSettingsNew, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Apply + Reboot")
+                        }
+
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showDesktopWarning = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                }
+            )
+        }
+
+
         Spacer(modifier = Modifier.height(16.dp))
  
         Card(
@@ -1414,7 +1797,13 @@ fun TaskManagerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomizationScreen(padding: PaddingValues) {
+fun CustomizationScreen(
+    padding: PaddingValues,
+    appUiScale: Float,
+    onAppUiScaleChange: (Float) -> Unit,
+    autoUiScalingEnabled: Boolean,
+    onAutoUiScalingToggle: (Boolean) -> Unit
+) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE) }
     var mode by remember { mutableStateOf(ThemeManager.getThemeMode(context)) }
@@ -1776,6 +2165,48 @@ fun CustomizationScreen(padding: PaddingValues) {
                 FilterChip(selected = mode == index, onClick = { mode = index; ThemeManager.setThemeMode(context, index) }, label = { Text(label) })
             }
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        Text("App UI Scaling", style = MaterialTheme.typography.titleLarge)
+        Text("Customize the size of fonts and controls for your physical screen size.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        
+        Spacer(Modifier.height(12.dp))
+        
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Automatic Scaling Mode", style = MaterialTheme.typography.titleMedium)
+                Text("Scale layouts down in small/narrow Freeform windows to avoid cramming.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+            Switch(
+                checked = autoUiScalingEnabled, 
+                onCheckedChange = onAutoUiScalingToggle
+            )
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        
+        val scalePercent = (appUiScale * 100).toInt()
+        Text("Custom UI Scale: ${scalePercent}%", style = MaterialTheme.typography.titleMedium)
+        Text("Compensates for high physical DPI or small phone displays.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        
+        Spacer(Modifier.height(4.dp))
+        
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Slider(
+                value = appUiScale, 
+                onValueChange = onAppUiScaleChange, 
+                valueRange = 0.7f..1.3f,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(12.dp))
+            OutlinedButton(
+                onClick = { onAppUiScaleChange(1.0f) },
+                shape = CircleShape
+            ) {
+                Text("Reset")
+            }
+        }
     }
 }
 
@@ -1948,6 +2379,38 @@ fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, titleBar
     }
 }
 @Composable
+private fun SectionContainer(
+    isExpressive: Boolean,
+    title: String,
+    content: @Composable () -> Unit
+) {
+    if (isExpressive) {
+        Text(
+            text = title, 
+            style = MaterialTheme.typography.titleMedium, 
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                content()
+            }
+        }
+    } else {
+        Spacer(Modifier.height(16.dp))
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        content()
+        Divider(Modifier.padding(vertical = 16.dp))
+    }
+}
+
+@Composable
 fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1956,8 +2419,15 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     val isResolutionOverrideEnabled = CompatibilityManager.isResolutionOverrideEnabled(context)
     val isRefreshRateOverrideEnabled = CompatibilityManager.isRefreshRateOverrideEnabled(context)
     
+    val isExpressive = ThemeManager.getAppUiStyle(context) == 1
+    
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("Display Settings Hub", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+        Text(
+            "Display Settings Hub", 
+            style = if (isExpressive) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineSmall, 
+            fontWeight = FontWeight.ExtraBold, 
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.height(8.dp))
         Text("Configure layout margin boundaries, density, resolutions, and refresh rates for your screen configurations.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         
@@ -1990,43 +2460,44 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
             Text("Configuring: ${display.name} (ID: ${display.id})", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             
-            Text("Dock Position & Margin Bounds", style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("None", "Top", "Bottom", "Left", "Right").forEachIndexed { index, label ->
-                    FilterChip(selected = dockPos == index, onClick = { 
-                        dockPos = index 
-                        ThemeManager.setDockPosition(context, display.id, index)
-                        FreeformOverlayService.showDockGuide(display.id, index, dockSize.toInt())
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            SectionContainer(isExpressive = isExpressive, title = "Dock Position & Margin Bounds") {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("None", "Top", "Bottom", "Left", "Right").forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = dockPos == index, 
+                            onClick = { 
+                                dockPos = index 
+                                ThemeManager.setDockPosition(context, display.id, index)
+                                FreeformOverlayService.showDockGuide(display.id, index, dockSize.toInt())
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    FreeformOverlayService.hideDockGuide()
+                                }, 1500)
+                            }, 
+                            label = { Text(label) },
+                            shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
+                        )
+                    }
+                }
+                
+                if (dockPos > 0) {
+                    Text("Dock Size: ${dockSize.toInt()}px", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+                    Slider(
+                        value = dockSize, 
+                        onValueChange = { 
+                            dockSize = it
+                            ThemeManager.setDockSize(context, display.id, it.toInt())
+                            FreeformOverlayService.showDockGuide(display.id, dockPos, it.toInt())
+                        },
+                        onValueChangeFinished = {
                             FreeformOverlayService.hideDockGuide()
-                        }, 1500)
-                    }, label = { Text(label) })
+                        },
+                        valueRange = 0f..1000f
+                    )
+                    Text("Tip: Adjust slider to see the visual dock guide on the target display.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
             }
             
-            if (dockPos > 0) {
-                Text("Dock Size: ${dockSize.toInt()}px", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
-                Slider(
-                    value = dockSize, 
-                    onValueChange = { 
-                        dockSize = it
-                        ThemeManager.setDockSize(context, display.id, it.toInt())
-                        FreeformOverlayService.showDockGuide(display.id, dockPos, it.toInt())
-                    },
-                    onValueChangeFinished = {
-                        FreeformOverlayService.hideDockGuide()
-                    },
-                    valueRange = 0f..500f
-                )
-                Text("Tip: Adjust slider to see the visual dock guide on the target display.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
-            
-            Divider(Modifier.padding(vertical = 16.dp))
-            
             // ─── Display Density (DPI) ───
-            Text("Display Density (DPI)", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            
             var physicalDensity by remember(selectedIdx) { mutableStateOf(display.dpi) }
             var activeDensity by remember(selectedIdx) { mutableStateOf(ThemeManager.getDensity(context, display.id, display.activeDpi)) }
             
@@ -2100,64 +2571,64 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                 }.sorted()
             }
             
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                defaultDpis.forEach { dpi ->
-                    val isSelected = activeDensity == dpi
-                    val label = if (dpi == physicalDensity) "$dpi (Default)" else "$dpi"
+            SectionContainer(isExpressive = isExpressive, title = "Display Density (DPI)") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    defaultDpis.forEach { dpi ->
+                        val isSelected = activeDensity == dpi
+                        val label = if (dpi == physicalDensity) "$dpi (Default)" else "$dpi"
+                        
+                        OutlinedButton(
+                            onClick = { initiateDpiChange(dpi) },
+                            shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape,
+                            colors = if (isSelected) {
+                                ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            } else {
+                                ButtonDefaults.outlinedButtonColors()
+                            },
+                            border = if (isSelected) {
+                                androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                            } else {
+                                androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            }
+                        ) {
+                            Text(label)
+                        }
+                    }
                     
                     OutlinedButton(
-                        onClick = { initiateDpiChange(dpi) },
-                        colors = if (isSelected) {
-                            ButtonDefaults.outlinedButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else {
-                            ButtonDefaults.outlinedButtonColors()
-                        },
-                        border = if (isSelected) {
-                            androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                        } else {
-                            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                        }
+                        onClick = { showCustomDpiDialog = true },
+                        shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape,
+                        colors = ButtonDefaults.outlinedButtonColors(),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
-                        Text(label)
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Custom DPI")
                     }
                 }
                 
-                OutlinedButton(
-                    onClick = { showCustomDpiDialog = true },
-                    colors = ButtonDefaults.outlinedButtonColors(),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                Spacer(Modifier.height(8.dp))
+                Text("Current: $activeDensity DPI (Physical: $physicalDensity DPI)", style = MaterialTheme.typography.bodyMedium)
+                Text("Lower DPI = More content fits (Desktop mode).\nHigher DPI = Larger text and buttons.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                
+                Button(
+                    onClick = { initiateDpiChange(physicalDensity) },
+                    modifier = Modifier.padding(top = 8.dp),
+                    shape = if (isExpressive) CircleShape else ButtonDefaults.shape,
+                    colors = ButtonDefaults.filledTonalButtonColors()
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Custom DPI")
+                    Text("Reset Density")
                 }
-            }
-            
-            Spacer(Modifier.height(8.dp))
-            Text("Current: $activeDensity DPI (Physical: $physicalDensity DPI)", style = MaterialTheme.typography.bodyMedium)
-            Text("Lower DPI = More content fits (Desktop mode).\nHigher DPI = Larger text and buttons.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            
-            Button(
-                onClick = { initiateDpiChange(physicalDensity) },
-                modifier = Modifier.padding(top = 8.dp),
-                colors = ButtonDefaults.filledTonalButtonColors()
-            ) {
-                Text("Reset Density")
             }
             
             // ─── Display Resolution (WxH) ───
             if (isResolutionOverrideEnabled) {
-                Divider(Modifier.padding(vertical = 16.dp))
-                
-                Text("Display Resolution (Size)", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                
                 var physicalW by remember(selectedIdx) { mutableStateOf(display.width) }
                 var physicalH by remember(selectedIdx) { mutableStateOf(display.height) }
                 
@@ -2208,11 +2679,11 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                         withContext(Dispatchers.Main) {
                             val intent = Intent(context, FreeformOverlayService::class.java).apply {
                                 action = "ACTION_RESOLUTION_CONFIRMATION"
-                                putExtra("displayId", display.id)
-                                putExtra("targetW", targetW)
-                                putExtra("targetH", targetH)
-                                putExtra("originalW", currentActiveW)
-                                putExtra("originalH", currentActiveH)
+                                    putExtra("displayId", display.id)
+                                    putExtra("targetW", targetW)
+                                    putExtra("targetH", targetH)
+                                    putExtra("originalW", currentActiveW)
+                                    putExtra("originalH", currentActiveH)
                             }
                             context.startService(intent)
                             activeW = targetW
@@ -2235,57 +2706,62 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                 
                 val presetPercents = listOf(100, 75, 60, 50)
                 
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    presetPercents.forEach { pct ->
-                        val targetW = (physicalW * pct) / 100
-                        val targetH = (physicalH * pct) / 100
-                        val isSelected = activeW == targetW && activeH == targetH
-                        val label = if (pct == 100) "100% (Physical)" else "$pct% (${targetW}x${targetH})"
+                SectionContainer(isExpressive = isExpressive, title = "Display Resolution (Size)") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        presetPercents.forEach { pct ->
+                            val targetW = (physicalW * pct) / 100
+                            val targetH = (physicalH * pct) / 100
+                            val isSelected = activeW == targetW && activeH == targetH
+                            val label = if (pct == 100) "100% (Physical)" else "$pct% (${targetW}x${targetH})"
+                            
+                            OutlinedButton(
+                                onClick = { initiateResChange(targetW, targetH) },
+                                shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape,
+                                colors = if (isSelected) {
+                                    ButtonDefaults.outlinedButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                } else {
+                                    ButtonDefaults.outlinedButtonColors()
+                                },
+                                border = if (isSelected) {
+                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                }
+                            ) {
+                                Text(label)
+                            }
+                        }
                         
                         OutlinedButton(
-                            onClick = { initiateResChange(targetW, targetH) },
-                            colors = if (isSelected) {
-                                ButtonDefaults.outlinedButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            } else {
-                                ButtonDefaults.outlinedButtonColors()
-                            },
-                            border = if (isSelected) {
-                                androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                            } else {
-                                androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                            }
+                            onClick = { showCustomResDialog = true },
+                            shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape,
+                            colors = ButtonDefaults.outlinedButtonColors(),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
-                            Text(label)
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Custom Size")
                         }
                     }
                     
-                    OutlinedButton(
-                        onClick = { showCustomResDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Current: ${activeW}x${activeH} Pixels (Physical: ${physicalW}x${physicalH} Pixels)", style = MaterialTheme.typography.bodyMedium)
+                    Text("Reducing resolution scales system assets, increasing overlay smoothness, and lowering frame generation latency.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    
+                    Button(
+                        onClick = { initiateResChange(physicalW, physicalH) },
+                        modifier = Modifier.padding(top = 8.dp),
+                        shape = if (isExpressive) CircleShape else ButtonDefaults.shape,
+                        colors = ButtonDefaults.filledTonalButtonColors()
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Custom Size")
+                        Text("Reset Resolution")
                     }
-                }
-                
-                Spacer(Modifier.height(8.dp))
-                Text("Current: ${activeW}x${activeH} Pixels (Physical: ${physicalW}x${physicalH} Pixels)", style = MaterialTheme.typography.bodyMedium)
-                Text("Reducing resolution scales system assets, increasing overlay smoothness, and lowering frame generation latency.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                
-                Button(
-                    onClick = { initiateResChange(physicalW, physicalH) },
-                    modifier = Modifier.padding(top = 8.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors()
-                ) {
-                    Text("Reset Resolution")
                 }
                 
                 if (showCustomResDialog) {
@@ -2375,11 +2851,6 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
             
             // ─── Display Refresh Rate (FPS) ───
             if (isRefreshRateOverrideEnabled) {
-                Divider(Modifier.padding(vertical = 16.dp))
-                
-                Text("Display Refresh Rate (FPS)", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                
                 var activeFps by remember(selectedIdx) { mutableStateOf(ThemeManager.getRefreshRate(context, display.id, 60)) }
                 var supportedModes by remember(selectedIdx) { mutableStateOf<List<android.view.Display.Mode>>(emptyList()) }
                 
@@ -2425,46 +2896,49 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     supportedModes.map { it.refreshRate.toInt() }.distinct().sorted()
                 }
                 
-                if (uniqueFpss.isEmpty()) {
-                    Text("Standard refresh rate controls not supported on this display context.")
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        uniqueFpss.forEach { fps ->
-                            val isSelected = activeFps == fps
-                            val label = "$fps Hz"
-                            
-                            OutlinedButton(
-                                onClick = {
-                                    val targetMode = supportedModes.find { it.refreshRate.toInt() == fps }
-                                    if (targetMode != null) {
-                                        triggerRefreshChange(targetMode.modeId, fps)
+                SectionContainer(isExpressive = isExpressive, title = "Display Refresh Rate (FPS)") {
+                    if (uniqueFpss.isEmpty()) {
+                        Text("Standard refresh rate controls not supported on this display context.")
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uniqueFpss.forEach { fps ->
+                                val isSelected = activeFps == fps
+                                val label = "$fps Hz"
+                                
+                                OutlinedButton(
+                                    onClick = {
+                                        val targetMode = supportedModes.find { it.refreshRate.toInt() == fps }
+                                        if (targetMode != null) {
+                                            triggerRefreshChange(targetMode.modeId, fps)
+                                        }
+                                    },
+                                    shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape,
+                                    colors = if (isSelected) {
+                                        ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    } else {
+                                        ButtonDefaults.outlinedButtonColors()
+                                    },
+                                    border = if (isSelected) {
+                                        androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                    } else {
+                                        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                                     }
-                                },
-                                colors = if (isSelected) {
-                                    ButtonDefaults.outlinedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                } else {
-                                    ButtonDefaults.outlinedButtonColors()
-                                },
-                                border = if (isSelected) {
-                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                } else {
-                                    androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                ) {
+                                    Text(label)
                                 }
-                            ) {
-                                Text(label)
                             }
                         }
+                        
+                        Spacer(Modifier.height(8.dp))
+                        Text("Current: $activeFps Hz", style = MaterialTheme.typography.bodyMedium)
+                        Text("Higher refresh rates increase UI responsiveness and reduce animation stuttering. Supported hardware modes are loaded directly from your display.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
-                    
-                    Spacer(Modifier.height(8.dp))
-                    Text("Current: $activeFps Hz", style = MaterialTheme.typography.bodyMedium)
-                    Text("Higher refresh rates increase UI responsiveness and reduce animation stuttering. Supported hardware modes are loaded directly from your display.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
             }
             
@@ -2581,14 +3055,23 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     var isBubbleModeEnabled by remember { mutableStateOf(prefs.getBoolean("bubble_mode", false)) }
     var isTabletModeEnabled by remember { mutableStateOf(ThemeManager.useTabletMode(context)) }
     
+    val isExpressive = ThemeManager.getAppUiStyle(context) == 1
+    
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("App Settings", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "App Settings", 
+            style = if (isExpressive) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text("Configure global settings, theme attributes, and advanced system features.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        
         Spacer(Modifier.height(16.dp))
 
-        Text("Appearance", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        SectionContainer(isExpressive = isExpressive, title = "Appearance") {
             var themeMode by remember { mutableStateOf(ThemeManager.getThemeMode(context)) }
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Text("Theme Mode", style = MaterialTheme.typography.titleMedium)
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
@@ -2598,17 +3081,16 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                                 themeMode = index
                                 ThemeManager.setThemeMode(context, index) 
                             }, 
-                            label = { Text(label) }
+                            label = { Text(label) },
+                            shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
                         )
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-        Text("System Behavior", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
+        SectionContainer(isExpressive = isExpressive, title = "System Behavior") {
+            Column {
                 Text("Launch Screen Preference", style = MaterialTheme.typography.titleMedium)
                 listOf("Phone Screen", "Secondary Screen", "Automatic").forEachIndexed { index, label ->
                     Row(Modifier.fillMaxWidth().clickable { 
@@ -2623,7 +3105,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     }
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 var workspaceAutoSnap by remember { mutableStateOf(ThemeManager.getWorkspaceAutoSnap(context)) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2673,7 +3158,7 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                                     onValueChangeFinished = {
                                         FreeformOverlayService.hideSensitivityGuide()
                                     },
-                                    valueRange = 20f..150f,
+                                    valueRange = 1f..250f,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
@@ -2695,10 +3180,8 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-        Text("Experimental (May be unstable)", style = MaterialTheme.typography.titleMedium, color = Color.Red)
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
+        SectionContainer(isExpressive = isExpressive, title = "Experimental (May be unstable)") {
+            Column {
                 // Tablet Mode Toggle
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -2711,7 +3194,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     })
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 var usePillForSnapped by remember { mutableStateOf(ThemeManager.usePillForSnapped(context)) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2725,7 +3211,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     })
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 var realtimeResize by remember { mutableStateOf(ThemeManager.realtimeResize(context)) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2739,7 +3228,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     })
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 var instantResizeNoAnim by remember { mutableStateOf(ThemeManager.instantResizeNoAnim(context)) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2753,7 +3245,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     })
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 // Bubble Mode Toggle
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2767,7 +3262,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     })
                 }
                 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
                 
                 // Paired Group Resizing Toggle
                 var isPairedResizingGlobalEnabled by remember { 
@@ -2786,9 +3284,13 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 
                 if (isPairedResizingGlobalEnabled) {
                     Spacer(Modifier.height(12.dp))
-                    ElevatedCard(
+                    Card(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                        ),
+                        border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -2813,7 +3315,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
 
                 var isTiledSwapGlobalEnabled by remember { 
                     mutableStateOf(ThemeManager.getTiledSwapGlobal(context)) 
@@ -2831,9 +3336,13 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 
                 if (isTiledSwapGlobalEnabled) {
                     Spacer(Modifier.height(12.dp))
-                    ElevatedCard(
+                    Card(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                        ),
+                        border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -2858,7 +3367,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
 
                 var isVisualHandlesGlobalEnabled by remember {
                     mutableStateOf(ThemeManager.getVisualCornerHandlesGlobal(context))
@@ -2876,9 +3388,13 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 
                 if (isVisualHandlesGlobalEnabled) {
                     Spacer(Modifier.height(12.dp))
-                    ElevatedCard(
+                    Card(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                        ),
+                        border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -2903,7 +3419,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
 
                 var hideOnLauncherActive by remember { mutableStateOf(ThemeManager.getHideOnLauncherActive(context)) }
                 var selectedLauncherPackage by remember { mutableStateOf(ThemeManager.getDockLauncherPackage(context)) }
@@ -2921,9 +3440,13 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 
                 if (hideOnLauncherActive) {
                     Spacer(Modifier.height(12.dp))
-                    ElevatedCard(
+                    Card(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                        ),
+                        border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text("Select Active Launcher / Dock", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -2989,7 +3512,8 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                             Spacer(Modifier.height(8.dp))
                             Button(
                                 onClick = { showCustomLauncherPicker = true },
-                                modifier = Modifier.align(Alignment.End)
+                                modifier = Modifier.align(Alignment.End),
+                                shape = if (isExpressive) CircleShape else ButtonDefaults.shape
                             ) {
                                 Text("Search other apps...")
                             }
@@ -3050,7 +3574,10 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                                         }
                                     },
                                     confirmButton = {
-                                        TextButton(onClick = { showCustomLauncherPicker = false }) {
+                                        TextButton(
+                                            onClick = { showCustomLauncherPicker = false },
+                                            shape = if (isExpressive) CircleShape else ButtonDefaults.textShape
+                                        ) {
                                             Text("Cancel")
                                         }
                                     }
@@ -3067,6 +3594,54 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Compatibility Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+data class DeviceInfoSpec(
+    val name: String,
+    val ram: String,
+    val cpu: String,
+    val storage: String
+)
+
+private fun getDeviceInfoSpec(context: Context): DeviceInfoSpec {
+    val manufacturer = Build.MANUFACTURER
+    val model = Build.MODEL
+    val deviceName = if (model.startsWith(manufacturer, ignoreCase = true)) {
+        model
+    } else {
+        "${manufacturer.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.US) else it.toString() }} $model"
+    }
+
+    var ramText = "Unknown RAM"
+    try {
+        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val memInfo = android.app.ActivityManager.MemoryInfo()
+        actManager.getMemoryInfo(memInfo)
+        val totalRamGb = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+        ramText = String.format(java.util.Locale.US, "%.1f GB RAM", totalRamGb)
+    } catch (e: Exception) {
+        Log.e("DeviceInfo", "Error getting RAM info", e)
+    }
+
+    val cpuAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: "ARM64"
+    val cpuCores = Runtime.getRuntime().availableProcessors()
+    val cpuText = "$cpuCores Cores @ $cpuAbi"
+
+    var storageText = "Unknown Storage"
+    try {
+        val path = android.os.Environment.getDataDirectory()
+        val stat = android.os.StatFs(path.path)
+        val blockSize = stat.blockSizeLong
+        val totalBlocks = stat.blockCountLong
+        val availableBlocks = stat.availableBlocksLong
+        val totalStorageGb = (totalBlocks * blockSize) / (1024.0 * 1024.0 * 1024.0)
+        val availableStorageGb = (availableBlocks * blockSize) / (1024.0 * 1024.0 * 1024.0)
+        storageText = String.format(java.util.Locale.US, "%.1f GB free of %.1f GB", availableStorageGb, totalStorageGb)
+    } catch (e: Exception) {
+        Log.e("DeviceInfo", "Error getting storage info", e)
+    }
+
+    return DeviceInfoSpec(deviceName, ramText, cpuText, storageText)
+}
 
 @Composable
 fun CompatibilityScreen(padding: PaddingValues) {
@@ -3099,6 +3674,8 @@ fun CompatibilityScreen(padding: PaddingValues) {
         else         -> "Android (API $sdkInt)"
     }
 
+    val isExpressive = ThemeManager.getAppUiStyle(context) == 1
+
     Column(
         modifier = Modifier
             .padding(padding)
@@ -3108,7 +3685,7 @@ fun CompatibilityScreen(padding: PaddingValues) {
     ) {
         Text(
             "Compatibility",
-            style = MaterialTheme.typography.headlineMedium,
+            style = if (isExpressive) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.primary
         )
@@ -3121,35 +3698,78 @@ fun CompatibilityScreen(padding: PaddingValues) {
         Spacer(Modifier.height(12.dp))
 
         // Device version badge
+        val deviceInfo = remember { getDeviceInfoSpec(context) }
+        
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (isExpressive) 0.15f else 0.7f)
             ),
-            shape = MaterialTheme.shapes.large
+            shape = if (isExpressive) RoundedCornerShape(28.dp) else MaterialTheme.shapes.extraLarge,
+            border = if (isExpressive) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)) else null
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    Icons.Default.PhoneAndroid,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.PhoneAndroid,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Column {
+                        Text(
+                            deviceInfo.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            "$versionName (Android ${Build.VERSION.RELEASE}) • API $sdkInt",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Memory, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Memory", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
+                        Text(deviceInfo.ram, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.SettingsSuggest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Processor", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
+                        Text(deviceInfo.cpu, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
                 Column {
-                    Text(
-                        "Your Device",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        "$versionName  ·  API $sdkInt",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Storage, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Internal Storage", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Text(deviceInfo.storage, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -3596,5 +4216,956 @@ fun PillPreviewCard(shrinkStyle: Int) {
                 color = Color.Gray
             )
         }
+    }
+}
+
+fun getAbsolutePathFromDocumentTreeUri(context: Context, uri: Uri): String? {
+    try {
+        val documentId = android.provider.DocumentsContract.getTreeDocumentId(uri) ?: return null
+        val parts = documentId.split(":")
+        if (parts.size >= 2) {
+            val type = parts[0]
+            val path = parts[1]
+            if ("primary".equals(type, ignoreCase = true)) {
+                return android.os.Environment.getExternalStorageDirectory().absolutePath + "/" + path
+            } else {
+                return "/storage/" + type + "/" + path
+            }
+        } else if (parts.size == 1) {
+            if ("primary".equals(parts[0], ignoreCase = true)) {
+                return android.os.Environment.getExternalStorageDirectory().absolutePath
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("MainActivity", "Failed to parse document tree URI to path", e)
+    }
+    return null
+}
+
+data class CaptureMedia(
+    val file: File? = null,
+    val uri: Uri? = null,
+    val name: String,
+    val isVideo: Boolean,
+    val lastModified: Long,
+    val size: Long
+)
+
+@Composable
+fun CaptureScreen(
+    padding: PaddingValues,
+    availableDisplays: List<DisplayInfo>
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    val prefs = remember { context.getSharedPreferences("freeform_capture_settings", Context.MODE_PRIVATE) }
+    
+    val defaultSavePath = remember { 
+        ScreenRecordManager.getDefaultSaveDirectory(context).absolutePath
+    }
+    
+    var selectedDisplayId by remember { mutableStateOf(0) }
+    var resolution by remember { mutableStateOf(prefs.getString("pref_screenrecord_resolution", "Native") ?: "Native") }
+    var bitrate by remember { mutableStateOf(prefs.getInt("pref_screenrecord_bitrate", 8)) }
+    var recordMic by remember { mutableStateOf(prefs.getBoolean("pref_screenrecord_mic", false)) }
+    var refreshGalleryKey by remember { mutableStateOf(0) }
+    val saveUriStr = remember(refreshGalleryKey) { prefs.getString("pref_screenrecord_save_uri", "") ?: "" }
+    
+    var customSaveDir by remember { mutableStateOf(prefs.getString("pref_screenrecord_save_dir", defaultSavePath) ?: defaultSavePath) }
+    var capturePreset by remember { mutableStateOf(prefs.getString("pref_capture_preset", "high") ?: "high") }
+    var controllerStyle by remember { mutableStateOf(prefs.getString("pref_controller_style", "obsidian") ?: "obsidian") }
+    
+    // Keyboard shortcuts mapping
+    var recMod by remember { mutableStateOf(prefs.getString("pref_shortcut_record_mod", "Ctrl+Alt") ?: "Ctrl+Alt") }
+    var recKey by remember { mutableStateOf(prefs.getString("pref_shortcut_record_key", "R") ?: "R") }
+    
+    var capMod by remember { mutableStateOf(prefs.getString("pref_shortcut_screenshot_mod", "Ctrl+Alt") ?: "Ctrl+Alt") }
+    var capKey by remember { mutableStateOf(prefs.getString("pref_shortcut_screenshot_key", "S") ?: "S") }
+    
+    var cropMod by remember { mutableStateOf(prefs.getString("pref_shortcut_crop_mod", "Ctrl+Alt") ?: "Ctrl+Alt") }
+    var cropKey by remember { mutableStateOf(prefs.getString("pref_shortcut_crop_key", "C") ?: "C") }
+    
+    var isControllerActive by remember { mutableStateOf(false) }
+    var galleryFiles by remember { mutableStateOf<List<CaptureMedia>>(emptyList()) }
+    
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val intent = Intent(context, FreeformOverlayService::class.java).apply {
+                action = "ACTION_START_CAPTURE_CONTROL"
+                putExtra("displayId", selectedDisplayId)
+            }
+            context.startService(intent)
+            isControllerActive = true
+        } else {
+            Toast.makeText(context, "Camera permission is required for Facecam features.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    // Notification permission request on Android 13+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(context, "Notifications are disabled. You will not receive capture alerts.", Toast.LENGTH_SHORT).show()
+            }
+        }
+        LaunchedEffect(Unit) {
+            val permission = "android.permission.POST_NOTIFICATIONS"
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(permission)
+            }
+        }
+    }
+
+    val directoryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val contentResolver = context.contentResolver
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+                
+                prefs.edit().putString("pref_screenrecord_save_uri", uri.toString()).apply()
+                
+                val rawPath = getAbsolutePathFromDocumentTreeUri(context, uri) ?: defaultSavePath
+                customSaveDir = rawPath
+                prefs.edit().putString("pref_screenrecord_save_dir", rawPath).apply()
+                refreshGalleryKey++
+            } catch (e: Exception) {
+                Log.e("CaptureScreen", "Failed to persist folder URI", e)
+                Toast.makeText(context, "Error selecting folder: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    LaunchedEffect(customSaveDir, saveUriStr, refreshGalleryKey) {
+        withContext(Dispatchers.IO) {
+            val list = mutableListOf<CaptureMedia>()
+            if (saveUriStr.isNotEmpty()) {
+                try {
+                    val treeUri = Uri.parse(saveUriStr)
+                    val treeDocumentId = android.provider.DocumentsContract.getTreeDocumentId(treeUri)
+                    val childrenUri = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocumentId)
+                    val projection = arrayOf(
+                        android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                        android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                        android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+                        android.provider.DocumentsContract.Document.COLUMN_SIZE,
+                        android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE
+                    )
+                    context.contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+                        val idIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                        val nameIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                        val modIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                        val sizeIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_SIZE)
+                        val mimeIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE)
+                        
+                        while (cursor.moveToNext()) {
+                            val docId = cursor.getString(idIndex)
+                            val name = cursor.getString(nameIndex) ?: ""
+                            val lastMod = if (modIndex != -1) cursor.getLong(modIndex) else 0L
+                            val size = if (sizeIndex != -1) cursor.getLong(sizeIndex) else 0L
+                            val mime = cursor.getString(mimeIndex) ?: ""
+                            
+                            if (name.endsWith(".mp4") || name.endsWith(".png") || name.endsWith(".jpg") || 
+                                mime.startsWith("video/") || mime.startsWith("image/")) {
+                                
+                                val docUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                list.add(CaptureMedia(
+                                    uri = docUri,
+                                    name = name,
+                                    isVideo = name.endsWith(".mp4") || mime.startsWith("video/"),
+                                    lastModified = lastMod,
+                                    size = size
+                                ))
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("CaptureScreen", "Error query SAF documents", e)
+                }
+            }
+            
+            // If SAF list is empty, try raw file access (only works for app-private or if granted MANAGE_EXTERNAL_STORAGE)
+            if (list.isEmpty()) {
+                val dir = File(customSaveDir)
+                if (dir.exists()) {
+                    dir.listFiles { _, name -> 
+                        name.endsWith(".mp4") || name.endsWith(".png") || name.endsWith(".jpg")
+                    }?.forEach { file ->
+                        list.add(CaptureMedia(
+                            file = file,
+                            name = file.name,
+                            isVideo = file.name.endsWith(".mp4"),
+                            lastModified = file.lastModified(),
+                            size = file.length()
+                        ))
+                    }
+                }
+            }
+            galleryFiles = list.sortedByDescending { it.lastModified }
+        }
+    }
+    
+    val isExpressive = ThemeManager.getAppUiStyle(context) == 1
+    val cardShape = if (isExpressive) RoundedCornerShape(28.dp) else MaterialTheme.shapes.extraLarge
+    val cardColors = if (isExpressive) {
+        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f))
+    } else {
+        CardDefaults.elevatedCardColors()
+    }
+    val cardBorder = if (isExpressive) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else null
+
+    Column(
+        modifier = Modifier
+            .padding(padding)
+            .padding(24.dp)
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            "Capture & Broadcast", 
+            style = if (isExpressive) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displaySmall, 
+            fontWeight = FontWeight.ExtraBold, 
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text("Record Desktop environments, crop screenshot regions, and manage captures.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        
+        Spacer(Modifier.height(24.dp))
+        
+        // Card 1: Monitor / Display Selector
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            shape = cardShape,
+            colors = cardColors,
+            border = cardBorder
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Target Display Physical Monitor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Select which physical display monitor you want to capture.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(16.dp))
+                
+                availableDisplays.forEach { d ->
+                    val isSelected = selectedDisplayId == d.id
+                    val borderAccent = if (isSelected) MaterialTheme.colorScheme.primary else if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent
+                    
+                    OutlinedCard(
+                        onClick = { selectedDisplayId = d.id },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderAccent),
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else MaterialTheme.shapes.medium
+                    ) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Tv, null, tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray, modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(d.name, fontWeight = FontWeight.Bold)
+                                Text("ID: ${d.id} • Resolution: ${d.width}x${d.height} • Active DPI: ${d.activeDpi}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            if (context.checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                            } else {
+                                val intent = Intent(context, FreeformOverlayService::class.java).apply {
+                                    action = "ACTION_START_CAPTURE_CONTROL"
+                                    putExtra("displayId", selectedDisplayId)
+                                }
+                                context.startService(intent)
+                                isControllerActive = true
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.PlayArrow, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Show Controller")
+                    }
+                    
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(context, FreeformOverlayService::class.java).apply {
+                                action = "ACTION_STOP_CAPTURE_CONTROL"
+                            }
+                            context.startService(intent)
+                            isControllerActive = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Stop, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Hide Controller")
+                    }
+                }
+                
+            }
+        }
+        
+        // Card 2: Capture Parameters & Save Settings
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            shape = cardShape,
+            colors = cardColors,
+            border = cardBorder
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Video Quality Preset", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Choose between optimized presets or unlock advanced custom parameters.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(12.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                    listOf(
+                        "high" to "High (Native)",
+                        "medium" to "Medium (1080p)",
+                        "low_size" to "Low Size (720p)",
+                        "advanced" to "Custom (Adv)"
+                    ).forEach { (presetVal, label) ->
+                        val isSel = capturePreset == presetVal
+                        FilterChip(
+                            selected = isSel,
+                            onClick = {
+                                capturePreset = presetVal
+                                prefs.edit().putString("pref_capture_preset", presetVal).apply()
+                            },
+                            label = { Text(label) },
+                            shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
+                        )
+                    }
+                }
+                
+                if (capturePreset == "advanced") {
+                    Spacer(Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Advanced Capture Parameters", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(12.dp))
+                            
+                            // Resolution Selector
+                            Text("Record Resolution Override:", style = MaterialTheme.typography.labelMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                listOf("Native", "1080p", "720p", "480p").forEach { r ->
+                                    val isSel = resolution == r
+                                    FilterChip(
+                                        selected = isSel,
+                                        onClick = {
+                                            resolution = r
+                                            prefs.edit().putString("pref_screenrecord_resolution", r).apply()
+                                        },
+                                        label = { Text(r) },
+                                        shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
+                                    )
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(12.dp))
+                            
+                            // Bitrate slider
+                            Text("Video Target Bitrate: $bitrate Mbps", style = MaterialTheme.typography.labelMedium)
+                            Slider(
+                                value = bitrate.toFloat(),
+                                onValueChange = {
+                                    bitrate = it.toInt()
+                                    prefs.edit().putInt("pref_screenrecord_bitrate", it.toInt()).apply()
+                                },
+                                valueRange = 1f..24f,
+                                steps = 23
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                // Mic voiceover
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Microphone Audio Sync", fontWeight = FontWeight.Bold)
+                        Text("Record microphone voiceover inside a synced M4A file alongside.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = recordMic,
+                        onCheckedChange = {
+                            recordMic = it
+                            prefs.edit().putBoolean("pref_screenrecord_mic", it).apply()
+                        }
+                    )
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                Divider(color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color)
+                Spacer(Modifier.height(16.dp))
+                
+                // Save path customizer
+                Text("Storage Destination Directory:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = customSaveDir,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        supportingText = {
+                            if (saveUriStr.isNotEmpty()) {
+                                Text("Selected via Android Folder Picker", color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Text("Using Default Package-scoped Directory", color = Color.Gray)
+                            }
+                        }
+                    )
+                    
+                    Button(
+                        onClick = { directoryPickerLauncher.launch(null) },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        shape = if (isExpressive) CircleShape else ButtonDefaults.shape
+                    ) {
+                        Icon(Icons.Default.FolderOpen, "Choose Folder")
+                        Spacer(Modifier.width(4.dp))
+                        Text("Choose")
+                    }
+                    
+                    IconButton(onClick = {
+                        customSaveDir = defaultSavePath
+                        prefs.edit().putString("pref_screenrecord_save_dir", defaultSavePath).apply()
+                        prefs.edit().putString("pref_screenrecord_save_uri", "").apply()
+                        refreshGalleryKey++
+                    }) {
+                        Icon(Icons.Default.Refresh, "Reset")
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                Divider(color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color)
+                Spacer(Modifier.height(16.dp))
+                
+                // Precise Capture ID Configuration System
+                var captureIdMode by remember { mutableStateOf(prefs.getString("pref_capture_id_mode", "auto") ?: "auto") }
+                var physicalOverrideId by remember { mutableStateOf(prefs.getString("pref_physical_display_id_override", "") ?: "") }
+                
+                var detectedPhysicalId by remember(selectedDisplayId) { mutableStateOf<String?>(null) }
+                LaunchedEffect(selectedDisplayId) {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val res = ScreenRecordManager.getPhysicalDisplayId(context, selectedDisplayId)
+                            detectedPhysicalId = res?.removePrefix("local:")
+                        } catch (e: Exception) {
+                            detectedPhysicalId = null
+                        }
+                    }
+                }
+                
+                Text("Display Capture ID Mode", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("Control whether capture commands should use automatic resolution, raw sequential logical display IDs, or 64-bit physical IDs.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        "auto" to "Auto-Resolve",
+                        "logical" to "Logical ID Only",
+                        "physical" to "Physical ID Only"
+                    ).forEach { (modeVal, label) ->
+                        val isSelected = captureIdMode == modeVal
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                captureIdMode = modeVal
+                                prefs.edit().putString("pref_capture_id_mode", modeVal).apply()
+                            },
+                            label = { Text(label) },
+                            shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                // Show real-time diagnostics
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isExpressive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("Active Target Display Diagnostics", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(4.dp))
+                        Text("• Selected Logical Display ID: $selectedDisplayId", style = MaterialTheme.typography.bodySmall)
+                        Text("• Auto-Detected Physical Display ID: ${detectedPhysicalId ?: "None (Primary Display or resolution failed)"}", style = MaterialTheme.typography.bodySmall)
+                        
+                        val activeCommandId = when (captureIdMode) {
+                            "logical" -> selectedDisplayId.toString()
+                            "physical" -> if (physicalOverrideId.isNotEmpty()) physicalOverrideId else (detectedPhysicalId ?: selectedDisplayId.toString())
+                            else -> if (physicalOverrideId.isNotEmpty()) physicalOverrideId else (detectedPhysicalId ?: selectedDisplayId.toString())
+                        }
+                        Text("• Active ID passed to screencap/screenrecord: $activeCommandId", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Text("Physical Display ID Override", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("Enter your monitor's 64-bit physical display ID (e.g. 4621070409437748996) if auto-detection fails or captures the incorrect screen.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = physicalOverrideId,
+                    onValueChange = {
+                        physicalOverrideId = it
+                        prefs.edit().putString("pref_physical_display_id_override", it.trim()).apply()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Enter 64-bit physical display ID (e.g. 4621070409437748996)") },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // Sandbox Validation Testing
+                var testScreenshotFile by remember { mutableStateOf<File?>(null) }
+                var testScreenshotBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                var isTestCapturing by remember { mutableStateOf(false) }
+                var showTestConfirmDialog by remember { mutableStateOf(false) }
+                
+                LaunchedEffect(testScreenshotFile) {
+                    val file = testScreenshotFile
+                    if (file != null && file.exists() && file.length() > 0) {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }
+                                val bmp = android.graphics.BitmapFactory.decodeFile(file.absolutePath, opts)
+                                withContext(Dispatchers.Main) {
+                                    testScreenshotBitmap = bmp
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Failed decoding test screenshot bitmap", e)
+                                withContext(Dispatchers.Main) {
+                                    testScreenshotBitmap = null
+                                }
+                            }
+                        }
+                    } else {
+                        testScreenshotBitmap = null
+                    }
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            isTestCapturing = true
+                            testScreenshotFile = null
+                            testScreenshotBitmap = null
+                            ScreenRecordManager.takeScreenshot(context, selectedDisplayId) { file ->
+                                isTestCapturing = false
+                                testScreenshotFile = file
+                                showTestConfirmDialog = true
+                            }
+                        },
+                        enabled = !isTestCapturing,
+                        modifier = Modifier.weight(1f),
+                        shape = if (isExpressive) CircleShape else ButtonDefaults.shape
+                    ) {
+                        if (isTestCapturing) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Capturing Test...")
+                        } else {
+                            Icon(Icons.Default.CameraAlt, "Test Screenshot")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Test Capture & Validate Screen")
+                        }
+                    }
+                }
+                
+                if (showTestConfirmDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showTestConfirmDialog = false },
+                        title = { Text("Verify Display Capture Output") },
+                        text = {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                val bitmap = testScreenshotBitmap
+                                if (bitmap != null) {
+                                    Text("Please check the captured screen preview below. Does it display your external monitor or fell back to your phone display?", style = MaterialTheme.typography.bodySmall)
+                                    Spacer(Modifier.height(12.dp))
+                                    Card(
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, Color.LightGray)
+                                    ) {
+                                        Image(
+                                            bitmap = bitmap.asImageBitmap(),
+                                            contentDescription = "Test Capture Preview",
+                                            modifier = Modifier.fillMaxWidth().height(180.dp).padding(4.dp)
+                                        )
+                                    }
+                                } else {
+                                    if (isTestCapturing || testScreenshotFile != null) {
+                                        Text("Decoding preview image...", color = MaterialTheme.colorScheme.primary)
+                                    } else {
+                                        Text("Screenshot failed! No file was created or the file size is 0 bytes.\n\nThis typically means that the display ID passed is invalid, or the system rejected the screencap option.", color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = { showTestConfirmDialog = false },
+                                shape = if (isExpressive) CircleShape else ButtonDefaults.shape
+                            ) {
+                                Text("Looks Correct! ✅")
+                            }
+                        },
+                        dismissButton = {
+                            OutlinedButton(
+                                onClick = {
+                                    prefs.edit().putString("pref_capture_id_mode", "physical").apply()
+                                    captureIdMode = "physical"
+                                    showTestConfirmDialog = false
+                                    Toast.makeText(context, "Switched to 'Physical ID Only'. Please make sure your 64-bit ID is entered above.", Toast.LENGTH_LONG).show()
+                                },
+                                shape = if (isExpressive) CircleShape else ButtonDefaults.outlinedShape
+                            ) {
+                                Text("Incorrect (Phone Display) ❌", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+        
+        // Card 2.5: Floating Controller Visual Theme Style
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            shape = cardShape,
+            colors = cardColors,
+            border = cardBorder
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Floating Controller Visual Style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Choose a theme layout for the floating screen record controller pill overlay.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(16.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                    listOf(
+                        "obsidian" to "Obsidian (Classic)",
+                        "liquid_glass" to "Liquid Glass (Premium)",
+                        "solid_minimal" to "Minimal Solid (CPU Save)"
+                    ).forEach { (styleVal, label) ->
+                        val isSel = controllerStyle == styleVal
+                        FilterChip(
+                            selected = isSel,
+                            onClick = {
+                                controllerStyle = styleVal
+                                prefs.edit().putString("pref_controller_style", styleVal).apply()
+                            },
+                            label = { Text(label) },
+                            shape = if (isExpressive) CircleShape else FilterChipDefaults.shape
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(8.dp))
+                val description = when (controllerStyle) {
+                    "liquid_glass" -> "Liquid Glass: Dynamic 3D glossy caustics, dual refracting light outlines, and deep concave button shadows."
+                    "solid_minimal" -> "Minimal Solid: A flat solid Material design color scheme. Highly CPU efficient and clean, optimal for low-end devices."
+                    else -> "Obsidian Glass: Classic deep obsidian semi-transparent layout with soft violet accent highlights."
+                }
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        
+        // Card 3: Keyboard Shortcuts Config
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            shape = cardShape,
+            colors = cardColors,
+            border = cardBorder
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Hardware Keyboard Shortcuts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Configure global hotkeys inside freeform layouts or the main dashboard.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(16.dp))
+                
+                ShortcutRow("Toggle Screen Recording", recMod, recKey, { m -> recMod = m; prefs.edit().putString("pref_shortcut_record_mod", m).apply() }, { k -> recKey = k; prefs.edit().putString("pref_shortcut_record_key", k).apply() })
+                Spacer(Modifier.height(12.dp))
+                ShortcutRow("Capture Full Screenshot", capMod, capKey, { m -> capMod = m; prefs.edit().putString("pref_shortcut_screenshot_mod", m).apply() }, { k -> capKey = k; prefs.edit().putString("pref_shortcut_screenshot_key", k).apply() })
+                Spacer(Modifier.height(12.dp))
+                ShortcutRow("Trigger Regional Crop", cropMod, cropKey, { m -> cropMod = m; prefs.edit().putString("pref_shortcut_crop_mod", m).apply() }, { k -> cropKey = k; prefs.edit().putString("pref_shortcut_crop_key", k).apply() })
+            }
+        }
+        
+        // Card 4: Media bento grid gallery
+        Text("Media Gallery", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 12.dp))
+        
+        if (galleryFiles.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth().height(160.dp),
+                shape = cardShape,
+                colors = cardColors,
+                border = cardBorder
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Camera, null, tint = Color.Gray, modifier = Modifier.size(36.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Gallery is Empty", fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("Your recordings and cropped screens will show up here.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                galleryFiles.chunked(2).forEach { rowFiles ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        rowFiles.forEach { item ->
+                            Card(
+                                modifier = Modifier.weight(1f).height(180.dp),
+                                shape = if (isExpressive) RoundedCornerShape(20.dp) else MaterialTheme.shapes.large,
+                                border = if (isExpressive) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else null,
+                                colors = if (isExpressive) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)) else CardDefaults.cardColors()
+                            ) {
+                                Box(Modifier.fillMaxSize()) {
+                                    ThumbnailImage(item)
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .background(Color.Black.copy(alpha = 0.65f))
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(item.name.substringAfterLast("_"), color = Color.White, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                                val sizeMb = item.size / (1024f * 1024f)
+                                                Text(String.format("%.2f MB", sizeMb), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                            }
+                                            
+                                            Row {
+                                                IconButton(
+                                                    onClick = { playOrViewMedia(context, item) },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(Icons.Default.PlayArrow, null, tint = Color.Green, modifier = Modifier.size(16.dp))
+                                                }
+                                                Spacer(Modifier.width(8.dp))
+                                                IconButton(
+                                                    onClick = { shareMedia(context, item) },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                                }
+                                                Spacer(Modifier.width(8.dp))
+                                                IconButton(
+                                                    onClick = {
+                                                        scope.launch(Dispatchers.IO) {
+                                                            try {
+                                                                if (item.file != null) {
+                                                                    ShellExecutor.executeCommand("rm \"${item.file.absolutePath}\"")
+                                                                    if (item.name.endsWith(".mp4")) {
+                                                                        val audioPath = item.file.absolutePath.replace(".mp4", ".m4a").replace("record_", "voiceover_")
+                                                                        ShellExecutor.executeCommand("rm \"$audioPath\"")
+                                                                    }
+                                                                } else if (item.uri != null) {
+                                                                    android.provider.DocumentsContract.deleteDocument(context.contentResolver, item.uri)
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                Log.e("MainActivity", "Failed to delete document", e)
+                                                            }
+                                                            withContext(Dispatchers.Main) {
+                                                                refreshGalleryKey++
+                                                            }
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Delete, null, tint = Color.Red, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (rowFiles.size == 1) {
+                            Box(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShortcutRow(
+    label: String,
+    modifierStr: String,
+    keyChar: String,
+    onModifierChange: (String) -> Unit,
+    onKeyChange: (String) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        
+        var showModMenu by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick = { showModMenu = true }, shape = CircleShape) {
+                Text(modifierStr)
+            }
+            DropdownMenu(expanded = showModMenu, onDismissRequest = { showModMenu = false }) {
+                listOf("Ctrl+Alt", "Ctrl+Shift", "Alt+Shift").forEach { m ->
+                    DropdownMenuItem(text = { Text(m) }, onClick = {
+                        onModifierChange(m)
+                        showModMenu = false
+                    })
+                }
+            }
+        }
+        
+        Spacer(Modifier.width(8.dp))
+        
+        var showKeyMenu by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick = { showKeyMenu = true }, shape = CircleShape) {
+                Text(keyChar)
+            }
+            DropdownMenu(expanded = showKeyMenu, onDismissRequest = { showKeyMenu = false }) {
+                listOf("R", "S", "C", "A", "P", "F").forEach { k ->
+                    DropdownMenuItem(text = { Text(k) }, onClick = {
+                        onKeyChange(k)
+                        showKeyMenu = false
+                    })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ThumbnailImage(item: CaptureMedia) {
+    var bitmap by remember(item) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val context = LocalContext.current
+    LaunchedEffect(item) {
+        withContext(Dispatchers.IO) {
+            try {
+                if (item.isVideo) {
+                    if (item.file != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            bitmap = ThumbnailUtils.createVideoThumbnail(item.file, Size(512, 384), null)
+                        } else {
+                            bitmap = ThumbnailUtils.createVideoThumbnail(item.file.absolutePath, MediaStore.Video.Thumbnails.MINI_KIND)
+                        }
+                    } else if (item.uri != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            bitmap = context.contentResolver.loadThumbnail(item.uri, Size(512, 384), null)
+                        }
+                    }
+                } else {
+                    if (item.file != null) {
+                        val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+                        bitmap = android.graphics.BitmapFactory.decodeFile(item.file.absolutePath, opts)
+                    } else if (item.uri != null) {
+                        context.contentResolver.openInputStream(item.uri)?.use { 
+                            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+                            bitmap = android.graphics.BitmapFactory.decodeStream(it, null, opts)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Thumbnail generation failed", e)
+            }
+        }
+    }
+    
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(), 
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        )
+    } else {
+        Box(Modifier.fillMaxSize().background(Color.DarkGray), contentAlignment = Alignment.Center) {
+            Icon(if (item.isVideo) Icons.Default.Videocam else Icons.Default.Image, null, tint = Color.LightGray, modifier = Modifier.size(36.dp))
+        }
+    }
+}
+
+private fun playOrViewMedia(context: Context, item: CaptureMedia) {
+    try {
+        val uri = if (item.uri != null) {
+            item.uri
+        } else if (item.file != null) {
+            val authority = "${context.packageName}.fileprovider"
+            androidx.core.content.FileProvider.getUriForFile(context, authority, item.file)
+        } else return
+        
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, if (item.isVideo) "video/mp4" else "image/png")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            clipData = android.content.ClipData.newRawUri(null, uri)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun shareMedia(context: Context, item: CaptureMedia) {
+    try {
+        val uri = if (item.uri != null) {
+            item.uri
+        } else if (item.file != null) {
+            val authority = "${context.packageName}.fileprovider"
+            androidx.core.content.FileProvider.getUriForFile(context, authority, item.file)
+        } else return
+        
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = if (item.isVideo) "video/mp4" else "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = android.content.ClipData.newRawUri(null, uri)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share Capture"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error sharing file: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }

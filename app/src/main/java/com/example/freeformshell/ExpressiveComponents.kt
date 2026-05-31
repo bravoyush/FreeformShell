@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Videocam
 
 @Composable
 fun ExpressiveLayout(
@@ -43,76 +44,93 @@ fun ExpressiveLayout(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
     
-    // Adaptive thresholds
-    val isTablet = screenWidth >= 900.dp
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val isPhoneLandscape = isLandscape && !isTablet
-    
-    // Per-mode settings
-    val hoverEnabled = if (isTablet) 
-        ThemeManager.isSidebarHoverExpandTabletEnabled(context) 
-    else 
-        ThemeManager.isSidebarHoverExpandEnabled(context)
-    
-    val autoCollapse = if (isTablet)
-        ThemeManager.isSidebarAutoCollapseTabletEnabled(context)
-    else
-        ThemeManager.isSidebarAutoCollapseEnabled(context)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val windowWidth = maxWidth
+        val windowHeight = maxHeight
         
-    var isSidebarExpanded by remember { mutableStateOf(isTablet && !autoCollapse) }
+        // Adaptive thresholds based on active Freeform window boundaries!
+        val isTablet = windowWidth >= 720.dp
+        val isLandscape = windowWidth > windowHeight
+        val isPhoneLandscape = isLandscape && !isTablet
+        
+        // Per-mode settings
+        val hoverEnabled = if (isTablet) 
+            ThemeManager.isSidebarHoverExpandTabletEnabled(context) 
+        else 
+            ThemeManager.isSidebarHoverExpandEnabled(context)
+        
+        val autoCollapse = if (isTablet)
+            ThemeManager.isSidebarAutoCollapseTabletEnabled(context)
+        else
+            ThemeManager.isSidebarAutoCollapseEnabled(context)
+            
+        var isSidebarExpanded by remember { mutableStateOf(isTablet && !autoCollapse) }
+        
+        val sidebarWidth by animateDpAsState(
+            targetValue = when {
+                !isTablet && !isPhoneLandscape -> 0.dp // Hidden in portrait phone
+                isSidebarExpanded -> 240.dp
+                else -> 80.dp
+            },
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "sidebarWidth"
+        )
     
-    val sidebarWidth by animateDpAsState(
-        targetValue = when {
-            !isTablet && !isPhoneLandscape -> 0.dp // Hidden in portrait phone
-            isSidebarExpanded -> 240.dp
-            else -> 80.dp
-        },
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "sidebarWidth"
-    )
+        // Only shift content on Large Tablets/Screens. 
+        val sidebarShift by animateDpAsState(
+            targetValue = if (isTablet) sidebarWidth else 0.dp,
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "contentShift"
+        )
 
-    // Only shift content on Large Tablets/Screens. 
-    // On smaller landscape screens, the sidebar is a layer on top (Overlay mode).
-    val sidebarShift by animateDpAsState(
-        targetValue = if (isTablet) sidebarWidth else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "contentShift"
-    )
-
-    Box(Modifier.fillMaxSize()) {
-        // Main Content Area
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = sidebarShift)
-        ) {
-            content(PaddingValues(0.dp))
+        // Dynamic scaling factors for the dock based on active window height!
+        val (dockHeight, dockBottom, iconSize, itemSpacing) = when {
+            windowHeight >= 600.dp -> {
+                listOf(64.dp, 16.dp, 48.dp, 8.dp)
+            }
+            windowHeight >= 450.dp -> {
+                listOf(52.dp, 10.dp, 38.dp, 6.dp)
+            }
+            else -> {
+                listOf(42.dp, 6.dp, 30.dp, 4.dp)
+            }
         }
-
-        // Adaptive Sidebar (Either Shifting or Overlay)
-        if (isTablet || isPhoneLandscape) {
-            ExpressiveSidebar(
-                selectedTabIndex = selectedTabIndex,
-                onTabSelected = onTabSelected,
-                isExpanded = isSidebarExpanded,
-                onToggleExpand = { isSidebarExpanded = it },
-                isHoverEnabled = hoverEnabled,
-                width = sidebarWidth,
-                isOverlay = !isTablet // On non-tablet landscape, it behaves as an overlay
-            )
-        }
-
-        // Floating Pill Dock (Portrait Phone)
-        if (!isTablet && !isPhoneLandscape) {
+    
+        val bottomPadding = if (!isTablet && !isPhoneLandscape) (dockHeight + dockBottom) else 0.dp
+    
+        Box(Modifier.fillMaxSize()) {
+            // Main Content Area
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
+                    .fillMaxSize()
+                    .padding(start = sidebarShift)
             ) {
-                ExpressivePillDock(selectedTabIndex, onTabSelected)
+                content(PaddingValues(bottom = bottomPadding))
+            }
+    
+            // Adaptive Sidebar (Either Shifting or Overlay)
+            if (isTablet || isPhoneLandscape) {
+                ExpressiveSidebar(
+                    selectedTabIndex = selectedTabIndex,
+                    onTabSelected = onTabSelected,
+                    isExpanded = isSidebarExpanded,
+                    onToggleExpand = { isSidebarExpanded = it },
+                    isHoverEnabled = hoverEnabled,
+                    width = sidebarWidth,
+                    isOverlay = !isTablet // On non-tablet landscape, it behaves as an overlay
+                )
+            }
+    
+            // Floating Pill Dock (Portrait Phone)
+            if (!isTablet && !isPhoneLandscape) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = dockBottom)
+                ) {
+                    ExpressivePillDock(selectedTabIndex, onTabSelected, iconSize = iconSize, itemSpacing = itemSpacing)
+                }
             }
         }
     }
@@ -128,6 +146,7 @@ fun ExpressiveSidebar(
     width: Dp,
     isOverlay: Boolean
 ) {
+    val context = LocalContext.current
     val surfaceColor by animateColorAsState(
         targetValue = if (isExpanded) 
             MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp) 
@@ -171,16 +190,20 @@ fun ExpressiveSidebar(
                 )
             }
 
-            val navItems = listOf(
-                SidebarItemData(0, Icons.Default.Dashboard, "Windows"),
-                SidebarItemData(7, Icons.Default.Workspaces, "Layouts"),
-                SidebarItemData(1, Icons.Default.Palette, "Customization"),
-                SidebarItemData(2, Icons.Default.List, "Tasks"),
-                SidebarItemData(3, Icons.Default.Tv, "Display"),
-                SidebarItemData(4, Icons.Default.Block, "Blacklist"),
-                SidebarItemData(5, Icons.Default.Settings, "Settings"),
-                SidebarItemData(6, Icons.Default.Build, "Compat")
-            )
+            val navItems = buildList {
+                add(SidebarItemData(0, Icons.Default.Dashboard, "Windows"))
+                add(SidebarItemData(7, Icons.Default.Workspaces, "Layouts"))
+                add(SidebarItemData(1, Icons.Default.Palette, "Customization"))
+                add(SidebarItemData(2, Icons.Default.List, "Tasks"))
+                add(SidebarItemData(3, Icons.Default.Tv, "Display"))
+                if (ThemeManager.isForceDesktopModeEnabled(context)) {
+                    add(SidebarItemData(9, Icons.Default.Monitor, "Desktop"))
+                }
+                add(SidebarItemData(4, Icons.Default.Block, "Blacklist"))
+                add(SidebarItemData(8, Icons.Default.Videocam, "Capture"))
+                add(SidebarItemData(5, Icons.Default.Settings, "Settings"))
+                add(SidebarItemData(6, Icons.Default.Build, "Compat"))
+            }
 
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
@@ -261,18 +284,28 @@ fun ExpressiveSidebarItem(
 @Composable
 fun ExpressivePillDock(
     selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit
+    onTabSelected: (Int) -> Unit,
+    iconSize: Dp = 48.dp,
+    itemSpacing: Dp = 8.dp
 ) {
-    val navItems = listOf(
-        0 to Icons.Default.Dashboard,
-        7 to Icons.Default.Workspaces,
-        1 to Icons.Default.Palette,
-        2 to Icons.Default.List,
-        3 to Icons.Default.Tv,
-        4 to Icons.Default.Block,
-        5 to Icons.Default.Settings,
-        6 to Icons.Default.Build
-    )
+    val context = LocalContext.current
+    val navItems = buildList {
+        add(0 to Icons.Default.Dashboard)
+        add(7 to Icons.Default.Workspaces)
+        add(1 to Icons.Default.Palette)
+        add(2 to Icons.Default.List)
+        add(3 to Icons.Default.Tv)
+        if (ThemeManager.isForceDesktopModeEnabled(context)) {
+            add(9 to Icons.Default.Monitor)
+        }
+        add(4 to Icons.Default.Block)
+        add(8 to Icons.Default.Videocam)
+        add(5 to Icons.Default.Settings)
+        add(6 to Icons.Default.Build)
+    }
+
+    val rowPaddingH = iconSize * 0.25f
+    val rowPaddingV = iconSize * 0.16f
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceColorAtElevation(12.dp),
@@ -282,15 +315,15 @@ fun ExpressivePillDock(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = rowPaddingH, vertical = rowPaddingV)
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(itemSpacing)
         ) {
             navItems.forEach { (index, icon) ->
                 val isSelected = selectedTabIndex == index
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(iconSize)
                         .background(
                             if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, 
                             CircleShape
@@ -302,7 +335,7 @@ fun ExpressivePillDock(
                         imageVector = icon,
                         contentDescription = null,
                         tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(iconSize * 0.5f)
                     )
                 }
             }

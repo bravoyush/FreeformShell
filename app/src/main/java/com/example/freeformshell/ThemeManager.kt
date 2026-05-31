@@ -29,6 +29,8 @@ object ThemeManager {
     private const val KEY_USE_TABLET_MODE = "use_tablet_mode"
     private const val KEY_APP_LAUNCH_DISPLAY = "app_launch_display" // 0: Phone, 1: Secondary, 2: Auto
     private const val KEY_SHOW_SHADOWS = "show_shadows"
+    private const val KEY_APP_UI_SCALE = "app_ui_scale_v2" // Float value, default 1.0f
+    private const val KEY_AUTO_UI_SCALING = "auto_ui_scaling_v2" // Boolean value, default true
     
     fun showShadows(context: Context): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SHOW_SHADOWS, false)
@@ -67,7 +69,7 @@ object ThemeManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(KEY_EXPRESSIVE_THEME_IMAGE, uri).apply()
 
     fun isSidebarHoverExpandEnabled(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_HOVER_EXPAND, true)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_HOVER_EXPAND, false)
 
     fun setSidebarHoverExpandEnabled(context: Context, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_HOVER_EXPAND, enabled).apply()
@@ -79,7 +81,7 @@ object ThemeManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_HOVER_EXPAND_TABLET, enabled).apply()
 
     fun isSidebarAutoCollapseEnabled(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_AUTO_COLLAPSE, true)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIDEBAR_AUTO_COLLAPSE, false)
 
     fun setSidebarAutoCollapseEnabled(context: Context, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SIDEBAR_AUTO_COLLAPSE, enabled).apply()
@@ -369,4 +371,41 @@ object ThemeManager {
 
     fun setGlobalOverlayEnabled(context: Context, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("global_overlay_enabled", enabled).apply()
+
+    fun getAppUiScale(context: Context): Float =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat(KEY_APP_UI_SCALE, 1.0f)
+
+    fun setAppUiScale(context: Context, value: Float) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_APP_UI_SCALE, value).apply()
+
+    fun isAutoUiScalingEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_AUTO_UI_SCALING, false)
+
+    fun setAutoUiScalingEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO_UI_SCALING, enabled).apply()
+
+    fun isForceDesktopModeEnabled(context: Context): Boolean =
+        android.provider.Settings.Global.getInt(context.contentResolver, "force_desktop_mode_on_external_displays", 0) == 1
+
+    /**
+     * Applies the force_desktop_mode_on_external_displays global setting via Shizuku shell.
+     * The callback is invoked on a background thread with `true` on success, `false` on failure.
+     */
+    fun setForceDesktopModeEnabled(enabled: Boolean, onDone: ((success: Boolean) -> Unit)? = null) {
+        val value = if (enabled) 1 else 0
+        Thread {
+            try {
+                val result = ShellExecutor.executeCommandWithResult(
+                    "settings put global force_desktop_mode_on_external_displays $value"
+                )
+                val success = result.third == 0
+                android.util.Log.d("ThemeManager", "setForceDesktopModeEnabled($enabled) => exit=${result.third} out=${result.first} err=${result.second}")
+                onDone?.invoke(success)
+            } catch (e: Exception) {
+                android.util.Log.e("ThemeManager", "setForceDesktopModeEnabled failed", e)
+                onDone?.invoke(false)
+            }
+        }.start()
+    }
 }
+

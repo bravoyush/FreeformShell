@@ -8,4 +8,5 @@
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="ic_launcher_background">#FF3700B3</color>
+    <color name="ic_mirror_launcher_background">#FF12121A</color>
 </resources>

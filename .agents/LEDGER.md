@@ -6,7 +6,7 @@ This ledger is the single source of truth for the active state of **FreeformShel
 
 ## 🚀 Active Metadata
 
-* **Current Version:** `v1.2`
+* **Current Version:** `v1.3.5`
 * **Status:** Stable / In Active Evolution
 * **Target API Range:** Android 11 (API level 30) to Android 15+ (API level 35+)
 * **Key Dependencies:** LSPosed `HiddenApiBypass`, Shizuku Binder IPC
@@ -111,6 +111,26 @@ When making modifications, **you must strictly adhere** to the following Android
 - [x] **Customization Tab & Sidebar Behaviour Overhaul**: Reordered the Customization screen to move "App UI", "Sidebar Behaviour", and "Theme Mode" to the bottom. Added a live `SidebarHoverPreview` animation to demonstrate the auto-expansion effect. Renamed navigation style to "**App UI**" and the sidebar experience to "**Sidebar Behaviour**". Renamed the sidebar "Style" tab to "**Customization**" for better expressive clarity. (Modified: [MainActivity.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/MainActivity.kt), [ExpressiveComponents.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt))
 - [x] **Resolved LocalConfiguration Compilation Error**: Fixed an unresolved reference to `LocalConfiguration` in `MainActivity.kt` by adding the correct `androidx.compose.ui.platform.LocalConfiguration` import. (Modified: [MainActivity.kt](file:///g:/Ai/FreeformShell/app/src/main/java/com/example/freeformshell/MainActivity.kt))
 - [x] **Audit and verify Android Studio AI Agent's new custom Expressive UI navigation styling and sidebar hover expansion preview settings, and successfully verify clean compilation across debug and release builds**: Automated state synchronization. (Modified: CoreUi.kt, ExpressiveComponents.kt, MainActivity.kt, Screens.kt, ThemeManager.kt, )
+- [x] **Integrated premium screen recording and capture tools with glassmorphic floating controller, snipping crops, circular facecams, and bento capture gallery.**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml)
+
+
+
+- [x] **Android 14 HDMI & External Display Capture**: Resolved critical targeting issues for HDMI recording and screenshots. Implemented direct `SurfaceFlinger` hardware ID resolution to correctly pass raw numeric addresses (e.g., `4621070409437748996`) to the `screenrecord --display-id` flag, bypassing logical ID mismatches on Android 14.
+- [x] **Premium Liquid Glass UI Overhaul**: Implemented a 5-layer refractive glass engine for the capture pill and control bars. Features include specular highlights, radial refraction arcs, accent bloom, and high-definition shimmer borders. Fixed "blurry icon" issues on low-DPI virtual displays (scrcpy) by optimizing pixel-perfect rendering.
+- [x] **Advanced Regional Snipping Tool**: Upgraded the snipping workflow with a confirmation-based model. Captures now show a refractive glass control bar for adjustment/confirmation before saving. Integrated a dynamic scaling engine to map DP-based screen selections to physical bitmap pixels on high-resolution displays.
+- [x] **Bulletproof Capture Notifications**: Integrated `MediaScannerConnection` for immediate system-wide gallery visibility. Overhauled notification intents with `ClipData` and `FLAG_GRANT_READ_URI_PERMISSION` to fix "media not found" errors in third-party players.
+- [x] **Facecam & Permission Synchronization**: Fully integrated Camera permissions into the capture flow, including manifest hardware declarations and automatic system prompt triggers.
+- [x] **Implemented custom App UI Scaling slider and default-disabled auto UI scaling switch for high-DPI and phone displays**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Update implementation plan detailing zero-dependency native phone mirroring via Shizuku input injection**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Update implementation plan with wallpaper fallback for MonitorView**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Implement Part 1: Programmatic Force Desktop Mode & Modular Desktop settings screen with MonitorView screenshot/wallpaper fallback**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Relocate Force Desktop Mode toggle as a Big Button on Home screen (Dashboard), and make the Desktop tab dynamically appear only when active**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Fix Force Desktop Mode toggle: corrected setting key from force_desktop_mode_on_secondary_displays to force_desktop_mode_on_external_displays in ThemeManager.kt and MainActivity.kt. Simplified desktop mode dialog: added Apply Only (no restart) button with Toast feedback showing command result, Apply + Restart SystemUI, Apply + Reboot options. Made setForceDesktopModeEnabled run on background thread with onDone callback. Commands now run sequentially in single Dispatchers.IO coroutine to eliminate race conditions.**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+
+
+
+
+
 
 
 ### 🟡 In Progress / Planned
@@ -120,4 +140,4 @@ When making modifications, **you must strictly adhere** to the following Android
 
 ---
 
-*Last Updated: 2026-05-26 by Antigravity (Audit and verify Android Studio AI Agent's new custom Expressive UI navigation styling and sidebar hover expansion preview settings, and successfully verify clean compilation across debug and release builds)*
+*Last Updated: 2026-05-27 by Antigravity (Fix Force Desktop Mode toggle: corrected setting key from force_desktop_mode_on_secondary_displays to force_desktop_mode_on_external_displays in ThemeManager.kt and MainActivity.kt. Simplified desktop mode dialog: added Apply Only (no restart) button with Toast feedback showing command result, Apply + Restart SystemUI, Apply + Reboot options. Made setForceDesktopModeEnabled run on background thread with onDone callback. Commands now run sequentially in single Dispatchers.IO coroutine to eliminate race conditions.)*

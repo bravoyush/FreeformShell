@@ -68,6 +68,12 @@ Before concluding the session, the agent must update the codebase repository sta
 3. **Step 3.3: Re-index Code Graph**
    - Run `graphify update .` to keep the codebase AST index perfectly up to date.
 
+4. **Step 3.4: Perform Versioned Code Backup & Retention Check**
+   - **Action**: Run the backup script to archive a clean copy of the current state:
+     `python .agents/skills/backup/backup.py`
+   - **Why**: Keeps a perfect timeline of branch milestones named using `<version>_<YYYY-MM-DD_HH-MM-SS>` within `g:\Ai\Freeform Backup\<branch>\`. It automatically manages storage limits, keeping the 5 most recent backups for the active version and archiving older ones to the `old/` directory.
+
+
 ---
 
 ## 📑 Core Document Templates

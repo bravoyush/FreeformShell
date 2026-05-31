@@ -9,8 +9,23 @@
     <!-- Permission for Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Permission to query all installed packages -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Permission for capture completed alerts and high priority notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Camera permission for Facecam -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Permission to set system wallpaper -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- External Storage Permissions for legacy and shell-created files -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
 
     <application
         android:allowBackup="true"
@@ -21,12 +36,27 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FreeformShell"
+        android:requestLegacyExternalStorage="true"
         tools:targetApi="31">
         
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.FreeformShell">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PhoneMirrorActivity"
+            android:label="Mirror"
+            android:icon="@mipmap/ic_mirror_launcher"
+            android:roundIcon="@mipmap/ic_mirror_launcher_round"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.FreeformShell"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -43,6 +73,20 @@
 
         <service
             android:name=".FreeformOverlayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Overlay for window management" />
+        </service>
+
+        <service
+            android:name=".PhoneMirrorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
+            android:name=".PhoneMirrorOverlayService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
@@ -95,7 +139,15 @@
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/widget_quick_toolbox_info" />
         </receiver>
-
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
