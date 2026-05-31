@@ -6787,7 +6787,7 @@
       "label": "\ud83d\ude80 How to Bootstrap This Session (Token Saving Entry)",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L35",
+      "source_location": "L21",
       "id": "agents_handoff_how_to_bootstrap_this_session_token_saving_entry",
       "community": 27,
       "norm_label": "\ud83d\ude80 how to bootstrap this session (token saving entry)"
@@ -6796,7 +6796,7 @@
       "label": "\ud83c\udfaf Next Tasks On the Horizon",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L48",
+      "source_location": "L34",
       "id": "agents_handoff_next_tasks_on_the_horizon",
       "community": 27,
       "norm_label": "\ud83c\udfaf next tasks on the horizon"
@@ -6805,7 +6805,7 @@
       "label": "\ud83d\udc65 Project Team Roles & Roster",
       "file_type": "document",
       "source_file": ".agents/HANDOFF.md",
-      "source_location": "L57",
+      "source_location": "L43",
       "id": "agents_handoff_project_team_roles_roster",
       "community": 27,
       "norm_label": "\ud83d\udc65 project team roles & roster"
@@ -6877,7 +6877,7 @@
       "label": "\ud83d\udfe1 In Progress / Planned",
       "file_type": "document",
       "source_file": ".agents/LEDGER.md",
-      "source_location": "L136",
+      "source_location": "L138",
       "id": "agents_ledger_in_progress_planned",
       "community": 23,
       "norm_label": "\ud83d\udfe1 in progress / planned"
@@ -18029,9 +18029,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L2381",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_sectioncontainer",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_sectioncontainer"
     },
     {
       "relation": "contains",
@@ -18059,9 +18059,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L3598",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_deviceinfospec",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_deviceinfospec"
     },
     {
       "relation": "contains",
@@ -18069,9 +18069,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L3605",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_src_main_java_com_example_freeformshell_mainactivity_kt",
-      "target": "freeformshell_mainactivity_getdeviceinfospec",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_getdeviceinfospec"
     },
     {
       "relation": "contains",
@@ -18647,9 +18647,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L2463",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_mainactivity_displaysettingsscreen",
-      "target": "freeformshell_mainactivity_sectioncontainer",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_sectioncontainer"
     },
     {
       "relation": "calls",
@@ -18658,9 +18658,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L3072",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_mainactivity_appsettingsscreen",
-      "target": "freeformshell_mainactivity_sectioncontainer",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_sectioncontainer"
     },
     {
       "relation": "calls",
@@ -18712,9 +18712,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L3643",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_mainactivity_getdeviceinfospec",
-      "target": "freeformshell_mainactivity_deviceinfospec",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_deviceinfospec"
     },
     {
       "relation": "calls",
@@ -18723,9 +18723,9 @@
       "source_file": "app/src/main/java/com/example/freeformshell/MainActivity.kt",
       "source_location": "L3701",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "freeformshell_mainactivity_compatibilityscreen",
-      "target": "freeformshell_mainactivity_getdeviceinfospec",
-      "confidence_score": 1.0
+      "target": "freeformshell_mainactivity_getdeviceinfospec"
     },
     {
       "relation": "contains",
@@ -28410,5 +28410,5 @@
       "source_file": "docs/core_logic.md"
     }
   ],
-  "built_at_commit": "ff7c1bc3a81fdbb9eb3ea0db446c486830708883"
+  "built_at_commit": "c291fbc378ff687e3b51862ded74bf5304be1fc4"
 }

@@ -1,7 +1,7 @@
 # Graph Report - FreeformShell  (2026-05-31)
 
 ## Corpus Check
-- 66 files · ~291,406 words
+- 66 files · ~291,276 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ff7c1bc3`
+- Built from commit: `c291fbc3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

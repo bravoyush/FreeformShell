@@ -2,8 +2,8 @@
 
 *   **From:** Antigravity
 *   **To:** Any Subsequent AI Agent / Human Coder
-*   **Date:** 2026-05-27
-*   **Current State:** Fix Force Desktop Mode toggle: corrected setting key from force_desktop_mode_on_secondary_displays to force_desktop_mode_on_external_displays in ThemeManager.kt and MainActivity.kt. Simplified desktop mode dialog: added Apply Only (no restart) button with Toast feedback showing command result, Apply + Restart SystemUI, Apply + Reboot options. Made setForceDesktopModeEnabled run on background thread with onDone callback. Commands now run sequentially in single Dispatchers.IO coroutine to eliminate race conditions.
+*   **Date:** 2026-05-31
+*   **Current State:** Moved version to v1.4 and initialized new development session
 
 ---
 
@@ -14,21 +14,7 @@
 3.  **Active Rules Status:** Android constraints, gesture safeguards, and graphify rules are loaded and fully active.
 
 *   **Modified Files:**
-    *   [MODIFY] [AndroidManifest.xml](file:///app/src/main/AndroidManifest.xml)
-    *   [MODIFY] [ExpressiveComponents.kt](file:///app/src/main/java/com/example/freeformshell/ExpressiveComponents.kt)
-    *   [MODIFY] [FreeformOverlayService.kt](file:///app/src/main/java/com/example/freeformshell/FreeformOverlayService.kt)
-    *   [MODIFY] [MainActivity.kt](file:///app/src/main/java/com/example/freeformshell/MainActivity.kt)
-    *   [MODIFY] [ShellExecutor.kt](file:///app/src/main/java/com/example/freeformshell/ShellExecutor.kt)
-    *   [MODIFY] [ThemeManager.kt](file:///app/src/main/java/com/example/freeformshell/ThemeManager.kt)
-*   **New Files:**
-    *   [NEW] [AnnotationOverlay.kt](file:///app/src/main/java/com/example/freeformshell/AnnotationOverlay.kt)
-    *   [NEW] [DesktopSettingsScreen.kt](file:///app/src/main/java/com/example/freeformshell/DesktopSettingsScreen.kt)
-    *   [NEW] [FacecamOverlay.kt](file:///app/src/main/java/com/example/freeformshell/FacecamOverlay.kt)
-    *   [NEW] [ScreenRecordControllerOverlay.kt](file:///app/src/main/java/com/example/freeformshell/ScreenRecordControllerOverlay.kt)
-    *   [NEW] [ScreenRecordManager.kt](file:///app/src/main/java/com/example/freeformshell/ScreenRecordManager.kt)
-    *   [NEW] [SnippingOverlay.kt](file:///app/src/main/java/com/example/freeformshell/SnippingOverlay.kt)
-    *   [NEW] [file_paths.xml](file:///app/src/main/res/xml/file_paths.xml)
-    *   [NEW] [test_screencap.png](file:///test_screencap.png)
+    *   [MODIFY] [LEDGER.md](file:///.agents/LEDGER.md)
 
 ---
 

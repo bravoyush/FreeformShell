@@ -6,7 +6,7 @@ This ledger is the single source of truth for the active state of **FreeformShel
 
 ## 🚀 Active Metadata
 
-* **Current Version:** `v1.3.5`
+* **Current Version:** `v1.4`
 * **Status:** Stable / In Active Evolution
 * **Target API Range:** Android 11 (API level 30) to Android 15+ (API level 35+)
 * **Key Dependencies:** LSPosed `HiddenApiBypass`, Shizuku Binder IPC
@@ -126,6 +126,8 @@ When making modifications, **you must strictly adhere** to the following Android
 - [x] **Implement Part 1: Programmatic Force Desktop Mode & Modular Desktop settings screen with MonitorView screenshot/wallpaper fallback**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
 - [x] **Relocate Force Desktop Mode toggle as a Big Button on Home screen (Dashboard), and make the Desktop tab dynamically appear only when active**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
 - [x] **Fix Force Desktop Mode toggle: corrected setting key from force_desktop_mode_on_secondary_displays to force_desktop_mode_on_external_displays in ThemeManager.kt and MainActivity.kt. Simplified desktop mode dialog: added Apply Only (no restart) button with Toast feedback showing command result, Apply + Restart SystemUI, Apply + Reboot options. Made setForceDesktopModeEnabled run on background thread with onDone callback. Commands now run sequentially in single Dispatchers.IO coroutine to eliminate race conditions.**: Automated state synchronization. (Modified: AndroidManifest.xml, ExpressiveComponents.kt, FreeformOverlayService.kt, MainActivity.kt, ShellExecutor.kt, ThemeManager.kt, AnnotationOverlay.kt, DesktopSettingsScreen.kt, FacecamOverlay.kt, ScreenRecordControllerOverlay.kt, ScreenRecordManager.kt, SnippingOverlay.kt, file_paths.xml, test_screencap.png)
+- [x] **Moved version to v1.4 and initialized new development session**: Automated state synchronization. (Modified: LEDGER.md)
+
 
 
 
@@ -140,4 +142,4 @@ When making modifications, **you must strictly adhere** to the following Android
 
 ---
 
-*Last Updated: 2026-05-27 by Antigravity (Fix Force Desktop Mode toggle: corrected setting key from force_desktop_mode_on_secondary_displays to force_desktop_mode_on_external_displays in ThemeManager.kt and MainActivity.kt. Simplified desktop mode dialog: added Apply Only (no restart) button with Toast feedback showing command result, Apply + Restart SystemUI, Apply + Reboot options. Made setForceDesktopModeEnabled run on background thread with onDone callback. Commands now run sequentially in single Dispatchers.IO coroutine to eliminate race conditions.)*
+*Last Updated: 2026-05-31 by Antigravity (Moved version to v1.4 and initialized new development session)*
