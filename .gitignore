@@ -10,3 +10,12 @@ local.properties
 # Text files / dumps
 *.txt
 *.log
+
+# Backup & Scratch files
+*.bak*
+*.fix_backup
+*.old
+*.tmp
+
+# Ignore temporary graphify AST cache files, but keep graphify-out knowledge graph reports & indices
+graphify-out/cache/

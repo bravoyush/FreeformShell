@@ -16,6 +16,15 @@ class FreeformTaskManagerWidget : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_task_manager)
             
+            val widgetEnabled = ThemeManager.isModuleWidgetEnabled(context)
+            if (widgetEnabled) {
+                views.setViewVisibility(R.id.widget_task_list, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widget_task_disabled_text, android.view.View.GONE)
+            } else {
+                views.setViewVisibility(R.id.widget_task_list, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_task_disabled_text, android.view.View.VISIBLE)
+            }
+            
             // Set up list view adapter service
             val serviceIntent = Intent(context, FreeformTaskManagerWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)

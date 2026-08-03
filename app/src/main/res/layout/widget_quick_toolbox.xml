@@ -33,6 +33,7 @@
 
     <!-- Bento Grid Container -->
     <LinearLayout
+        android:id="@+id/widget_bento_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -236,5 +237,17 @@
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Disabled Module Warning Text -->
+    <TextView
+        android:id="@+id/widget_toolbox_disabled_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Quick Toolbox is disabled.\nEnable in Companion Settings."
+        android:textColor="#888888"
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:visibility="gone" />
 
 </LinearLayout>

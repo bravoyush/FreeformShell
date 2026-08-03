@@ -28,9 +28,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,8 +76,21 @@ import android.widget.Toast
 import android.media.ThumbnailUtils
 import android.provider.MediaStore
 import android.util.Size
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 class MainActivity : ComponentActivity() {
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        window.decorView.post {
+            val token = window.decorView.windowToken
+            if (token != null) {
+                FreeformOverlayService.primaryDisplayToken = token
+                Log.d("MainActivity", "Successfully populated primaryDisplayToken from MainActivity: $token")
+            }
+        }
+    }
 
     private val onPermissionResultListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
         recreate()
@@ -192,20 +207,26 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
-                        onRequestOverlayPermission = {
-                            val intent = Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:$packageName")
-                            )
-                            startActivity(intent)
-                        },
-                        onRequestShizukuPermission = {
-                            if (Shizuku.pingBinder()) {
-                                Shizuku.requestPermission(0)
+                    var setupComplete by remember { mutableStateOf(ThemeManager.isSetupComplete(context)) }
+                    
+                    if (!setupComplete) {
+                        OnboardingScreen(onComplete = { setupComplete = true })
+                    } else {
+                        MainScreen(
+                            onRequestOverlayPermission = {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:$packageName")
+                                )
+                                startActivity(intent)
+                            },
+                            onRequestShizukuPermission = {
+                                if (Shizuku.pingBinder()) {
+                                    Shizuku.requestPermission(0)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -221,6 +242,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
     }
 }
+
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -258,26 +280,36 @@ fun MainScreen(
     var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var filteredApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var showAppPicker by remember { mutableStateOf(false) }
-    var showLogDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showAppPicker by rememberSaveable { mutableStateOf(false) }
+    var showLogDialog by rememberSaveable { mutableStateOf(false) }
+    var showSettingsDialog by rememberSaveable { mutableStateOf(false) }
+    var showSearchDialog by rememberSaveable { mutableStateOf(false) }
+    var showOnboardingOverlay by rememberSaveable { mutableStateOf(false) }
+    var showShizukuGuide by rememberSaveable { mutableStateOf(false) }
+    var showTaskbarGuide by rememberSaveable { mutableStateOf(false) }
+    var showDevOptionsGuide by rememberSaveable { mutableStateOf(false) }
+    var highlightedSettingId by remember { mutableStateOf<String?>(null) }
     var launchQueue by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+
+    LaunchedEffect(highlightedSettingId) {
+        if (highlightedSettingId != null) {
+            kotlinx.coroutines.delay(3500)
+            highlightedSettingId = null
+        }
+    }
     
     var availableDisplays by remember { mutableStateOf<List<DisplayInfo>>(emptyList()) }
-    var selectedDisplayId by remember { mutableLongStateOf(0L) }.let { 
-        // Use Long to match Display ID if needed, but Int is fine. Let's stick to Int.
-        remember { mutableStateOf(0) }
-    }
+    var selectedDisplayId by rememberSaveable { mutableStateOf(0) }
     
     var selectedAppToLaunch by remember { mutableStateOf<AppInfo?>(null) }
     val dm = context.resources.displayMetrics
     
     // Size logic moved to dynamic calculation
-    var launchWidth by remember { mutableStateOf("") }
-    var launchHeight by remember { mutableStateOf("") }
+    var launchWidth by rememberSaveable { mutableStateOf("") }
+    var launchHeight by rememberSaveable { mutableStateOf("") }
 
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
     var isDesktopModeEnabled by remember { mutableStateOf(ThemeManager.isForceDesktopModeEnabled(context)) }
 
     val activity = context as? ComponentActivity
@@ -287,6 +319,18 @@ fun MainScreen(
     }
     var hasMicPermission by remember { 
         mutableStateOf(context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) 
+    }
+    var hasNotificationPermission by remember {
+        mutableStateOf(ThemeManager.isNotificationServiceEnabled(context))
+    }
+    var hasBluetoothPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
     }
     
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -299,11 +343,22 @@ fun MainScreen(
     ) { isGranted ->
         hasMicPermission = isGranted
     }
+    val btPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasBluetoothPermission = isGranted
+    }
 
     LaunchedEffect(showSettingsDialog) {
         if (showSettingsDialog) {
             hasCameraPermission = context.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
             hasMicPermission = context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            hasNotificationPermission = ThemeManager.isNotificationServiceEnabled(context)
+            hasBluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
             isShizukuAvailable = Shizuku.pingBinder()
             hasShizukuPermission = isShizukuAvailable && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
             hasOverlayPermission = Settings.canDrawOverlays(context)
@@ -318,13 +373,26 @@ fun MainScreen(
         }
     }
 
+    LaunchedEffect(
+        ThemeManager.isModuleLockEnabled(context),
+        ThemeManager.isModuleWidgetEnabled(context),
+        ThemeManager.isModuleCaptureEnabled(context)
+    ) {
+        val lockEnabled = ThemeManager.isModuleLockEnabled(context)
+        val widgetEnabled = ThemeManager.isModuleWidgetEnabled(context)
+        val captureEnabled = ThemeManager.isModuleCaptureEnabled(context)
+        if (!lockEnabled && selectedTabIndex == 10) selectedTabIndex = 5
+        if (!widgetEnabled && selectedTabIndex == 2) selectedTabIndex = 0
+        if (!captureEnabled && selectedTabIndex == 8) selectedTabIndex = 0
+    }
+
     var editingGroup by remember { mutableStateOf<WorkspaceGroup?>(null) }
     var isEditingFavorite by remember { mutableStateOf(false) }
     var refreshWorkspacesKey by remember { mutableStateOf(0) }
 
-    var appUiStyle by remember { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
-    var appUiScale by remember { mutableStateOf(ThemeManager.getAppUiScale(context)) }
-    var autoUiScalingEnabled by remember { mutableStateOf(ThemeManager.isAutoUiScalingEnabled(context)) }
+    var appUiStyle by rememberSaveable { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
+    var appUiScale by rememberSaveable { mutableStateOf(ThemeManager.getAppUiScale(context)) }
+    var autoUiScalingEnabled by rememberSaveable { mutableStateOf(ThemeManager.isAutoUiScalingEnabled(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -601,18 +669,25 @@ fun MainScreen(
                     if (appUiStyle == 0) {
                         NavigationBar {
                             val showLabels = windowWidth >= 520.dp
-                            NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") }, alwaysShowLabel = showLabels)
-                            if (isDesktopModeEnabled) {
-                                NavigationBarItem(selected = selectedTabIndex == 9, onClick = { selectedTabIndex = 9 }, icon = { Icon(Icons.Default.Monitor, null) }, label = { Text("Desktop") }, alwaysShowLabel = showLabels)
-                            }
-                            NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 8, onClick = { selectedTabIndex = 8 }, icon = { Icon(Icons.Default.Videocam, null) }, label = { Text("Capture") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 10, onClick = { selectedTabIndex = 10 }, icon = { Icon(Icons.Default.Lock, null) }, label = { Text("Lock") }, alwaysShowLabel = showLabels)
-                            NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") }, alwaysShowLabel = showLabels)
+                             NavigationBarItem(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, icon = { Icon(Icons.Default.Window, null) }, label = { Text("Windows") }, alwaysShowLabel = showLabels)
+                             NavigationBarItem(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Customization") }, alwaysShowLabel = showLabels)
+                             if (ThemeManager.isModuleWidgetEnabled(context)) {
+                                 NavigationBarItem(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Task Manager") }, alwaysShowLabel = showLabels)
+                             }
+                             NavigationBarItem(selected = selectedTabIndex == 3, onClick = { selectedTabIndex = 3 }, icon = { Icon(Icons.Default.Tv, null) }, label = { Text("Display") }, alwaysShowLabel = showLabels)
+                             if (isDesktopModeEnabled) {
+                                 NavigationBarItem(selected = selectedTabIndex == 9, onClick = { selectedTabIndex = 9 }, icon = { Icon(Icons.Default.Monitor, null) }, label = { Text("Desktop") }, alwaysShowLabel = showLabels)
+                             }
+                             NavigationBarItem(selected = selectedTabIndex == 11, onClick = { selectedTabIndex = 11 }, icon = { Icon(Icons.Default.RocketLaunch, null) }, label = { Text("Launcher") }, alwaysShowLabel = showLabels)
+                             NavigationBarItem(selected = selectedTabIndex == 4, onClick = { selectedTabIndex = 4 }, icon = { Icon(Icons.Default.Block, null) }, label = { Text("Blacklist") }, alwaysShowLabel = showLabels)
+                             if (ThemeManager.isModuleCaptureEnabled(context)) {
+                                 NavigationBarItem(selected = selectedTabIndex == 8, onClick = { selectedTabIndex = 8 }, icon = { Icon(Icons.Default.Videocam, null) }, label = { Text("Capture") }, alwaysShowLabel = showLabels)
+                             }
+                             NavigationBarItem(selected = selectedTabIndex == 5, onClick = { selectedTabIndex = 5 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, alwaysShowLabel = showLabels)
+                             if (ThemeManager.isModuleLockEnabled(context)) {
+                                 NavigationBarItem(selected = selectedTabIndex == 10, onClick = { selectedTabIndex = 10 }, icon = { Icon(Icons.Default.Lock, null) }, label = { Text("Lock") }, alwaysShowLabel = showLabels)
+                             }
+                             NavigationBarItem(selected = selectedTabIndex == 6, onClick = { selectedTabIndex = 6 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Compat") }, alwaysShowLabel = showLabels)
                         }
                     }
                 },
@@ -680,7 +755,10 @@ fun MainScreen(
                             onRefreshWorkspaces = { refreshWorkspacesKey++ },
                             onDesktopModeToggled = { isDesktopModeEnabled = it },
                             onShowPermissions = { showSettingsDialog = true },
-                            onShowLogs = { showLogDialog = true }
+                            onShowGuides = { selectedTabIndex = 12 },
+                            onShowLogs = { showLogDialog = true },
+                            onTabSelected = { selectedTabIndex = it },
+                            onSearchClick = { showSearchDialog = true }
                         )
                         1 -> CustomizationScreen(
                             padding = innerPadding,
@@ -693,7 +771,9 @@ fun MainScreen(
                             onAutoUiScalingToggle = { 
                                 autoUiScalingEnabled = it
                                 ThemeManager.setAutoUiScalingEnabled(context, it)
-                            }
+                            },
+                            highlightedSettingId = highlightedSettingId,
+                            onSearchClick = { showSearchDialog = true }
                         )
                         2 -> TaskManagerScreen(
                             padding = innerPadding,
@@ -728,6 +808,16 @@ fun MainScreen(
                         )
                         8 -> CaptureScreen(innerPadding, availableDisplays)
                         10 -> LockScreenSettingsScreen(innerPadding)
+                        11 -> LauncherSettingsScreen(innerPadding) { tab ->
+                            selectedTabIndex = tab
+                        }
+                        12 -> HelpAndGuidesScreen(
+                            padding = innerPadding,
+                            onRelaunchOnboarding = { showOnboardingOverlay = true },
+                            onOpenShizukuGuide = { showShizukuGuide = true },
+                            onOpenTaskbarGuide = { showTaskbarGuide = true },
+                            onOpenDevOptionsGuide = { showDevOptionsGuide = true }
+                        )
                     }
                 }
 
@@ -735,10 +825,61 @@ fun MainScreen(
                     ExpressiveLayout(
                         selectedTabIndex = selectedTabIndex,
                         onTabSelected = { selectedTabIndex = it },
+                        onSearchClick = { showSearchDialog = true },
                         content = content
                     )
                 } else {
                     content(padding)
+                }
+
+                if (showOnboardingOverlay) {
+                    Dialog(
+                        onDismissRequest = { showOnboardingOverlay = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        Surface(modifier = Modifier.fillMaxSize()) {
+                            OnboardingScreen(
+                                isReopen = true,
+                                onOpenShizukuGuide = { showShizukuGuide = true },
+                                onOpenTaskbarGuide = { showTaskbarGuide = true },
+                                onOpenDevOptionsGuide = { showDevOptionsGuide = true },
+                                onComplete = { showOnboardingOverlay = false }
+                            )
+                        }
+                    }
+                }
+
+                if (showShizukuGuide) {
+                    Dialog(
+                        onDismissRequest = { showShizukuGuide = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        Surface(modifier = Modifier.fillMaxSize()) {
+                            ShizukuGuideScreen(onClose = { showShizukuGuide = false })
+                        }
+                    }
+                }
+
+                if (showTaskbarGuide) {
+                    Dialog(
+                        onDismissRequest = { showTaskbarGuide = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        Surface(modifier = Modifier.fillMaxSize()) {
+                            TaskbarGuideScreen(onClose = { showTaskbarGuide = false })
+                        }
+                    }
+                }
+
+                if (showDevOptionsGuide) {
+                    Dialog(
+                        onDismissRequest = { showDevOptionsGuide = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        Surface(modifier = Modifier.fillMaxSize()) {
+                            DeveloperOptionsGuideScreen(onClose = { showDevOptionsGuide = false })
+                        }
+                    }
                 }
 
         if (showLogDialog) {
@@ -749,6 +890,16 @@ fun MainScreen(
                     }
                 },
                 confirmButton = { TextButton(onClick = { showLogDialog = false }) { Text("Close") } }
+            )
+        }
+
+        if (showSearchDialog) {
+            SettingsSearchDialog(
+                onDismiss = { showSearchDialog = false },
+                onNavigateToTab = { tab, settingId ->
+                    selectedTabIndex = tab
+                    highlightedSettingId = settingId
+                }
             )
         }
 
@@ -914,6 +1065,36 @@ fun MainScreen(
                                 }
                             }
                         )
+
+                        ListItem(
+                            headlineContent = { Text("Notification Access (Optional)") },
+                            supportingContent = { Text("Used to mirror notifications and control background media on lock screen.", style = MaterialTheme.typography.bodySmall, color = Color.Gray) },
+                            trailingContent = { StatusChip(label = if (hasNotificationPermission) "Granted" else "Request", color = if (hasNotificationPermission) Color.Green else Color.Red) },
+                            modifier = Modifier.clickable {
+                                try {
+                                    val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("MainActivity", "Failed opening notification listener settings", e)
+                                    Toast.makeText(context, "Please open Settings manually to grant Notification Access", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        )
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            ListItem(
+                                headlineContent = { Text("Bluetooth Access (Optional)") },
+                                supportingContent = { Text("Used to scan and show paired Bluetooth devices in Quick Settings.", style = MaterialTheme.typography.bodySmall, color = Color.Gray) },
+                                trailingContent = { StatusChip(label = if (hasBluetoothPermission) "Granted" else "Request", color = if (hasBluetoothPermission) Color.Green else Color.Red) },
+                                modifier = Modifier.clickable {
+                                    if (hasBluetoothPermission) {
+                                        Toast.makeText(context, "Optional: To revoke/disable bluetooth permission, please do so from system Settings.", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        btPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                                    }
+                                }
+                            )
+                        }
                     }
                 },
                 confirmButton = { TextButton(onClick = { showSettingsDialog = false }) { Text("Close") } }
@@ -944,7 +1125,10 @@ fun DashboardScreen(
     onRefreshWorkspaces: () -> Unit,
     onDesktopModeToggled: (Boolean) -> Unit,
     onShowPermissions: () -> Unit = {},
-    onShowLogs: () -> Unit = {}
+    onShowGuides: () -> Unit = {},
+    onShowLogs: () -> Unit = {},
+    onTabSelected: (Int) -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1001,6 +1185,19 @@ fun DashboardScreen(
                         )
                     }
                     IconButton(
+                        onClick = onShowGuides,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HelpCenter, 
+                            contentDescription = "Guide Center", 
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
                         onClick = onShowLogs,
                         modifier = Modifier
                             .size(44.dp)
@@ -1024,7 +1221,25 @@ fun DashboardScreen(
             StatusChip(label = "Overlay", color = if (hasOverlayPermission) Color(0xFF4CAF50) else Color(0xFFF44336))
         }
  
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 🔍 INSTANT SETTINGS SEARCH LAUNCHER BAR
+        OutlinedCard(
+            onClick = onSearchClick,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Search all shell settings & features...", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.weight(1f))
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text("Instant Search", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // --- Big Premium Force Desktop Mode Toggle Button ---
         var isDesktopModeActive by remember { mutableStateOf(ThemeManager.isForceDesktopModeEnabled(context)) }
@@ -1269,6 +1484,22 @@ fun DashboardScreen(
                 }
                 
                 Spacer(Modifier.height(24.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ⚡ QUICK SETTINGS TILES
+        SmartQuickSettingsSection(onNavigateToTab = { onTabSelected(it) })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
                 Text("Launch Controls", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
                 if (launchQueue.isNotEmpty()) {
@@ -1567,80 +1798,46 @@ fun TaskManagerScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "No Active Windows", 
+                        "No Active Freeform Apps", 
                         style = MaterialTheme.typography.titleMedium, 
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "Launch apps in freeform mode and arrange them to see active tasks here.",
-                        style = MaterialTheme.typography.bodySmall,
+                        "Launch apps in freeform mode to see them here.", 
+                        style = MaterialTheme.typography.bodySmall, 
                         color = Color.Gray,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
         } else {
-            Column(modifier = Modifier.padding(top = 8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 tasks.forEach { task ->
+                    val isBlacklisted = FreeformOverlayService.isBlacklisted(context, task.packageName)
+                    val isForceClose = FreeformOverlayService.shouldForceClose(context, task.packageName)
+                    
                     ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                        )
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large
                     ) {
                         ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { 
-                                Text(
-                                    task.packageName.substringAfterLast("."), 
-                                    fontWeight = FontWeight.Bold 
-                                ) 
-                            },
-                            supportingContent = { 
-                                Text(
-                                    "Task ID: ${task.taskId} • Freeform: ${task.isFreeform}", 
-                                    style = MaterialTheme.typography.labelSmall 
-                                ) 
-                            },
-                            leadingContent = { 
-                                AppIcon(task.packageName, modifier = Modifier.size(40.dp)) 
-                            },
+                            headlineContent = { Text(task.activityName ?: task.packageName, fontWeight = FontWeight.Bold) },
+                            supportingContent = { Text("Task ID: ${task.taskId} | Freeform: ${task.isFreeform}") },
+                            leadingContent = { AppIcon(task.packageName, modifier = Modifier.size(36.dp)) },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val isForceClose = FreeformOverlayService.shouldForceClose(context, task.packageName)
-                                    val isBlacklisted = FreeformOverlayService.isBlacklisted(context, task.packageName)
-
-                                    IconButton(onClick = { 
+                                    IconButton(onClick = {
                                         FreeformOverlayService.toggleForceClose(context, task.packageName)
                                         onRefresh()
                                     }) {
                                         Icon(
-                                            Icons.Default.Warning,
-                                            contentDescription = "Toggle Force Close",
-                                            tint = if (isForceClose) Color.Red else Color.Gray
+                                            Icons.Default.Close, 
+                                            null, 
+                                            tint = if (isForceClose) MaterialTheme.colorScheme.error else Color.Gray
                                         )
                                     }
-
-                                    TextButton(onClick = { 
-                                        if (isForceClose) {
-                                            ShellExecutor.forceStopApp(task.packageName, task.taskId)
-                                        } else {
-                                            ShellExecutor.removeTask(task.taskId)
-                                        }
-                                        onRefresh() // Auto refresh after close
-                                    }) { 
-                                        Text(
-                                            if (isForceClose) "Force Stop" else "Close", 
-                                            color = MaterialTheme.colorScheme.error, 
-                                            fontWeight = FontWeight.Bold
-                                        ) 
-                                    }
-
-                                    IconButton(onClick = { 
+                                    IconButton(onClick = {
                                         FreeformOverlayService.toggleBlacklist(context, task.packageName)
                                         onRefresh()
                                     }) {
@@ -1728,7 +1925,9 @@ fun CustomizationScreen(
     appUiScale: Float,
     onAppUiScaleChange: (Float) -> Unit,
     autoUiScalingEnabled: Boolean,
-    onAutoUiScalingToggle: (Boolean) -> Unit
+    onAutoUiScalingToggle: (Boolean) -> Unit,
+    highlightedSettingId: String? = null,
+    onSearchClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE) }
@@ -1738,399 +1937,942 @@ fun CustomizationScreen(
     var borderWidth by remember { mutableStateOf(ThemeManager.getBorderWidth(context)) }
     var titleBarOpacity by remember { mutableStateOf(ThemeManager.getTitleBarOpacity(context).toFloat()) }
     
+    var usePillForSnapped by remember { mutableStateOf(ThemeManager.usePillForSnapped(context)) }
     var appUiStyle by remember { mutableStateOf(ThemeManager.getAppUiStyle(context)) }
 
-    Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("Appearance", style = MaterialTheme.typography.headlineSmall)
-        
-        val isSystemDark = isSystemInDarkTheme()
-        val isPreviewDark = when(mode) { 1 -> false; 2 -> true; else -> isSystemDark }
-        WindowPreview(roundness, opacity, borderWidth, titleBarOpacity, isPreviewDark)
-        
-        Spacer(Modifier.height(16.dp))
+    val isThemeHighlight = highlightedSettingId in listOf("theme_mode", "preview")
+    val isGeoHighlight = highlightedSettingId in listOf("corner_roundness", "window_opacity", "border_width", "drag_tint")
+    val isTitleBarHighlight = highlightedSettingId in listOf("header_mode", "pill_mode", "icon_pack", "titlebar_opacity", "auto_hide_bar", "pill_shrink", "pill_shrink_style")
+    val isLayoutHighlight = highlightedSettingId in listOf("app_ui_style", "sidebar_hover", "sidebar_collapse")
+    val isScaleHighlight = highlightedSettingId in listOf("auto_scale", "custom_scale")
+    val isEngineHighlight = highlightedSettingId in listOf("resize_engine")
 
-        Text("Window Roundness: ${roundness.toInt()}dp", style = MaterialTheme.typography.titleMedium)
-        Slider(value = roundness, onValueChange = { roundness = it; ThemeManager.setRoundness(context, it) }, valueRange = 0f..40f)
-        
-        Text("Window Opacity: ${opacity.toInt()}/255", style = MaterialTheme.typography.titleMedium)
-        Slider(value = opacity, onValueChange = { opacity = it; ThemeManager.setOpacity(context, it.toInt()) }, valueRange = 50f..255f)
-        
-        Text("Normal Title Bar Opacity: ${titleBarOpacity.toInt()}%", style = MaterialTheme.typography.titleMedium)
-        Slider(value = titleBarOpacity, onValueChange = { titleBarOpacity = it; ThemeManager.setTitleBarOpacity(context, it.toInt()) }, valueRange = 30f..100f)
-        
-        Text("Border Width: ${borderWidth.toInt()}dp", style = MaterialTheme.typography.titleMedium)
-        Slider(value = borderWidth, onValueChange = { borderWidth = it; ThemeManager.setBorderWidth(context, it) }, valueRange = 0f..12f)
-        
-        Spacer(Modifier.height(16.dp))
-        
-        var isDragTintEnabled by remember { mutableStateOf(ThemeManager.isDragTintEnabled(context)) }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Drag & Resize Tint Overlay", style = MaterialTheme.typography.titleMedium)
-                Text("Show a semi-transparent colored tint overlay covering the window during gestures.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+    BoxWithConstraints(
+        modifier = Modifier.padding(padding).fillMaxSize()
+    ) {
+        val isWideScreen = maxWidth >= 600.dp
+
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("Customization", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("Window geometry & header styles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                IconButton(onClick = onSearchClick) {
+                    Icon(Icons.Default.Search, contentDescription = "Search Settings", tint = MaterialTheme.colorScheme.primary)
+                }
             }
-            Switch(checked = isDragTintEnabled, onCheckedChange = { 
-                isDragTintEnabled = it
-                ThemeManager.setDragTintEnabled(context, it)
-            })
-        }
+            
+            Spacer(Modifier.height(16.dp))
 
-        Spacer(Modifier.height(16.dp))
-        
-        val iconPacks = remember { IconPackManager.getInstalledIconPacks(context) }
-        var selectedIconPack by remember { mutableStateOf(IconPackManager.getSelectedIconPack(context)) }
-        var dropdownExpanded by remember { mutableStateOf(false) }
-        val currentPackLabel = iconPacks.find { it.packageName == selectedIconPack }?.label ?: "System Default"
-        
-        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Text("Icon Pack", style = MaterialTheme.typography.titleMedium)
-            Text("Select a custom icon pack to skin the window title bar app icons.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            
-            Spacer(Modifier.height(8.dp))
-            
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = { dropdownExpanded = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+            val isSystemDark = isSystemInDarkTheme()
+            val isPreviewDark = when(mode) { 1 -> false; 2 -> true; else -> isSystemDark }
+
+            if (isWideScreen) {
+                // WIDE SCREEN: SPLIT HERO CARD (Preview on Left, Geometry Sliders on Right)
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isThemeHighlight || isGeoHighlight) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(if (isThemeHighlight || isGeoHighlight) 6.dp else 2.dp))
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        Text("Selected: $currentPackLabel", style = MaterialTheme.typography.bodyMedium)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                    }
-                }
-                
-                DropdownMenu(
-                    expanded = dropdownExpanded,
-                    onDismissRequest = { dropdownExpanded = false },
-                    modifier = Modifier.fillMaxWidth(0.9f)
-                ) {
-                    iconPacks.forEach { pack ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    if (pack.icon != null) {
-                                        val bitmap = remember(pack.packageName) {
-                                            try {
-                                                pack.icon.toBitmap(48, 48).asImageBitmap()
-                                            } catch (e: Exception) {
-                                                null
-                                            }
-                                        }
-                                        if (bitmap != null) {
-                                            Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.size(24.dp))
-                                        } else {
-                                            Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
-                                        }
-                                    } else {
-                                        Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
+                        // LEFT SIDE: Interactive Window Preview + Theme Switcher
+                        Column(
+                            modifier = Modifier.weight(0.46f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            if (isThemeHighlight) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("MATCHED SETTING LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
                                     }
-                                    Text(pack.label)
                                 }
-                            },
-                            onClick = {
-                                selectedIconPack = pack.packageName
-                                IconPackManager.setSelectedIconPack(context, pack.packageName)
-                                dropdownExpanded = false
-                                Toast.makeText(context, "Applied ${pack.label}", Toast.LENGTH_SHORT).show()
                             }
-                        )
+
+                            Text("Window Preview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                            
+                            Spacer(Modifier.height(4.dp))
+
+                            WindowPreview(roundness, opacity, borderWidth, titleBarOpacity, isPreviewDark)
+
+                            Spacer(Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Theme Mode:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
+                                    FilterChip(
+                                        selected = mode == index,
+                                        onClick = {
+                                            mode = index
+                                            ThemeManager.setThemeMode(context, index)
+                                        },
+                                        label = { Text(label, fontSize = 11.sp) },
+                                        modifier = Modifier.height(28.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // RIGHT SIDE: Window Frame & Geometry Controls
+                        Column(modifier = Modifier.weight(0.54f)) {
+                            if (isGeoHighlight) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("MATCHED SETTING LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                                    }
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AspectRatio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Window Frame & Geometry", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            // Corner Roundness
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Corner Roundness", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Text("${roundness.toInt()} dp", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(value = roundness, onValueChange = { roundness = it; ThemeManager.setRoundness(context, it) }, valueRange = 0f..40f)
+
+                            // Window Opacity
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Window Opacity", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Text("${((opacity / 255f) * 100).toInt()}%", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(value = opacity, onValueChange = { opacity = it; ThemeManager.setOpacity(context, it.toInt()) }, valueRange = 50f..255f)
+
+                            // Border Width
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Border Stroke Width", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Text("${borderWidth.toInt()} dp", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(value = borderWidth, onValueChange = { borderWidth = it; ThemeManager.setBorderWidth(context, it) }, valueRange = 0f..12f)
+
+                            Spacer(Modifier.height(6.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            Spacer(Modifier.height(6.dp))
+
+                            // Drag & Resize Tint Overlay
+                            var isDragTintEnabled by remember { mutableStateOf(ThemeManager.isDragTintEnabled(context)) }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Drag & Resize Tint Overlay", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Text("Semi-transparent accent tint during gestures", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                                Switch(checked = isDragTintEnabled, onCheckedChange = { 
+                                    isDragTintEnabled = it
+                                    ThemeManager.setDragTintEnabled(context, it)
+                                })
+                            }
+                        }
                     }
                 }
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-        
-        // Pill Auto-Shrink & Scale Toggle
-        var isPillAutoShrinkGlobalEnabled by remember { 
-            mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", true)) 
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Pill Auto-Shrink & Scale", style = MaterialTheme.typography.titleMedium)
-                Text("Automatically scale down the window title pill when inactive to save space.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
-            Switch(checked = isPillAutoShrinkGlobalEnabled, onCheckedChange = { 
-                isPillAutoShrinkGlobalEnabled = it
-                prefs.edit().putBoolean("pill_auto_shrink_global", it).apply()
-            })
-        }
-
-        if (isPillAutoShrinkGlobalEnabled) {
-            Spacer(Modifier.height(12.dp))
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-                    displayManager.displays.forEach { d ->
-                        Text("Configure: ${d.name} (ID: ${d.displayId})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(4.dp))
-                        
-                        var shrinkEnabled by remember(d.displayId) { 
-                            mutableStateOf(ThemeManager.getPillAutoShrink(context, d.displayId)) 
+            } else {
+                // MOBILE / NARROW SCREEN: VERTICAL STACK
+                // 🖼️ CARD 1: WINDOW PREVIEW
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isThemeHighlight) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(if (isThemeHighlight) 6.dp else 3.dp))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        if (isThemeHighlight) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("MATCHED SETTING LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
                         }
-                        var scalePercent by remember(d.displayId) { 
-                            mutableStateOf(ThemeManager.getPillInactiveScale(context, d.displayId).toFloat()) 
-                        }
+
+                        Text("Window Preview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         
+                        Spacer(Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Mode:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
+                                FilterChip(
+                                    selected = mode == index,
+                                    onClick = {
+                                        mode = index
+                                        ThemeManager.setThemeMode(context, index)
+                                    },
+                                    label = { Text(label, fontSize = 11.sp) },
+                                    modifier = Modifier.height(28.dp).weight(1f)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        WindowPreview(roundness, opacity, borderWidth, titleBarOpacity, isPreviewDark)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // 📐 CARD 2: WINDOW FRAME & GEOMETRY
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isGeoHighlight) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(if (isGeoHighlight) 6.dp else 2.dp))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        if (isGeoHighlight) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("MATCHED SETTING LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AspectRatio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Window Frame & Geometry", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+
+                        // Window Roundness
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Corner Roundness", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                Text("${roundness.toInt()} dp", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Slider(value = roundness, onValueChange = { roundness = it; ThemeManager.setRoundness(context, it) }, valueRange = 0f..40f)
+                        
+                        Spacer(Modifier.height(6.dp))
+
+                        // Window Opacity
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Window Opacity", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                Text("${((opacity / 255f) * 100).toInt()}%", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Slider(value = opacity, onValueChange = { opacity = it; ThemeManager.setOpacity(context, it.toInt()) }, valueRange = 50f..255f)
+                        
+                        Spacer(Modifier.height(6.dp))
+
+                        // Border Width
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Border Stroke Width", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                Text("${borderWidth.toInt()} dp", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Slider(value = borderWidth, onValueChange = { borderWidth = it; ThemeManager.setBorderWidth(context, it) }, valueRange = 0f..12f)
+                        
+                        Spacer(Modifier.height(10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(10.dp))
+                        
+                        // Drag & Resize Tint Overlay
+                        var isDragTintEnabled by remember { mutableStateOf(ThemeManager.isDragTintEnabled(context)) }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Enable Auto-Shrink", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                            Switch(checked = shrinkEnabled, onCheckedChange = {
-                                shrinkEnabled = it
-                                ThemeManager.setPillAutoShrink(context, d.displayId, it)
+                            Column(Modifier.weight(1f)) {
+                                Text("Drag & Resize Tint Overlay", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text("Semi-transparent accent tint covering the window during gestures", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            }
+                            Switch(checked = isDragTintEnabled, onCheckedChange = { 
+                                isDragTintEnabled = it
+                                ThemeManager.setDragTintEnabled(context, it)
                             })
                         }
-                        
-                        if (shrinkEnabled) {
-                            Spacer(Modifier.height(4.dp))
-                            Text("Inactive Scale: ${scalePercent.toInt()}%", style = MaterialTheme.typography.bodySmall)
-                            Slider(
-                                value = scalePercent,
-                                onValueChange = { scalePercent = it },
-                                onValueChangeFinished = {
-                                    ThemeManager.setPillInactiveScale(context, d.displayId, scalePercent.toInt())
-                                },
-                                valueRange = 30f..90f,
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // 🪟 CARD 3: TITLE BAR & HEADER STYLE (RESPONSIVE SPLIT ON WIDE SCREENS)
             ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isTitleBarHighlight) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier
+                    ),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(if (isTitleBarHighlight) 6.dp else 2.dp))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Shrink Style", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("Choose styling for inactive/shrunk pill layout.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    Spacer(Modifier.height(8.dp))
-                    
-                    var shrinkStyle by remember { mutableStateOf(ThemeManager.getPillShrinkStyle(context)) }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Scale Transform", "Handle/Bar Resizing").forEachIndexed { index, label ->
-                            FilterChip(
-                                selected = shrinkStyle == index,
-                                onClick = { 
-                                    shrinkStyle = index
-                                    ThemeManager.setPillShrinkStyle(context, index)
-                                },
-                                label = { Text(label) }
-                            )
-                        }
-                    }
-                    
-                    Spacer(Modifier.height(8.dp))
-                    PillPreviewCard(shrinkStyle)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(32.dp))
-        
-        Text("Experimental", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                var showShadows by remember { mutableStateOf(ThemeManager.showShadows(context)) }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Window Shadows", style = MaterialTheme.typography.bodyLarge)
-                        Text("Add depth with soft shadows (Performance impact).", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    }
-                    Switch(checked = showShadows, onCheckedChange = { 
-                        showShadows = it
-                        ThemeManager.setShowShadows(context, it)
-                    })
-                }
-            }
-        }
-        
-        Spacer(Modifier.height(24.dp))
-        Text("Window Resizing Performance", style = MaterialTheme.typography.titleLarge)
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Resizing Engine Style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Choose the rendering strategy used during window resizing gestures.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                Spacer(Modifier.height(8.dp))
-                
-                var activeStyle by remember { mutableStateOf(CompatibilityManager.getActiveResizeStyle(context)) }
-                
-                val styleOptions = listOf(
-                    "Real-Time Scaling" to ResizeStyle.REAL_TIME_SCALING,
-                    "Classic Tinted Overlay" to ResizeStyle.FUTURE_STYLE_A,
-                    "App-Branded Matte Overlay" to ResizeStyle.FUTURE_STYLE_B
-                )
-                
-                var dropdownExpanded by remember { mutableStateOf(false) }
-                
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { dropdownExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
+                if (isWideScreen) {
+                    // WIDE SCREEN: 2-COLUMN SPLIT LAYOUT FOR TITLE BAR & HEADER STYLE
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        val currentLabel = styleOptions.find { it.second == activeStyle }?.first ?: "Real-Time Scaling"
-                        Text(currentLabel)
-                    }
-                    
-                    DropdownMenu(
-                        expanded = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false },
-                        modifier = Modifier.fillMaxWidth(0.9f)
-                    ) {
-                        styleOptions.forEach { (label, style) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    activeStyle = style
-                                    CompatibilityManager.setActiveResizeStyle(context, style)
-                                    dropdownExpanded = false
+                        // LEFT SIDE: Mode Switcher Chips & Looping Animation Preview
+                        Column(modifier = Modifier.weight(0.46f)) {
+                            if (isTitleBarHighlight) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("SEARCH LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                                    }
                                 }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Header Mode & Preview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = !usePillForSnapped,
+                                    onClick = {
+                                        usePillForSnapped = false
+                                        ThemeManager.setPillForSnapped(context, false)
+                                    },
+                                    label = { Text("Full Title Bar", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = usePillForSnapped,
+                                    onClick = {
+                                        usePillForSnapped = true
+                                        ThemeManager.setPillForSnapped(context, true)
+                                    },
+                                    label = { Text("Compact Pill", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            if (!usePillForSnapped) {
+                                var isAutoHideTitleBar by remember { mutableStateOf(ThemeManager.autoHideTitleBar(context)) }
+                                if (isAutoHideTitleBar) {
+                                    LoopingAutoHideTitleBarPreviewCard()
+                                }
+                            } else {
+                                var isPillAutoShrinkGlobalEnabled by remember { mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", true)) }
+                                if (isPillAutoShrinkGlobalEnabled) {
+                                    var shrinkStyle by remember { mutableStateOf(ThemeManager.getPillShrinkStyle(context)) }
+                                    PillPreviewCard(shrinkStyle)
+                                }
+                            }
+                        }
+
+                        // RIGHT SIDE: Icon Pack & Mode-Specific Controls
+                        Column(modifier = Modifier.weight(0.54f)) {
+                            Text("Title Bar Icon Pack", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(6.dp))
+
+                            val iconPacks = remember { IconPackManager.getInstalledIconPacks(context) }
+                            var selectedIconPack by remember { mutableStateOf(IconPackManager.getSelectedIconPack(context)) }
+                            var dropdownExpanded by remember { mutableStateOf(false) }
+                            val currentPackLabel = iconPacks.find { it.packageName == selectedIconPack }?.label ?: "System Default"
+
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(
+                                    onClick = { dropdownExpanded = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Apps, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(currentPackLabel, style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                    }
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = dropdownExpanded,
+                                    onDismissRequest = { dropdownExpanded = false },
+                                    modifier = Modifier.fillMaxWidth(0.85f)
+                                ) {
+                                    iconPacks.forEach { pack ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                    if (pack.icon != null) {
+                                                        val bitmap = remember(pack.packageName) {
+                                                            try {
+                                                                pack.icon.toBitmap(48, 48).asImageBitmap()
+                                                            } catch (e: Exception) {
+                                                                null
+                                                            }
+                                                        }
+                                                        if (bitmap != null) {
+                                                            Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.size(24.dp))
+                                                        } else {
+                                                            Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
+                                                        }
+                                                    } else {
+                                                        Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
+                                                    }
+                                                    Text(pack.label)
+                                                }
+                                            },
+                                            onClick = {
+                                                selectedIconPack = pack.packageName
+                                                IconPackManager.setSelectedIconPack(context, pack.packageName)
+                                                dropdownExpanded = false
+                                                Toast.makeText(context, "Applied ${pack.label}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            if (!usePillForSnapped) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Title Bar Opacity", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                        Text("${titleBarOpacity.toInt()}%", modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Slider(value = titleBarOpacity, onValueChange = { titleBarOpacity = it; ThemeManager.setTitleBarOpacity(context, it.toInt()) }, valueRange = 30f..100f)
+
+                                Spacer(Modifier.height(8.dp))
+
+                                var isAutoHideTitleBar by remember { mutableStateOf(ThemeManager.autoHideTitleBar(context)) }
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Auto-Hide Title Bar", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text("Collapse title bar into thin strip when idle", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                    }
+                                    Switch(checked = isAutoHideTitleBar, onCheckedChange = { 
+                                        isAutoHideTitleBar = it
+                                        ThemeManager.setAutoHideTitleBar(context, it)
+                                    })
+                                }
+                            } else {
+                                var isPillAutoShrinkGlobalEnabled by remember { mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", true)) }
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Pill Auto-Shrink & Scale", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text("Scale down title pill when inactive", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                    }
+                                    Switch(checked = isPillAutoShrinkGlobalEnabled, onCheckedChange = { 
+                                        isPillAutoShrinkGlobalEnabled = it
+                                        prefs.edit().putBoolean("pill_auto_shrink_global", it).apply()
+                                    })
+                                }
+
+                                if (isPillAutoShrinkGlobalEnabled) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Shrink Style", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Spacer(Modifier.height(4.dp))
+                                    var shrinkStyle by remember { mutableStateOf(ThemeManager.getPillShrinkStyle(context)) }
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        listOf("Scale Transform", "Handle Resizing").forEachIndexed { index, label ->
+                                            FilterChip(
+                                                selected = shrinkStyle == index,
+                                                onClick = { 
+                                                    shrinkStyle = index
+                                                    ThemeManager.setPillShrinkStyle(context, index)
+                                                },
+                                                label = { Text(label, fontSize = 11.sp) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // MOBILE SINGLE COLUMN LAYOUT
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        if (isTitleBarHighlight) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.PinDrop, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("MATCHED SETTING LOCATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Title Bar & Header Style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+
+                        Text("Header Mode", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(6.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = !usePillForSnapped,
+                                onClick = {
+                                    usePillForSnapped = false
+                                    ThemeManager.setPillForSnapped(context, false)
+                                },
+                                label = { Text("Full Title Bar", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                modifier = Modifier.weight(1f)
                             )
+                            FilterChip(
+                                selected = usePillForSnapped,
+                                onClick = {
+                                    usePillForSnapped = true
+                                    ThemeManager.setPillForSnapped(context, true)
+                                },
+                                label = { Text("Compact Pill", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        val iconPacks = remember { IconPackManager.getInstalledIconPacks(context) }
+                        var selectedIconPack by remember { mutableStateOf(IconPackManager.getSelectedIconPack(context)) }
+                        var dropdownExpanded by remember { mutableStateOf(false) }
+                        val currentPackLabel = iconPacks.find { it.packageName == selectedIconPack }?.label ?: "System Default"
+
+                        Text("Title Bar Icon Pack", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(6.dp))
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { dropdownExpanded = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Apps, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(currentPackLabel, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                            
+                            DropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false },
+                                modifier = Modifier.fillMaxWidth(0.85f)
+                            ) {
+                                iconPacks.forEach { pack ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                if (pack.icon != null) {
+                                                    val bitmap = remember(pack.packageName) {
+                                                        try {
+                                                            pack.icon.toBitmap(48, 48).asImageBitmap()
+                                                        } catch (e: Exception) {
+                                                            null
+                                                        }
+                                                    }
+                                                    if (bitmap != null) {
+                                                        Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.size(24.dp))
+                                                    } else {
+                                                        Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
+                                                    }
+                                                } else {
+                                                    Icon(Icons.Default.Apps, null, modifier = Modifier.size(24.dp))
+                                                }
+                                                Text(pack.label)
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedIconPack = pack.packageName
+                                            IconPackManager.setSelectedIconPack(context, pack.packageName)
+                                            dropdownExpanded = false
+                                            Toast.makeText(context, "Applied ${pack.label}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        if (!usePillForSnapped) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Title Bar Opacity", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Text("${titleBarOpacity.toInt()}%", modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(value = titleBarOpacity, onValueChange = { titleBarOpacity = it; ThemeManager.setTitleBarOpacity(context, it.toInt()) }, valueRange = 30f..100f)
+
+                            Spacer(Modifier.height(12.dp))
+
+                            var isAutoHideTitleBar by remember { mutableStateOf(ThemeManager.autoHideTitleBar(context)) }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Auto-Hide Title Bar", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Text("Collapse title bar into a thin strip when idle; reveal on hover", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                                Switch(checked = isAutoHideTitleBar, onCheckedChange = { 
+                                    isAutoHideTitleBar = it
+                                    ThemeManager.setAutoHideTitleBar(context, it)
+                                })
+                            }
+
+                            if (isAutoHideTitleBar) {
+                                Spacer(Modifier.height(12.dp))
+                                LoopingAutoHideTitleBarPreviewCard()
+                            }
+                        } else {
+                            var isPillAutoShrinkGlobalEnabled by remember { mutableStateOf(prefs.getBoolean("pill_auto_shrink_global", true)) }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Pill Auto-Shrink & Scale", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Text("Automatically scale down the window title pill when inactive", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                                Switch(checked = isPillAutoShrinkGlobalEnabled, onCheckedChange = { 
+                                    isPillAutoShrinkGlobalEnabled = it
+                                    prefs.edit().putBoolean("pill_auto_shrink_global", it).apply()
+                                })
+                            }
+
+                            if (isPillAutoShrinkGlobalEnabled) {
+                                Spacer(Modifier.height(12.dp))
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Text("Pill Shrink Style & Preview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        Text("Choose styling for inactive/shrunk pill layout", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                        Spacer(Modifier.height(8.dp))
+                                        
+                                        var shrinkStyle by remember { mutableStateOf(ThemeManager.getPillShrinkStyle(context)) }
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            listOf("Scale Transform", "Handle/Bar Resizing").forEachIndexed { index, label ->
+                                                FilterChip(
+                                                    selected = shrinkStyle == index,
+                                                    onClick = { 
+                                                        shrinkStyle = index
+                                                        ThemeManager.setPillShrinkStyle(context, index)
+                                                    },
+                                                    label = { Text(label) }
+                                                )
+                                            }
+                                        }
+                                        
+                                        Spacer(Modifier.height(8.dp))
+                                        PillPreviewCard(shrinkStyle)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-        if (appUiStyle == 1) {
-            Text("Sidebar Behaviour", style = MaterialTheme.typography.titleLarge)
-            SidebarHoverPreview()
-            
-            val configuration = LocalConfiguration.current
-            val isTablet = configuration.screenWidthDp >= 900
-            
-            Text("Adaptive Configuration", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // 📱 UNIFIED CARD: ALL APP UI & SCALING SETTINGS IN ONE PLACE!
             ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(if (isTablet) "Tablet Mode Active" else "Phone Mode Active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("App UI & Scaling", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // 1. App Navigation Layout Style
+                    Text("App UI Layout Style", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(6.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Classic UI", "Expressive UI").forEachIndexed { index, label ->
+                            FilterChip(
+                                selected = appUiStyle == index,
+                                onClick = {
+                                    appUiStyle = index
+                                    ThemeManager.setAppUiStyle(context, index)
+                                    (context as? MainActivity)?.recreate()
+                                },
+                                label = { Text(label, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // 2. Sidebar & Expressive Dock Behaviour (when appUiStyle == 1)
+                    if (appUiStyle == 1) {
+                        Spacer(Modifier.height(14.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(14.dp))
+
+                        Text("Expressive Dock & Sidebar Behaviour", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        SidebarHoverPreview()
+                        
+                        val configuration = LocalConfiguration.current
+                        val isTablet = configuration.screenWidthDp >= 900
+                        
+                        Text("Adaptive Configuration (${if (isTablet) "Tablet" else "Phone"})", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        
+                        // Phone Settings
+                        Text("Phone Settings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        var hoverEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandEnabled(context)) }
+                        var autoCollapse by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseEnabled(context)) }
+                        
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Hover Expand", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Switch(checked = hoverEnabled, onCheckedChange = { 
+                                hoverEnabled = it
+                                ThemeManager.setSidebarHoverExpandEnabled(context, it)
+                            })
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Auto-Collapse", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Switch(checked = autoCollapse, onCheckedChange = { 
+                                autoCollapse = it
+                                ThemeManager.setSidebarAutoCollapseEnabled(context, it)
+                            })
+                        }
+                        
+                        Spacer(Modifier.height(4.dp))
+                        
+                        // Tablet Settings
+                        Text("Tablet Settings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        var hoverTabletEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandTabletEnabled(context)) }
+                        var autoCollapseTablet by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseTabletEnabled(context)) }
+                        
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Hover Expand", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Switch(checked = hoverTabletEnabled, onCheckedChange = { 
+                                hoverTabletEnabled = it
+                                ThemeManager.setSidebarHoverExpandTabletEnabled(context, it)
+                            })
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Auto-Collapse", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Switch(checked = autoCollapseTablet, onCheckedChange = { 
+                                autoCollapseTablet = it
+                                ThemeManager.setSidebarAutoCollapseTabletEnabled(context, it)
+                            })
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(Modifier.height(14.dp))
+
+                    // 3. App UI Scaling Section
+                    Text("App UI Scaling & Size", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Automatic Scaling Mode", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text("Scale down in narrow Freeform windows to avoid cramming", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = autoUiScalingEnabled, 
+                            onCheckedChange = onAutoUiScalingToggle
+                        )
+                    }
+                    
                     Spacer(Modifier.height(12.dp))
                     
-                    // Phone Settings
-                    Text("Phone Settings", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                    var hoverEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandEnabled(context)) }
-                    var autoCollapse by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseEnabled(context)) }
-                    
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Hover Expand", Modifier.weight(1f))
-                        Switch(checked = hoverEnabled, onCheckedChange = { 
-                            hoverEnabled = it
-                            ThemeManager.setSidebarHoverExpandEnabled(context, it)
-                        })
-                    }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Auto-Collapse", Modifier.weight(1f))
-                        Switch(checked = autoCollapse, onCheckedChange = { 
-                            autoCollapse = it
-                            ThemeManager.setSidebarAutoCollapseEnabled(context, it)
-                        })
+                    val scalePercent = (appUiScale * 100).toInt()
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Custom UI Scale", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                            Text("${scalePercent}%", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                        }
                     }
                     
-                    Divider(Modifier.padding(vertical = 12.dp))
+                    Spacer(Modifier.height(4.dp))
                     
-                    // Tablet Settings
-                    Text("Tablet Settings", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                    var hoverTabletEnabled by remember { mutableStateOf(ThemeManager.isSidebarHoverExpandTabletEnabled(context)) }
-                    var autoCollapseTablet by remember { mutableStateOf(ThemeManager.isSidebarAutoCollapseTabletEnabled(context)) }
-                    
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Hover Expand", Modifier.weight(1f))
-                        Switch(checked = hoverTabletEnabled, onCheckedChange = { 
-                            hoverTabletEnabled = it
-                            ThemeManager.setSidebarHoverExpandTabletEnabled(context, it)
-                        })
-                    }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Auto-Collapse", Modifier.weight(1f))
-                        Switch(checked = autoCollapseTablet, onCheckedChange = { 
-                            autoCollapseTablet = it
-                            ThemeManager.setSidebarAutoCollapseTabletEnabled(context, it)
-                        })
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Slider(
+                            value = appUiScale, 
+                            onValueChange = onAppUiScaleChange, 
+                            valueRange = 0.7f..1.3f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        OutlinedButton(
+                            onClick = { onAppUiScaleChange(1.0f) },
+                            shape = CircleShape
+                        ) {
+                            Text("Reset")
+                        }
                     }
                 }
             }
+
             Spacer(Modifier.height(16.dp))
-        }
 
-        Text("App UI", style = MaterialTheme.typography.titleLarge)
-        Text("Select the primary navigation layout for the shell application.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Classic", "Expressive").forEachIndexed { index, label ->
-                FilterChip(
-                    selected = appUiStyle == index, 
-                    onClick = { 
-                        appUiStyle = index
-                        ThemeManager.setAppUiStyle(context, index)
-                        // Trigger a full recompose of the MainScreen
-                        (context as? MainActivity)?.recreate()
-                    }, 
-                    label = { Text(label) }
-                )
-            }
-        }
-        
-        Spacer(Modifier.height(16.dp))
-
-        Text("Theme Mode", style = MaterialTheme.typography.titleLarge)
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Auto", "Light", "Dark").forEachIndexed { index, label ->
-                FilterChip(selected = mode == index, onClick = { mode = index; ThemeManager.setThemeMode(context, index) }, label = { Text(label) })
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Text("App UI Scaling", style = MaterialTheme.typography.titleLarge)
-        Text("Customize the size of fonts and controls for your physical screen size.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        
-        Spacer(Modifier.height(12.dp))
-        
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Automatic Scaling Mode", style = MaterialTheme.typography.titleMedium)
-                Text("Scale layouts down in small/narrow Freeform windows to avoid cramming.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
-            Switch(
-                checked = autoUiScalingEnabled, 
-                onCheckedChange = onAutoUiScalingToggle
-            )
-        }
-        
-        Spacer(Modifier.height(16.dp))
-        
-        val scalePercent = (appUiScale * 100).toInt()
-        Text("Custom UI Scale: ${scalePercent}%", style = MaterialTheme.typography.titleMedium)
-        Text("Compensates for high physical DPI or small phone displays.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        
-        Spacer(Modifier.height(4.dp))
-        
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Slider(
-                value = appUiScale, 
-                onValueChange = onAppUiScaleChange, 
-                valueRange = 0.7f..1.3f,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(12.dp))
-            OutlinedButton(
-                onClick = { onAppUiScaleChange(1.0f) },
-                shape = CircleShape
+            // 🧪 EXPERIMENTAL & PERFORMANCE ENGINE (BOTTOM LAST!)
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
             ) {
-                Text("Reset")
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Experimental & Performance Engine", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Text("Choose rendering engine strategy during window resizing gestures", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Spacer(Modifier.height(12.dp))
+                    
+                    var activeStyle by remember { mutableStateOf(CompatibilityManager.getActiveResizeStyle(context)) }
+                    
+                    val styleOptions = listOf(
+                        "Real-Time Scaling" to ResizeStyle.REAL_TIME_SCALING,
+                        "Classic Tinted Overlay" to ResizeStyle.FUTURE_STYLE_A,
+                        "App-Branded Matte Overlay" to ResizeStyle.FUTURE_STYLE_B
+                    )
+                    
+                    var dropdownExpanded by remember { mutableStateOf(false) }
+                    
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { dropdownExpanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            val currentLabel = styleOptions.find { it.second == activeStyle }?.first ?: "Real-Time Scaling"
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text(currentLabel, style = MaterialTheme.typography.bodyMedium)
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                        }
+                        
+                        DropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.85f)
+                        ) {
+                            styleOptions.forEach { (label, style) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        activeStyle = style
+                                        CompatibilityManager.setActiveResizeStyle(context, style)
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -2241,16 +2983,16 @@ fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, titleBar
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .padding(vertical = 16.dp),
+            .height(210.dp)
+            .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)),
         shape = MaterialTheme.shapes.extraLarge
     ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // Mock Window
+        Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+            // Mock Window - Natural Squarish Desktop Window Shape (240dp x 155dp)!
             Column(
                 modifier = Modifier
-                    .size(200.dp, 120.dp)
+                    .size(240.dp, 155.dp)
                     .background(
                         color = if (isDark) Color(0xFF2D2D30).copy(alpha = opacity / 255f) 
                                 else Color(0xFFF3F6FA).copy(alpha = opacity / 255f),
@@ -2276,7 +3018,7 @@ fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, titleBar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(24.dp)
+                        .height(28.dp)
                         .background(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = titleBarOpacity / 100f),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(
@@ -2284,13 +3026,13 @@ fun WindowPreview(roundness: Float, opacity: Float, borderWidth: Float, titleBar
                                 topEnd = roundness.dp
                             )
                         )
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(10.dp).background(Color.White.copy(0.5f), androidx.compose.foundation.shape.CircleShape))
                         Spacer(Modifier.width(6.dp))
-                        Box(Modifier.width(40.dp).height(4.dp).background(Color.White.copy(0.3f)))
+                        Box(Modifier.width(48.dp).height(4.dp).background(Color.White.copy(0.3f)))
                     }
                 }
             }
@@ -2379,7 +3121,7 @@ fun DisplaySettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
         if (displays.isEmpty()) {
             Text("No displays detected.")
         } else {
-            val display = displays[selectedIdx]
+            val display = displays.getOrNull(selectedIdx) ?: displays[0]
             var dockPos by remember(selectedIdx) { mutableStateOf(ThemeManager.getDockPosition(context, display.id)) }
             var dockSize by remember(selectedIdx) { mutableStateOf(ThemeManager.getDockSize(context, display.id).toFloat()) }
 
@@ -2983,6 +3725,17 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
     
     val isExpressive = ThemeManager.getAppUiStyle(context) == 1
     
+    var showModulesScreen by remember { mutableStateOf(false) }
+
+    if (showModulesScreen) {
+        SystemModulesScreen(
+            padding = padding,
+            isExpressive = isExpressive,
+            onBack = { showModulesScreen = false }
+        )
+        return
+    }
+    
     Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
             "App Settings", 
@@ -2993,6 +3746,60 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
         Spacer(Modifier.height(8.dp))
         Text("Configure global settings, theme attributes, and advanced system features.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         
+        Spacer(Modifier.height(16.dp))
+
+        // System Modules Control Center Link
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showModulesScreen = true }
+                .padding(vertical = 8.dp),
+            shape = if (isExpressive) RoundedCornerShape(24.dp) else CardDefaults.shape,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            ),
+            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Build,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "System Modules & Battery Optimizer",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Turn off heavy background services, toggle OS-level manifest features, and freeze idle loops to prevent phone heating & save battery.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
         Spacer(Modifier.height(16.dp))
 
         SectionContainer(isExpressive = isExpressive, title = "Appearance") {
@@ -3106,6 +3913,90 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
             }
         }
 
+        SectionContainer(isExpressive = isExpressive, title = "Notifications") {
+            var showFilterDialog by remember { mutableStateOf(false) }
+            
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { showFilterDialog = true }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.FilterAlt, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Manage Spam Filters", style = MaterialTheme.typography.titleMedium)
+                        Text("Select which apps will have notification cool-down applied to prevent spam during media seeking.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                    Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
+                }
+            }
+
+            if (showFilterDialog) {
+                var searchQuery by rememberSaveable { mutableStateOf("") }
+                val allApps = remember {
+                    val pm = context.packageManager
+                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                        .map { app -> AppInfo(app.loadLabel(pm).toString(), app.packageName, null, (app.flags and ApplicationInfo.FLAG_SYSTEM != 0)) }
+                        .sortedBy { it.label }
+                }
+                val filteredApps = remember(searchQuery) {
+                    allApps.filter { it.label.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true) }
+                }
+                
+                // Track state locally to trigger UI updates
+                var cooldownApps by remember { 
+                    mutableStateOf(
+                        context.getSharedPreferences("freeform_theme_prefs", Context.MODE_PRIVATE)
+                            .getStringSet("notification_cooldown_apps", emptySet())?.toSet() ?: emptySet()
+                    )
+                }
+
+                AlertDialog(
+                    onDismissRequest = { showFilterDialog = false },
+                    title = { Text("Notification Cool-down") },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                label = { Text("Search apps") },
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingIcon = { Icon(Icons.Default.Search, null) }
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            LazyColumn(modifier = Modifier.height(400.dp)) {
+                                items(filteredApps, key = { it.packageName }) { app ->
+                                    val isEnabled = cooldownApps.contains(app.packageName.lowercase())
+                                    val onToggle = {
+                                        ThemeManager.toggleNotificationCooldown(context, app.packageName)
+                                        // Update local state to trigger recomposition
+                                        cooldownApps = context.getSharedPreferences("freeform_theme_prefs", Context.MODE_PRIVATE)
+                                            .getStringSet("notification_cooldown_apps", emptySet())?.toSet() ?: emptySet()
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AppIcon(app.packageName, modifier = Modifier.size(32.dp))
+                                        Spacer(Modifier.width(12.dp))
+                                        Text(app.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                                        Checkbox(checked = isEnabled, onCheckedChange = { onToggle() })
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { showFilterDialog = false }) { Text("Done") } }
+                )
+            }
+        }
+
         SectionContainer(isExpressive = isExpressive, title = "Experimental (May be unstable)") {
             Column {
                 // Tablet Mode Toggle
@@ -3135,6 +4026,52 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                         usePillForSnapped = it
                         ThemeManager.setPillForSnapped(context, it)
                     })
+                }
+                
+                if (!usePillForSnapped) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                    )
+                    
+                    var autoHideTitleBar by remember { mutableStateOf(ThemeManager.autoHideTitleBar(context)) }
+                    var autoHideTriggerMode by remember { mutableStateOf(ThemeManager.getAutoHideTriggerMode(context)) }
+
+                    Column(Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Auto-Hide Title Bar on Top Edge", style = MaterialTheme.typography.bodyLarge)
+                                Text("Collapses docked/snapped title bar into a thin 8dp strip. Reveals full title bar when hovering top edge or tapping.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            }
+                            Switch(checked = autoHideTitleBar, onCheckedChange = { 
+                                autoHideTitleBar = it
+                                ThemeManager.setAutoHideTitleBar(context, it)
+                                FreeformOverlayService.requestRefresh()
+                            })
+                        }
+
+                        if (autoHideTitleBar) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Trigger Source", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val modes = listOf("Hybrid (Mouse & Touch)", "Mouse Hover Only", "Touch Tap Only")
+                                modes.forEachIndexed { index, label ->
+                                    FilterChip(
+                                        selected = autoHideTriggerMode == index,
+                                        onClick = {
+                                            autoHideTriggerMode = index
+                                            ThemeManager.setAutoHideTriggerMode(context, index)
+                                        },
+                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 Divider(
@@ -3169,6 +4106,100 @@ fun AppSettingsScreen(padding: PaddingValues, displays: List<DisplayInfo>) {
                         instantResizeNoAnim = it
                         ThemeManager.setInstantResizeNoAnim(context, it)
                     })
+                }
+                
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = if (isExpressive) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else DividerDefaults.color
+                )
+
+                // Enhanced Multi-Window Support
+                var enhancedMultiWindow by remember { mutableStateOf(ThemeManager.isEnhancedMultiWindowEnabled(context)) }
+                var showMultiWindowFilter by remember { mutableStateOf(false) }
+
+                Column {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Enhanced Multi-Window Support", style = MaterialTheme.typography.bodyLarge)
+                            Text("Allows apps to have independent title bars for every unique window/task. Perfect for Chrome or Task Manager.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        }
+                        Switch(checked = enhancedMultiWindow, onCheckedChange = { 
+                            enhancedMultiWindow = it
+                            ThemeManager.setEnhancedMultiWindowEnabled(context, it)
+                        })
+                    }
+                    
+                    if (enhancedMultiWindow) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { showMultiWindowFilter = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Settings, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Manage Multi-Window App List")
+                        }
+                    }
+                }
+
+                if (showMultiWindowFilter) {
+                    var mSearchQuery by remember { mutableStateOf("") }
+                    val allApps = remember {
+                        val pm = context.packageManager
+                        pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                            .map { app -> AppInfo(app.loadLabel(pm).toString(), app.packageName, null, (app.flags and ApplicationInfo.FLAG_SYSTEM != 0)) }
+                            .sortedBy { it.label }
+                    }
+                    val filteredApps = remember(mSearchQuery) {
+                        allApps.filter { it.label.contains(mSearchQuery, ignoreCase = true) || it.packageName.contains(mSearchQuery, ignoreCase = true) }
+                    }
+                    
+                    var multiWindowWhitelist by remember { 
+                        mutableStateOf(ThemeManager.getMultiWindowWhitelist(context))
+                    }
+
+                    AlertDialog(
+                        onDismissRequest = { showMultiWindowFilter = false },
+                        title = { Text("Multi-Window Support List") },
+                        text = {
+                            Column {
+                                Text("Select apps that are allowed to have multiple independent title bars simultaneously.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = mSearchQuery,
+                                    onValueChange = { mSearchQuery = it },
+                                    label = { Text("Search apps") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                LazyColumn(modifier = Modifier.height(400.dp)) {
+                                    items(filteredApps, key = { it.packageName }) { app ->
+                                        val isEnabled = multiWindowWhitelist.contains(app.packageName)
+                                        val onToggle = {
+                                            ThemeManager.toggleMultiWindowWhitelist(context, app.packageName)
+                                            multiWindowWhitelist = ThemeManager.getMultiWindowWhitelist(context)
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            AppIcon(app.packageName, modifier = Modifier.size(32.dp))
+                                            Spacer(Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(app.label, style = MaterialTheme.typography.bodyMedium)
+                                                Text(app.packageName, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            }
+                                            Checkbox(checked = isEnabled, onCheckedChange = { onToggle() })
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showMultiWindowFilter = false }) { Text("Done") } }
+                    )
                 }
                 
                 Divider(
@@ -3919,7 +4950,7 @@ fun CompatibilityScreen(padding: PaddingValues) {
 fun BlacklistScreen(padding: PaddingValues) {
     val context = LocalContext.current
     var allInstalled by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(0) } // 0: All, 1: User, 2: System
     val scope = rememberCoroutineScope()
     
@@ -5093,5 +6124,354 @@ private fun shareMedia(context: Context, item: CaptureMedia) {
         context.startActivity(Intent.createChooser(intent, "Share Capture"))
     } catch (e: Exception) {
         Toast.makeText(context, "Error sharing file: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+fun SystemModulesScreen(
+    padding: PaddingValues,
+    isExpressive: Boolean,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    // Read preference states
+    var lockModuleEnabled by remember { mutableStateOf(ThemeManager.isModuleLockEnabled(context)) }
+    var widgetModuleEnabled by remember { mutableStateOf(ThemeManager.isModuleWidgetEnabled(context)) }
+    var captureModuleEnabled by remember { mutableStateOf(ThemeManager.isModuleCaptureEnabled(context)) }
+    var mirrorModuleEnabled by remember { mutableStateOf(ThemeManager.isModuleMirrorEnabled(context)) }
+    
+    var deepSleepEnabled by remember { mutableStateOf(ThemeManager.isDeepSleepOptimizationEnabled(context)) }
+    var widgetRefreshDeduplicated by remember { mutableStateOf(ThemeManager.isWidgetRefreshDeduplicated(context)) }
+    var shellDisplayRequired by remember { mutableStateOf(ThemeManager.isShellDisplayRequired(context)) }
+    var lockAutoDetect by remember { mutableStateOf(ThemeManager.isLockAutoDetectEnabled(context)) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Header with Back Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "System Control Center",
+                style = if (isExpressive) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Fine-tune system background behavior, modular settings, and deep power saving configurations.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // ── Active Background Modules Status Dashboard ──────────────────────────────
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = if (isExpressive) RoundedCornerShape(24.dp) else CardDefaults.shape,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Active Background Modules",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Status Grid / Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val statusItems = listOf(
+                        Triple("Lock", lockModuleEnabled, Color(0xFF4CAF50)),
+                        Triple("Widgets", widgetModuleEnabled, Color(0xFF00BCD4)),
+                        Triple("Capture", captureModuleEnabled, Color(0xFFFF9800)),
+                        Triple("Mirror", mirrorModuleEnabled, Color(0xFF9C27B0))
+                    )
+                    
+                    statusItems.forEach { (name, enabled, color) ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    if (enabled) color.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.1f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (enabled) color.copy(alpha = 0.4f) else Color.Gray.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(
+                                            if (enabled) color else Color.Gray,
+                                            CircleShape
+                                        )
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (enabled) MaterialTheme.colorScheme.onSurface else Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // ── Feature Modules Section ──────────────────────────────────────────
+        SectionContainer(isExpressive = isExpressive, title = "Feature Modules (OS Manifest level)") {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                ModuleToggleCard(
+                    isExpressive = isExpressive,
+                    icon = Icons.Default.Lock,
+                    title = "Desktop Lock Screen",
+                    description = "Enables secure custom locks on displays. Programmatically disables lock screen overlays and system bindings when toggled off.",
+                    checked = lockModuleEnabled,
+                    onCheckedChange = { checked ->
+                        lockModuleEnabled = checked
+                        ThemeManager.setModuleLockEnabled(context, checked)
+                        ComponentToggleManager.syncAllModules(context)
+                    }
+                )
+                
+                ModuleToggleCard(
+                    isExpressive = isExpressive,
+                    icon = Icons.Default.List,
+                    title = "Task Manager Widgets",
+                    description = "Enables interactive launcher widgets & quick tools. Programmatically unbinds all receiver provider components to save background loops.",
+                    checked = widgetModuleEnabled,
+                    onCheckedChange = { checked ->
+                        widgetModuleEnabled = checked
+                        ThemeManager.setModuleWidgetEnabled(context, checked)
+                        ComponentToggleManager.syncAllModules(context)
+                    }
+                )
+                
+                ModuleToggleCard(
+                    isExpressive = isExpressive,
+                    icon = Icons.Default.Videocam,
+                    title = "Screen Record & Capture",
+                    description = "Enables floating capture widgets and recording service layers. Saves layout compositions and service resources when turned off.",
+                    checked = captureModuleEnabled,
+                    onCheckedChange = { checked ->
+                        captureModuleEnabled = checked
+                        ThemeManager.setModuleCaptureEnabled(context, checked)
+                        ComponentToggleManager.syncAllModules(context)
+                    }
+                )
+                
+                ModuleToggleCard(
+                    isExpressive = isExpressive,
+                    icon = Icons.Default.Tv,
+                    title = "Display Mirroring",
+                    description = "Supports wireless/virtual display screen mirroring. Toggling off programmatically disables the underlying mirror activities and active overlay layers.",
+                    checked = mirrorModuleEnabled,
+                    onCheckedChange = { checked ->
+                        mirrorModuleEnabled = checked
+                        ThemeManager.setModuleMirrorEnabled(context, checked)
+                        ComponentToggleManager.syncAllModules(context)
+                    }
+                )
+            }
+        }
+        
+        // ── Power & Performance Optimizations Section ──────────────────────────────
+        SectionContainer(isExpressive = isExpressive, title = "Power & Performance Optimizers") {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OptimizationToggleCard(
+                    isExpressive = isExpressive,
+                    title = "Pocket Sleep Optimizer",
+                    description = "Stops all background 'dumpsys' monitor task loops and CPU executions instantly when the handset screen goes off. Reduces standby standby battery overhead to absolute 0%.",
+                    checked = deepSleepEnabled,
+                    onCheckedChange = { checked ->
+                        deepSleepEnabled = checked
+                        ThemeManager.setDeepSleepOptimizationEnabled(context, checked)
+                    }
+                )
+                
+                OptimizationToggleCard(
+                    isExpressive = isExpressive,
+                    title = "Broadcast Throttling (Deduplication)",
+                    description = "Throttles widget refresh calls via layout hashing. Halts endless binder loops and ensures widget updates only fire on state change, cutting redundant queries by over 95%.",
+                    checked = widgetRefreshDeduplicated,
+                    onCheckedChange = { checked ->
+                        widgetRefreshDeduplicated = checked
+                        ThemeManager.setWidgetRefreshDeduplicated(context, checked)
+                    }
+                )
+                
+                OptimizationToggleCard(
+                    isExpressive = isExpressive,
+                    title = "Smart Active Display Guard",
+                    description = "Shuts down the background monitoring overlay service dynamically if display shells are disabled on all physical displays, keeping system footprint clean.",
+                    checked = shellDisplayRequired,
+                    onCheckedChange = { checked ->
+                        shellDisplayRequired = checked
+                        ThemeManager.setShellDisplayRequired(context, checked)
+                    }
+                )
+                
+                OptimizationToggleCard(
+                    isExpressive = isExpressive,
+                    title = "Auto Lock Detection",
+                    description = "Triggers desktop overlay locks automatically on handset sleep. Turn off to lock displays only when manually triggered via desktop panel widgets.",
+                    checked = lockAutoDetect,
+                    onCheckedChange = { checked ->
+                        lockAutoDetect = checked
+                        ThemeManager.setLockAutoDetectEnabled(context, checked)
+                    }
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun ModuleToggleCard(
+    isExpressive: Boolean,
+    icon: ImageVector,
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (checked) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            }
+        ),
+        border = if (checked) {
+            BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+        } else {
+            BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    }
+}
+
+@Composable
+fun OptimizationToggleCard(
+    isExpressive: Boolean,
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = if (isExpressive) RoundedCornerShape(20.dp) else CardDefaults.shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
     }
 }

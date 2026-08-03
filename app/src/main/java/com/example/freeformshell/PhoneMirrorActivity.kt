@@ -11,6 +11,12 @@ class PhoneMirrorActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        if (!ThemeManager.isModuleMirrorEnabled(this)) {
+            Toast.makeText(this, "Mirroring module is disabled! Enable it in Companion settings.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+        
         try {
             MirrorShortcutHelper.updatePinnedMirrorShortcutIfExist(this)
         } catch (e: Exception) {}

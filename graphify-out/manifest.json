@@ -15,24 +15,24 @@
     "semantic_hash": "df27ae8b6172e983a9484841e636a0a8"
   },
   "G:\\Ai\\FreeformShell\\app\\build.gradle.kts": {
-    "mtime": 1779647286.7027307,
-    "ast_hash": "c77073050a0cc2498f978eb23d970fa6",
+    "mtime": 1785238159.1573846,
+    "ast_hash": "ac06c327bf22a08bab4f0f77f89e9ef2",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DragResizeOverlay.kt": {
-    "mtime": 1779646573.9340205,
-    "ast_hash": "a33bb0ed09e7abc8ff8dfb4740e8abb4",
+    "mtime": 1785619235.1686287,
+    "ast_hash": "5e2bbb274aedd4eb036768969c227137",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformOverlayService.kt": {
-    "mtime": 1780223735.0475051,
-    "ast_hash": "6ec8410df7fdc61a1b4397a77576f7ac",
+    "mtime": 1785619235.1740153,
+    "ast_hash": "3ad265acc07a064a0ac030c50123b561",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformWidget.kt": {
-    "mtime": 1779013115.3519962,
-    "ast_hash": "914b43f6e10235f826c596053fa3c41c",
-    "semantic_hash": "914b43f6e10235f826c596053fa3c41c"
+    "mtime": 1780397316.766048,
+    "ast_hash": "0481077dd3391e31c22a46f32448ef11",
+    "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformWidgetService.kt": {
     "mtime": 1779646573.940029,
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MainActivity.kt": {
-    "mtime": 1780223819.483161,
-    "ast_hash": "f2df2dc506be0cf937765d341c92d0fc",
+    "mtime": 1785598772.6504061,
+    "ast_hash": "28d5247d10ac4a61f41e20e2abb42df7",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\MinimizedBubble.kt": {
@@ -50,8 +50,8 @@
     "semantic_hash": "4fd15caf71d0b7c54e58c252aa804698"
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ShellExecutor.kt": {
-    "mtime": 1779968167.545126,
-    "ast_hash": "6045b7770bc26fc25b18f509c5742d43",
+    "mtime": 1785731453.612854,
+    "ast_hash": "6512b80e17b84a6988f4fefa0e5fb547",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\SimpleOverlayService.kt": {
@@ -60,18 +60,18 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\TaskManager.kt": {
-    "mtime": 1779646573.9476686,
-    "ast_hash": "d959384938c4e69e0057b23f6f33c89a",
+    "mtime": 1785506044.1259406,
+    "ast_hash": "a4578a6b140fb787fe013689462ce0f6",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ThemeManager.kt": {
-    "mtime": 1780223586.7013845,
-    "ast_hash": "5be70be7c1e1bdad9067fcf53177920b",
+    "mtime": 1785621977.6500232,
+    "ast_hash": "28a21d11879d7f81fa0f81b9f3aada2b",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceManager.kt": {
-    "mtime": 1779646573.9501712,
-    "ast_hash": "df06845d392a88fac2ae50593372ed5f",
+    "mtime": 1785484649.5265164,
+    "ast_hash": "0e807efb3d8fdbbc10cba250a485c679",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\artifacts\\app_documentation_template.md.metadata.json": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\CompatibilityManager.kt": {
-    "mtime": 1779646573.9320176,
-    "ast_hash": "4c096f083a54fedc860d1a4b28ff294d",
+    "mtime": 1785610305.237779,
+    "ast_hash": "24381d3acb40ec78299e7fbd7dd4ccb8",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\docs\\discord_announcement.md": {
@@ -175,18 +175,18 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\HANDOFF.md": {
-    "mtime": 1780224012.577504,
-    "ast_hash": "7286d433297781dee8b69bc8a2245a61",
+    "mtime": 1785731581.92288,
+    "ast_hash": "011f3e4d7688a8fa383b293065e2a1b3",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\LEDGER.md": {
-    "mtime": 1780224012.577504,
-    "ast_hash": "3ab43d1a4b0e130b34ea9cca650beb06",
+    "mtime": 1785731581.92085,
+    "ast_hash": "7a084432af7c7878409e173a47e2c362",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\.agents\\rules\\agents.md": {
-    "mtime": 1780165243.0795894,
-    "ast_hash": "bc94fd284677e1064b641e972a8fd64a",
+    "mtime": 1785453002.6320534,
+    "ast_hash": "dba867b3b9cbb8a0e01b299bf0dcd004",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\CONTRIBUTING.md": {
@@ -240,13 +240,13 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformQuickToolboxWidget.kt": {
-    "mtime": 1779646573.938018,
-    "ast_hash": "2eb40e9615e9f666f7466962e046ad1c",
+    "mtime": 1780391574.3660553,
+    "ast_hash": "a52fc6bfa2280a2b4796fbdb1df92290",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformTaskManagerWidget.kt": {
-    "mtime": 1779646573.939018,
-    "ast_hash": "03861e4bb81c063280a78ee8fe38fc96",
+    "mtime": 1780391569.767664,
+    "ast_hash": "686d3240af1ddb09229b5f384fd37a11",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformTaskManagerWidgetService.kt": {
@@ -290,13 +290,13 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\CoreUi.kt": {
-    "mtime": 1779701145.5166907,
-    "ast_hash": "99fe89b843296706835c8dab151f3528",
+    "mtime": 1785606521.400554,
+    "ast_hash": "eb1ade4d997b9e5abca0e3d3ad63ca73",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ExpressiveComponents.kt": {
-    "mtime": 1780223829.603539,
-    "ast_hash": "8ddf27d1be40f3342ffc90eb35f0a361",
+    "mtime": 1785610643.8644311,
+    "ast_hash": "31ad0d20c169378949d70dc1f63a864e",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FacecamOverlay.kt": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DesktopSettingsScreen.kt": {
-    "mtime": 1780209221.5011714,
-    "ast_hash": "e109c7e49c2906e1de33d42f73f3fe25",
+    "mtime": 1780546568.098747,
+    "ast_hash": "7c3563a16042cf4185dcbea402dd2327",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorManager.kt": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorActivity.kt": {
-    "mtime": 1780198710.7549067,
-    "ast_hash": "11cb65573b6b880558846e3983d5f706",
+    "mtime": 1780391580.8714843,
+    "ast_hash": "8b810c8d08e900e759a14617232194aa",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\PhoneMirrorOverlayService.kt": {
@@ -374,19 +374,394 @@
     "ast_hash": "2dd23b6768d89174f809760720af4113",
     "semantic_hash": ""
   },
-  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DesktopKeyguardService.kt": {
-    "mtime": 1780223888.7793758,
-    "ast_hash": "2af790b61c41cfb5579f444134c1dbe9",
-    "semantic_hash": ""
-  },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\LockScreenSettingsScreen.kt": {
-    "mtime": 1780223648.3334932,
-    "ast_hash": "90a5bde069a1ead201e1e42a3a6e0840",
+    "mtime": 1780277032.1918337,
+    "ast_hash": "0eed4eb3016acf43ff26cdeacc6e835f",
     "semantic_hash": ""
   },
   "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceSandboxEditor.kt": {
-    "mtime": 1780223899.2201219,
-    "ast_hash": "87461c9ae3b254bedf363645aa71248a",
+    "mtime": 1785187539.0966618,
+    "ast_hash": "6318007500fa44e068a87e50aa423151",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DesktopKeyguardActivity.kt": {
+    "mtime": 1780333197.8243313,
+    "ast_hash": "339982d06a6618f15962a18a9091e0a5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\LockDesktopActivity.kt": {
+    "mtime": 1780391585.384716,
+    "ast_hash": "75c24f460527d81d868f86d8d3698db2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\LockScreenNotificationListener.kt": {
+    "mtime": 1781113612.3878758,
+    "ast_hash": "535ed6273365fa645f17d82ee25173d2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\task_log.txt": {
+    "mtime": 1780256170.3515882,
+    "ast_hash": "34c471b55af6fd1e39529f889b745177",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\task_log_2.txt": {
+    "mtime": 1780256486.0392284,
+    "ast_hash": "07384f3a79794e0f60255c5bde980d0f",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\task_log_2_utf8.txt": {
+    "mtime": 1780256502.6216524,
+    "ast_hash": "cec11dcaaa9a6722f3116b3d5277c127",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\task_log_utf8.txt": {
+    "mtime": 1780256195.9948502,
+    "ast_hash": "3b536345cd7086a9542a6d3111465a64",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DesktopKeyguardService.kt": {
+    "mtime": 1780390562.3197763,
+    "ast_hash": "f65782c3d983f47c76f2a1f62e6d9d8c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ComponentToggleManager.kt": {
+    "mtime": 1780391637.448735,
+    "ast_hash": "182b2dccd92333d93ad813a3ad4a7a65",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\AluminumDesktopOverlay.kt": {
+    "mtime": 1785731432.310563,
+    "ast_hash": "43e2a21fe53b323f572faffb9d4ec1e7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\LauncherSettingsScreen.kt": {
+    "mtime": 1785628514.6274583,
+    "ast_hash": "a8fd2ef3e74b459002a839cf8fa45833",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceShortcutActivity.kt": {
+    "mtime": 1780395169.729416,
+    "ast_hash": "dcd52a03d23a93a5e723c15589926cde",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WorkspaceShortcutHelper.kt": {
+    "mtime": 1780395334.7227955,
+    "ast_hash": "daf8574590b1c4ad0c863ed1f737f8e5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSActiveAppsPanel.kt": {
+    "mtime": 1780682592.5183306,
+    "ast_hash": "0e559f9b8a6f555e0ea0887814ab68af",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSBluetoothPanel.kt": {
+    "mtime": 1785731473.618489,
+    "ast_hash": "2523b64be42e565d47f333c909a13a21",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSCommon.kt": {
+    "mtime": 1785731439.834274,
+    "ast_hash": "7b0470dc612e1839cda67c269b69698a",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSMediaPlayer.kt": {
+    "mtime": 1785620560.1455364,
+    "ast_hash": "fb419dcd8d1f240b675daf07f009bae0",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSNotificationPanel.kt": {
+    "mtime": 1785646223.3968537,
+    "ast_hash": "53dfb2b2c22a6edc58bb2ffd3aa15fa7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSTileGridEditor.kt": {
+    "mtime": 1780679126.8076315,
+    "ast_hash": "46dcf7d6dd152e2921871a7095321743",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\QSWifiPanel.kt": {
+    "mtime": 1785730128.4425802,
+    "ast_hash": "e342548a019de1f770f2ba6c4dd44d6c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\NotificationToastOverlay.kt": {
+    "mtime": 1785255459.8842745,
+    "ast_hash": "7ce92c5fcf6c452bc6c4593493f085d2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\build_log.txt": {
+    "mtime": 1785013373.1792145,
+    "ast_hash": "223e4f8161cc74527f0c6ad775de30c5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\AnimatedPreviews.kt": {
+    "mtime": 1785162875.116465,
+    "ast_hash": "539dc9db3a527e340de8515ebd7aea40",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\SystemMonitorEngine.kt": {
+    "mtime": 1785422309.114908,
+    "ast_hash": "991ce94a4433c184307b486632a15233",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\TaskManagerActivity.kt": {
+    "mtime": 1785188621.7807455,
+    "ast_hash": "8f58018152c1f04b605b0cceab8a0330",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\WindowsTaskManagerView.kt": {
+    "mtime": 1785458445.8132732,
+    "ast_hash": "1846156f26a05155727471515f97fb72",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\HelpAndGuidesScreen.kt": {
+    "mtime": 1785603422.5393019,
+    "ast_hash": "c93513fcb2b8ff1e1b3706fdc7a2fd41",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\OnboardingScreen.kt": {
+    "mtime": 1785607817.577637,
+    "ast_hash": "182a53a96597ac8a4933339934c91fb2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ShizukuGuideScreen.kt": {
+    "mtime": 1785601198.6999412,
+    "ast_hash": "7b5c1fc3657cda35a90c258ddb1ff1ec",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\TaskbarGuideScreen.kt": {
+    "mtime": 1785601233.4386501,
+    "ast_hash": "816413832437df4cc1797a4f0a5a5fb1",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\notif_pairing_service.png": {
+    "mtime": 1785225037.5464587,
+    "ast_hash": "6ec068f10d200b83b04c5b39b9f0f6d4",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\notif_pairing_success.png": {
+    "mtime": 1785225095.0054688,
+    "ast_hash": "25b0b1aa2094b19032eeba8e89e70c76",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\shizuku_auth_list.png": {
+    "mtime": 1785225362.806689,
+    "ast_hash": "34e989d586a6d7630ef8302eba060fd8",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\shizuku_main_running.png": {
+    "mtime": 1785225324.951302,
+    "ast_hash": "8c7f29bbda5a365b1097b5b36405767d",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\shizuku_pairing_guide.png": {
+    "mtime": 1785224937.7466943,
+    "ast_hash": "e8425ee8fe9c01da8804dae10c2d1fab",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\shizuku_wireless_start.png": {
+    "mtime": 1785224919.5446947,
+    "ast_hash": "59b784034586e449f3d269cd495df693",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\system_pairing_dialog.png": {
+    "mtime": 1785225020.730846,
+    "ast_hash": "2ebc03b9c286d85cd9a29778a8ca2be8",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\system_wireless_debugging.png": {
+    "mtime": 1785224995.2367742,
+    "ast_hash": "b6a86d08700009c5a0041422ec69091e",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Enabling_freeform_for_taskbar.gif": {
+    "mtime": 1785235709.1947517,
+    "ast_hash": "d9dcd689a12157ed602031672a8adc73",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Taskbar_home.png": {
+    "mtime": 1785235607.8870907,
+    "ast_hash": "872164f0ce263dfdd6ac60ea833203fc",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Taskbar_Recommend_advance_tab_setting_1.png": {
+    "mtime": 1785237051.360344,
+    "ast_hash": "fd70351404d5861a026fafca1c3939ca",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Taskbar_Recommend_advance_tab_setting_2.png": {
+    "mtime": 1785237103.635944,
+    "ast_hash": "88eb8c17fd387e7e9d2e3603587d89a2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Taskbar_Recommend_general_tab_setting.png": {
+    "mtime": 1785236639.775138,
+    "ast_hash": "0d6ff63e175cc850cdb35c7ae09cd48a",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\enabling_freeform_for_taskbar.gif": {
+    "mtime": 1785235709.1947517,
+    "ast_hash": "d9dcd689a12157ed602031672a8adc73",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_home.png": {
+    "mtime": 1785235607.8870907,
+    "ast_hash": "872164f0ce263dfdd6ac60ea833203fc",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_recommend_advance_tab_setting_1.png": {
+    "mtime": 1785237051.360344,
+    "ast_hash": "fd70351404d5861a026fafca1c3939ca",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_recommend_advance_tab_setting_2.png": {
+    "mtime": 1785237103.635944,
+    "ast_hash": "88eb8c17fd387e7e9d2e3603587d89a2",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_recommend_general_tab_setting.png": {
+    "mtime": 1785236639.775138,
+    "ast_hash": "0d6ff63e175cc850cdb35c7ae09cd48a",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Enabling_desktopmode_taskbar.mp4": {
+    "mtime": 1785235766.3439143,
+    "ast_hash": "a7516d4f6e32a51ee22b6fdfd125b5be",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Freeform_window_setting_in_taskbar_app.mp4": {
+    "mtime": 1785236375.8156774,
+    "ast_hash": "74bb146ebaded99cf678533876411f2c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\setting_primary_launcher_in_taskbarapp.mp4": {
+    "mtime": 1785236239.7161052,
+    "ast_hash": "2b4ec33fcb6a0574829d6319d6f691b7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\setting_taskbar_as_default_launcher.mp4": {
+    "mtime": 1785236091.7762823,
+    "ast_hash": "a9d112563a1bac95aa6805c432852060",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\Taskbarhome_to_advance_tab_adding_navigation_button_recommended.mp4": {
+    "mtime": 1785236702.5836363,
+    "ast_hash": "d59e33323f21000d0de711de3dc8afb5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\taskbar_guide\\taskbar_general_settings_tab_set_Taskbar_potion_on_display.mp4": {
+    "mtime": 1785236464.6274986,
+    "ast_hash": "99f43d4d827db6082d732370fc67f32c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\enabling_desktopmode_taskbar.mp4": {
+    "mtime": 1785235766.3439143,
+    "ast_hash": "a7516d4f6e32a51ee22b6fdfd125b5be",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\freeform_bounds_fix.mp4": {
+    "mtime": 1785241113.9818726,
+    "ast_hash": "9dde0f188b8ed68a1a1b5397f148736f",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\freeform_window_setting_in_taskbar_app.mp4": {
+    "mtime": 1785236375.8156774,
+    "ast_hash": "74bb146ebaded99cf678533876411f2c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\setting_primary_launcher_in_taskbarapp.mp4": {
+    "mtime": 1785236239.7161052,
+    "ast_hash": "2b4ec33fcb6a0574829d6319d6f691b7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\setting_taskbar_as_default_launcher.mp4": {
+    "mtime": 1785236091.7762823,
+    "ast_hash": "a9d112563a1bac95aa6805c432852060",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbarhome_to_advance_tab_adding_navigation_button_recommended.mp4": {
+    "mtime": 1785236702.5836363,
+    "ast_hash": "d59e33323f21000d0de711de3dc8afb5",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_general_settings_tab_set_taskbar_potion_on_display.mp4": {
+    "mtime": 1785236464.6274986,
+    "ast_hash": "99f43d4d827db6082d732370fc67f32c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\taskbar_live_position.mp4": {
+    "mtime": 1785240803.5719607,
+    "ast_hash": "8273baf866d3213a861f8621d7e424fa",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\HardwareDatabase.kt": {
+    "mtime": 1785410711.5773692,
+    "ast_hash": "f8c4e930f7c0024685ac9cd059fff14d",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ProcessInspectorActivity.kt": {
+    "mtime": 1785334869.6608307,
+    "ast_hash": "a2ae3da14d6b4cb5b0eca76593378991",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ProcessInspectorEngine.kt": {
+    "mtime": 1785330371.6622064,
+    "ast_hash": "8de39894c66b4a3717d5ca21cf7aea9b",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\ProcessInspectorView.kt": {
+    "mtime": 1785332604.2932978,
+    "ast_hash": "83fdb5413c13eefb900a445d3e18bd19",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\Hardware databases.txt": {
+    "mtime": 1785410173.0436192,
+    "ast_hash": "d5d6a725eff33ea845799150398eeaea",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\DeveloperOptionsGuideScreen.kt": {
+    "mtime": 1785601162.1423907,
+    "ast_hash": "5dc62fead7ef361787632472ce84a99d",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\dev_guide_step_1_unlock.png": {
+    "mtime": 1785599636.6946063,
+    "ast_hash": "56ceb5c2726ce040470bccd2fdc2cfd1",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\dev_guide_step_2_open.mp4": {
+    "mtime": 1785599940.6873293,
+    "ast_hash": "b793a5ed86c13e17292cf9036fa52c9c",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\dev_guide_step_3_freeform.mp4": {
+    "mtime": 1785600118.9029608,
+    "ast_hash": "b4f1400bd73da50aba2e923a91db2ec7",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\raw\\dev_guide_step_4_desktop_mode.mp4": {
+    "mtime": 1785600225.4265342,
+    "ast_hash": "d529cbb99cc2f25dd39f4a226e76bdbe",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\java\\com\\example\\freeformshell\\FreeformAccessibilityService.kt": {
+    "mtime": 1785616128.055095,
+    "ast_hash": "f60096fe5b51aec6e6f05fd7e440ee98",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\ic_app_com_farmerbb_taskbar.png": {
+    "mtime": 1785607625.2377496,
+    "ast_hash": "e129d12ad81c3d3103fd7959f54400b9",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\ic_app_com_youki_dex.png": {
+    "mtime": 1785607787.7735932,
+    "ast_hash": "aa638fac29aa91b084e95fc64969d2fe",
+    "semantic_hash": ""
+  },
+  "G:\\Ai\\FreeformShell\\app\\src\\main\\res\\drawable\\ic_app_cu_axel_smartdock.png": {
+    "mtime": 1785607693.8694158,
+    "ast_hash": "51022c60778c611f2353258eb2ae2952",
     "semantic_hash": ""
   }
 }

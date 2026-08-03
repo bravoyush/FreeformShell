@@ -28,4 +28,5 @@ Before finishing your session:
 2.  Overwrite [.agents/HANDOFF.md](file:///g:/Ai/FreeformShell/.agents/HANDOFF.md) with a clear handoff brief for the next model or developer, detailing active state, completed work, and upcoming targets.
 3.  Run `graphify update .` to keep the AST indices fresh (costs 0 API tokens).
 4.  Run versioned backup: Execute `python .agents/skills/backup/backup.py` to create a non-destructive version and time-stamped archive under `g:\Ai\Freeform Backup\<branch>\<version>_<timestamp>` and apply the 5-backup retention limit (moving old ones to `old/`).
+5.  **Milestone GitHub Push**: If changes impact **Core Architectural Modules**, request user permission to `commit` and `push` to GitHub. This creates a secondary remote 'Milestone Save Point' for high-fidelity catastrophic recovery.
 

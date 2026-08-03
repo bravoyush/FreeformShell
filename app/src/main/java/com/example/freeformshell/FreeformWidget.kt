@@ -15,6 +15,17 @@ class FreeformWidget : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_layout)
             
+            val widgetEnabled = ThemeManager.isModuleWidgetEnabled(context)
+            if (widgetEnabled) {
+                views.setViewVisibility(R.id.widget_list, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widget__rescueall, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widget_disabled_text, android.view.View.GONE)
+            } else {
+                views.setViewVisibility(R.id.widget_list, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget__rescueall, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_disabled_text, android.view.View.VISIBLE)
+            }
+            
             // Set up list view
             val serviceIntent = Intent(context, FreeformWidgetService::class.java)
             serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -25,21 +36,21 @@ class FreeformWidget : AppWidgetProvider() {
             val rescueIntent = Intent(context, FreeformOverlayService::class.java).apply {
                 action = "ACTION_SHOW_ALL"
             }
-            val rescuePending = PendingIntent.getService(context, 10, rescueIntent, PendingIntent.FLAG_IMMUTABLE)
+            val rescuePending = PendingIntent.getForegroundService(context, 10 + appWidgetId, rescueIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             views.setOnClickPendingIntent(R.id.widget__rescueall, rescuePending)
             
             // Set up "Refresh" button
             val refreshIntent = Intent(context, FreeformWidget::class.java).apply {
                 action = "ACTION_REFRESH"
             }
-            val refreshPending = PendingIntent.getBroadcast(context, 11, refreshIntent, PendingIntent.FLAG_IMMUTABLE)
+            val refreshPending = PendingIntent.getBroadcast(context, 11 + appWidgetId, refreshIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             views.setOnClickPendingIntent(R.id.widget_refresh, refreshPending)
             
-            // Set up list item click template (Restore individual app)
-            val restoreIntent = Intent(context, FreeformWidget::class.java).apply {
-                action = "ACTION_RESTORE_ITEM"
+            // Set up list item click template (Target service directly to bypass background restrictions)
+            val restoreIntent = Intent(context, FreeformOverlayService::class.java).apply {
+                action = "ACTION_LAUNCH_WORKSPACE"
             }
-            val restorePending = PendingIntent.getBroadcast(context, 12, restoreIntent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val restorePending = PendingIntent.getForegroundService(context, 12 + appWidgetId, restoreIntent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             views.setPendingIntentTemplate(R.id.widget_list, restorePending)
             
             appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -54,18 +65,6 @@ class FreeformWidget : AppWidgetProvider() {
                 val mgr = AppWidgetManager.getInstance(context)
                 val cn = ComponentName(context, FreeformWidget::class.java)
                 mgr.notifyAppWidgetViewDataChanged(mgr.getAppWidgetIds(cn), R.id.widget_list)
-            }
-            "ACTION_RESTORE_ITEM" -> {
-                val groupJson = intent.getStringExtra("EXTRA_GROUP_JSON")
-                val targetDisplay = intent.getIntExtra("EXTRA_TARGET_DISPLAY", -1)
-                if (groupJson != null) {
-                    val rescueIntent = Intent(context, FreeformOverlayService::class.java).apply {
-                        action = "ACTION_LAUNCH_WORKSPACE"
-                        putExtra("EXTRA_GROUP_JSON", groupJson)
-                        putExtra("EXTRA_TARGET_DISPLAY", targetDisplay)
-                    }
-                    context.startForegroundService(rescueIntent)
-                }
             }
         }
     }

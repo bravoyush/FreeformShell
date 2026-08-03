@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00B0FF"
+        android:pathData="M18,18h72v72H18z"/>
+    <path
+        android:fillColor="#121212"
+        android:pathData="M22,22h64v64H22z"/>
+    <!-- Line Graph Icon -->
+    <path
+        android:strokeColor="#00B0FF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M28,68 L42,48 L54,58 L70,36 L80,44"/>
+    <!-- Horizontal Grid Lines -->
+    <path
+        android:strokeColor="#333333"
+        android:strokeWidth="2"
+        android:pathData="M26,38 H82 M26,54 H82 M26,70 H82"/>
+</vector>

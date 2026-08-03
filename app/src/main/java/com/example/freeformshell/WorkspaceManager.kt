@@ -23,7 +23,12 @@ object WorkspaceManager {
         }.mapNotNull { task ->
             val bounds = boundsMap[task.taskId]?.bounds ?: return@mapNotNull null
             val isSnapped = activeService?.let { service ->
-                service.dockedTasks.contains(task.taskId) || service.dockedPackages.contains(task.packageName)
+                val isMulti = ThemeManager.isMultiWindowSupported(context, task.packageName)
+                if (isMulti) {
+                    service.dockedTasks.contains(task.taskId)
+                } else {
+                    service.dockedTasks.contains(task.taskId) || service.dockedPackages.contains(task.packageName)
+                }
             } ?: false
             WorkspaceApp(task.packageName, task.activityName, bounds, isSnapped)
         }
@@ -114,9 +119,10 @@ object WorkspaceManager {
         val apps = mutableListOf<WorkspaceApp>()
         for (i in 0 until appsArray.length()) {
             val appObj = appsArray.getJSONObject(i)
+            val compStr = appObj.optString("comp", "").ifEmpty { null }
             apps.add(WorkspaceApp(
                 appObj.getString("pkg"),
-                appObj.optString("comp", ""),
+                compStr,
                 Rect(appObj.getInt("l"), appObj.getInt("t"), appObj.getInt("r"), appObj.getInt("b")),
                 appObj.optBoolean("snap", false)
             ))

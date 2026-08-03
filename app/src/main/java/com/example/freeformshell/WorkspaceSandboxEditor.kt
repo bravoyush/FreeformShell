@@ -1,6 +1,8 @@
 package com.example.freeformshell
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Rect
@@ -17,6 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -53,16 +58,35 @@ fun WorkspaceSandboxEditor(
     var apps by remember { mutableStateOf(group.apps.toMutableList()) }
     var selectedIndex by remember { mutableStateOf(-1) }
     
+    // Snapping guidelines states
+    var activeSnapLeftLine by remember { mutableStateOf<Float?>(null) }
+    var activeSnapTopLine by remember { mutableStateOf<Float?>(null) }
+    var activeSnapRightLine by remember { mutableStateOf<Float?>(null) }
+    var activeSnapBottomLine by remember { mutableStateOf<Float?>(null) }
+    
     // Installed applications list for package selector dialog
     var showAppPicker by remember { mutableStateOf(false) }
     var installedApps by remember { mutableStateOf<List<ApplicationInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoadingApps by remember { mutableStateOf(false) }
 
-    // Widescreen container dimensions (Simulated Screen bounds)
-    // External display default: 1920 x 1080 or phone default 1080 x 2400
-    val screenWidth = if (group.displayId == 0) 1080 else 1920
-    val screenHeight = if (group.displayId == 0) 2400 else 1080
+    // Real display dimensions (Dynamic Screen bounds)
+    val realDisplayBounds = remember(group.displayId) {
+        try {
+            val dm = context.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+            val display = dm.getDisplay(group.displayId) ?: dm.getDisplay(0)
+            val metrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            display?.getRealMetrics(metrics)
+            val w = if (metrics.widthPixels > 0) metrics.widthPixels else (if (group.displayId == 0) 1080 else 1920)
+            val h = if (metrics.heightPixels > 0) metrics.heightPixels else (if (group.displayId == 0) 2400 else 1080)
+            android.graphics.Point(w, h)
+        } catch (e: Exception) {
+            android.graphics.Point(if (group.displayId == 0) 1080 else 1920, if (group.displayId == 0) 2400 else 1080)
+        }
+    }
+    val screenWidth = realDisplayBounds.x
+    val screenHeight = realDisplayBounds.y
     val screenAspectRatio = screenWidth.toFloat() / screenHeight.toFloat()
 
     // Load installed apps when app picker needs to show
@@ -92,6 +116,49 @@ fun WorkspaceSandboxEditor(
                     }
                 },
                 actions = {
+                    // Direct Launch / Test Button
+                    IconButton(
+                        onClick = {
+                            try {
+                                val updatedGroup = WorkspaceGroup(apps, group.displayId, group.timestamp)
+                                val groupJson = WorkspaceManager.groupToJson(updatedGroup).toString()
+                                val serviceIntent = Intent(context, FreeformOverlayService::class.java).apply {
+                                    action = "ACTION_LAUNCH_WORKSPACE"
+                                    putExtra("EXTRA_GROUP_JSON", groupJson)
+                                    putExtra("EXTRA_TARGET_DISPLAY", updatedGroup.displayId)
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(serviceIntent)
+                                } else {
+                                    context.startService(serviceIntent)
+                                }
+                                Toast.makeText(context, "Launching Saved Workspace...", Toast.LENGTH_SHORT).show()
+                                onBack()
+                                (context as? android.app.Activity)?.moveTaskToBack(true)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Failed to restore workspace: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, "Launch Workspace", tint = MaterialTheme.colorScheme.primary)
+                    }
+
+                    // Pin dynamically to Home Screen launcher
+                    IconButton(
+                        onClick = {
+                            try {
+                                val updatedGroup = WorkspaceGroup(apps, group.displayId, group.timestamp)
+                                WorkspaceShortcutHelper.pinWorkspaceShortcut(context, updatedGroup)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Failed to pin shortcut: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Icon(Icons.Default.AddHome, "Pin to Home Screen")
+                    }
+
                     // Save Button
                     Button(
                         onClick = {
@@ -130,19 +197,8 @@ fun WorkspaceSandboxEditor(
             // Add App FAB
             FloatingActionButton(
                 onClick = {
-                    // Append a default window (centered, 50% width/height)
-                    val w = screenWidth / 2
-                    val h = screenHeight / 2
-                    val left = (screenWidth - w) / 2
-                    val top = (screenHeight - h) / 2
-                    val newApp = WorkspaceApp(
-                        packageName = "com.android.settings",
-                        component = null,
-                        bounds = Rect(left, top, left + w, top + h),
-                        isSnapped = false
-                    )
-                    apps = (apps + newApp).toMutableList()
-                    selectedIndex = apps.size - 1
+                    selectedIndex = -1
+                    showAppPicker = true
                 },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -159,7 +215,7 @@ fun WorkspaceSandboxEditor(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (group.displayId == 0) "Phone Screen Grid (1080 x 2400)" else "Widescreen Monitor Grid (1920 x 1080)",
+                text = if (group.displayId == 0) "Phone Screen Grid ($screenWidth x $screenHeight)" else "Display Grid ($screenWidth x $screenHeight)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -205,6 +261,26 @@ fun WorkspaceSandboxEditor(
                     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.05f)).align(Alignment.Center))
                     Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(Color.White.copy(alpha = 0.05f)).align(Alignment.Center))
 
+                    // Visual Snap Guides (glowing lines)
+                    activeSnapLeftLine?.let { x ->
+                        Box(modifier = Modifier.offset((x * scale).dp, 0.dp).fillMaxHeight().width(1.5.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)))
+                    }
+                    activeSnapRightLine?.let { x ->
+                        Box(modifier = Modifier.offset((x * scale).dp, 0.dp).fillMaxHeight().width(1.5.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)))
+                    }
+                    activeSnapTopLine?.let { y ->
+                        Box(modifier = Modifier.offset(0.dp, (y * scale).dp).fillMaxWidth().height(1.5.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)))
+                    }
+                    activeSnapBottomLine?.let { y ->
+                        Box(modifier = Modifier.offset(0.dp, (y * scale).dp).fillMaxWidth().height(1.5.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)))
+                    }
+
+                    // Remember updated state holders to avoid stale lambda captures inside pointerInput
+                    val currentAppsState = rememberUpdatedState(apps)
+                    val currentScaleState = rememberUpdatedState(scale)
+                    val screenWidthState = rememberUpdatedState(screenWidth)
+                    val screenHeightState = rememberUpdatedState(screenHeight)
+
                     // Draw each application block
                     apps.forEachIndexed { index, app ->
                         val isSelected = selectedIndex == index
@@ -222,81 +298,172 @@ fun WorkspaceSandboxEditor(
                                 .size(boxW, boxH)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
                                 )
                                 .border(
                                     width = if (isSelected) 2.5.dp else 1.5.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .clickable { selectedIndex = index }
-                                .pointerInput(index) {
-                                    detectDragGestures { change, dragAmount ->
-                                        change.consume()
-                                        
-                                        // Translate dragging in DPs back into physical screen pixel offsets
-                                        val dx = (dragAmount.x / scale).toInt()
-                                        val dy = (dragAmount.y / scale).toInt()
-                                        
-                                        val newLeft = (appBounds.left + dx).coerceIn(0, screenWidth - appBounds.width())
-                                        val newTop = (appBounds.top + dy).coerceIn(0, screenHeight - appBounds.height())
-                                        val newRight = newLeft + appBounds.width()
-                                        val newBottom = newTop + appBounds.height()
-                                        
-                                        val updatedBounds = Rect(newLeft, newTop, newRight, newBottom)
-                                        apps[index] = apps[index].copy(bounds = updatedBounds)
-                                        apps = apps.toMutableList()
-                                        selectedIndex = index
-                                    }
-                                }
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize().padding(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                            // 1. Sleek Title Bar (EXCLUSIVE DRAG & SNAP HANDLE)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(24.dp)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                    )
+                                    .pointerInput(index) {
+                                        detectDragGestures(
+                                            onDragStart = { selectedIndex = index }, // Selecting block when drag starts
+                                            onDragEnd = {
+                                                activeSnapLeftLine = null
+                                                activeSnapRightLine = null
+                                                activeSnapTopLine = null
+                                                activeSnapBottomLine = null
+                                            },
+                                            onDragCancel = {
+                                                activeSnapLeftLine = null
+                                                activeSnapRightLine = null
+                                                activeSnapTopLine = null
+                                                activeSnapBottomLine = null
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                
+                                                val curApps = currentAppsState.value
+                                                if (index >= 0 && index < curApps.size) {
+                                                    val curApp = curApps[index]
+                                                    val curBounds = curApp.bounds
+                                                    val curScale = currentScaleState.value
+                                                    val curScrWidth = screenWidthState.value
+                                                    val curScrHeight = screenHeightState.value
+                                                    
+                                                    val dx = (dragAmount.x / curScale).toInt()
+                                                    val dy = (dragAmount.y / curScale).toInt()
+                                                    
+                                                    val snapThreshold = (24 * curScale).toInt().coerceAtLeast(16)
+                                                    
+                                                    var finalLeft = curBounds.left + dx
+                                                    var snapLeft: Float? = null
+                                                    var snapRight: Float? = null
+                                                    
+                                                    if (Math.abs(finalLeft) < snapThreshold) {
+                                                        finalLeft = 0
+                                                        snapLeft = 0f
+                                                    } else if (Math.abs((finalLeft + curBounds.width()) - curScrWidth) < snapThreshold) {
+                                                        finalLeft = curScrWidth - curBounds.width()
+                                                        snapRight = curScrWidth.toFloat()
+                                                    } else if (Math.abs(finalLeft - (curScrWidth - curBounds.width()) / 2) < snapThreshold) {
+                                                        finalLeft = (curScrWidth - curBounds.width()) / 2
+                                                        snapLeft = curScrWidth / 2f
+                                                    }
+                                                    
+                                                    var finalTop = curBounds.top + dy
+                                                    var snapTop: Float? = null
+                                                    var snapBottom: Float? = null
+                                                    
+                                                    if (Math.abs(finalTop) < snapThreshold) {
+                                                        finalTop = 0
+                                                        snapTop = 0f
+                                                    } else if (Math.abs((finalTop + curBounds.height()) - curScrHeight) < snapThreshold) {
+                                                        finalTop = curScrHeight - curBounds.height()
+                                                        snapBottom = curScrHeight.toFloat()
+                                                    } else if (Math.abs(finalTop - (curScrHeight - curBounds.height()) / 2) < snapThreshold) {
+                                                        finalTop = (curScrHeight - curBounds.height()) / 2
+                                                        snapTop = curScrHeight / 2f
+                                                    }
+                                                    
+                                                    finalLeft = finalLeft.coerceIn(0, curScrWidth - curBounds.width())
+                                                    finalTop = finalTop.coerceIn(0, curScrHeight - curBounds.height())
+                                                    
+                                                    activeSnapLeftLine = snapLeft
+                                                    activeSnapRightLine = snapRight
+                                                    activeSnapTopLine = snapTop
+                                                    activeSnapBottomLine = snapBottom
+                                                    
+                                                    val updatedBounds = Rect(finalLeft, finalTop, finalLeft + curBounds.width(), finalTop + curBounds.height())
+                                                    val newList = curApps.toMutableList()
+                                                    newList[index] = newList[index].copy(bounds = updatedBounds)
+                                                    apps = newList
+                                                    selectedIndex = index
+                                                }
+                                            }
+                                        )
+                                    }
                             ) {
-                                AppIcon(app.packageName, modifier = Modifier.size(24.dp))
-                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = app.packageName.substringAfterLast("."),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.align(Alignment.Center).padding(horizontal = 4.dp)
                                 )
                             }
 
-                            // Dynamic Resize handle in bottom-right corner
+                            // 2. Card Body Content (App Launcher Icon) - Clicking selects the window card
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 24.dp) // Leave space for title bar
+                                    .padding(6.dp)
+                                    .clickable { selectedIndex = index },
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                AppIcon(app.packageName, modifier = Modifier.size(24.dp))
+                            }
+
+                            // 3. Diagonal Grip Resize Handle (EXCLUSIVE CORNER SCALE HANDLE)
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .size(20.dp)
+                                    .size(24.dp) // Touch bounds
                                     .pointerInput(index) {
-                                        detectDragGestures { change, dragAmount ->
-                                            change.consume()
-                                            
-                                            val dw = (dragAmount.x / scale).toInt()
-                                            val dh = (dragAmount.y / scale).toInt()
-                                            
-                                            val minSize = (120 * scale).toInt()
-                                            val newRight = (appBounds.right + dw).coerceIn(appBounds.left + minSize, screenWidth)
-                                            val newBottom = (appBounds.bottom + dh).coerceIn(appBounds.top + minSize, screenHeight)
-                                            
-                                            val updatedBounds = Rect(appBounds.left, appBounds.top, newRight, newBottom)
-                                            apps[index] = apps[index].copy(bounds = updatedBounds)
-                                            apps = apps.toMutableList()
-                                            selectedIndex = index
-                                        }
+                                        detectDragGestures(
+                                            onDragStart = { selectedIndex = index },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                
+                                                val curApps = currentAppsState.value
+                                                if (index >= 0 && index < curApps.size) {
+                                                    val curApp = curApps[index]
+                                                    val curBounds = curApp.bounds
+                                                    val curScale = currentScaleState.value
+                                                    val curScrWidth = screenWidthState.value
+                                                    val curScrHeight = screenHeightState.value
+                                                    
+                                                    val dw = (dragAmount.x / curScale).toInt()
+                                                    val dh = (dragAmount.y / curScale).toInt()
+                                                    
+                                                    val minSize = 150
+                                                    val newRight = (curBounds.right + dw).coerceIn(curBounds.left + minSize, curScrWidth)
+                                                    val newBottom = (curBounds.bottom + dh).coerceIn(curBounds.top + minSize, curScrHeight)
+                                                    
+                                                    val updatedBounds = Rect(curBounds.left, curBounds.top, newRight, newBottom)
+                                                    val newList = curApps.toMutableList()
+                                                    newList[index] = newList[index].copy(bounds = updatedBounds)
+                                                    apps = newList
+                                                    selectedIndex = index
+                                                }
+                                            }
+                                        )
                                     },
                                 contentAlignment = Alignment.BottomEnd
                             ) {
-                                Box(
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = "Resize",
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f),
                                     modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(8.dp)
-                                        .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(bottomEnd = 2.dp))
+                                        .size(16.dp)
+                                        .padding(2.dp)
+                                        .graphicsLayer(rotationZ = -45f) // Rotated diagonal line/filter grip
                                 )
                             }
                         }
@@ -310,6 +477,12 @@ fun WorkspaceSandboxEditor(
             if (selectedIndex != -1 && selectedIndex < apps.size) {
                 val app = apps[selectedIndex]
                 
+                // Reactive numeric states mapped to selected block coordinates
+                val leftStr = remember(selectedIndex, app.bounds.left) { mutableStateOf(app.bounds.left.toString()) }
+                val topStr = remember(selectedIndex, app.bounds.top) { mutableStateOf(app.bounds.top.toString()) }
+                val widthStr = remember(selectedIndex, app.bounds.width()) { mutableStateOf(app.bounds.width().toString()) }
+                val heightStr = remember(selectedIndex, app.bounds.height()) { mutableStateOf(app.bounds.height().toString()) }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
@@ -367,16 +540,110 @@ fun WorkspaceSandboxEditor(
                                 "Bottom-Right" to Rect(screenWidth / 2, screenHeight / 2, screenWidth, screenHeight)
                             )
                             snaps.forEach { (name, rect) ->
+                                val isSelectedSnap = kotlin.math.abs(app.bounds.left - rect.left) < 10 &&
+                                                     kotlin.math.abs(app.bounds.top - rect.top) < 10 &&
+                                                     kotlin.math.abs(app.bounds.right - rect.right) < 10 &&
+                                                     kotlin.math.abs(app.bounds.bottom - rect.bottom) < 10
                                 FilterChip(
-                                    selected = app.bounds == rect,
+                                    selected = isSelectedSnap,
                                     onClick = {
-                                        apps[selectedIndex] = app.copy(bounds = rect, isSnapped = true)
-                                        apps = apps.toMutableList()
+                                        apps = apps.mapIndexed { i, a ->
+                                            if (i == selectedIndex) a.copy(bounds = rect, isSnapped = true) else a
+                                        }.toMutableList()
+                                        leftStr.value = rect.left.toString()
+                                        topStr.value = rect.top.toString()
+                                        widthStr.value = rect.width().toString()
+                                        heightStr.value = rect.height().toString()
                                     },
                                     label = { Text(name) },
                                     shape = CircleShape
                                 )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Precise Numerical Coordinate Editor Fields
+                        Text("Coordinates & Size (px)", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = leftStr.value,
+                                onValueChange = {
+                                    leftStr.value = it
+                                    val v = it.toIntOrNull()
+                                    if (v != null) {
+                                        val newL = v.coerceIn(0, screenWidth)
+                                        val newW = app.bounds.width()
+                                        val newBounds = Rect(newL, app.bounds.top, (newL + newW).coerceAtMost(screenWidth), app.bounds.bottom)
+                                        apps = apps.mapIndexed { i, a -> if (i == selectedIndex) a.copy(bounds = newBounds, isSnapped = false) else a }.toMutableList()
+                                    }
+                                },
+                                label = { Text("Left (X)", fontSize = 11.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = topStr.value,
+                                onValueChange = {
+                                    topStr.value = it
+                                    val v = it.toIntOrNull()
+                                    if (v != null) {
+                                        val newT = v.coerceIn(0, screenHeight)
+                                        val newH = app.bounds.height()
+                                        val newBounds = Rect(app.bounds.left, newT, app.bounds.right, (newT + newH).coerceAtMost(screenHeight))
+                                        apps = apps.mapIndexed { i, a -> if (i == selectedIndex) a.copy(bounds = newBounds, isSnapped = false) else a }.toMutableList()
+                                    }
+                                },
+                                label = { Text("Top (Y)", fontSize = 11.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = widthStr.value,
+                                onValueChange = {
+                                    widthStr.value = it
+                                    val w = it.toIntOrNull()
+                                    if (w != null && w > 0) {
+                                        val maxW = screenWidth - app.bounds.left
+                                        val finalW = w.coerceIn(120, if (maxW > 120) maxW else screenWidth)
+                                        val newBounds = Rect(app.bounds.left, app.bounds.top, app.bounds.left + finalW, app.bounds.bottom)
+                                        apps = apps.mapIndexed { i, a -> if (i == selectedIndex) a.copy(bounds = newBounds, isSnapped = false) else a }.toMutableList()
+                                    }
+                                },
+                                label = { Text("Width", fontSize = 11.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = heightStr.value,
+                                onValueChange = {
+                                    heightStr.value = it
+                                    val h = it.toIntOrNull()
+                                    if (h != null && h > 0) {
+                                        val maxH = screenHeight - app.bounds.top
+                                        val finalH = h.coerceIn(120, if (maxH > 120) maxH else screenHeight)
+                                        val newBounds = Rect(app.bounds.left, app.bounds.top, app.bounds.right, app.bounds.top + finalH)
+                                        apps = apps.mapIndexed { i, a -> if (i == selectedIndex) a.copy(bounds = newBounds, isSnapped = false) else a }.toMutableList()
+                                    }
+                                },
+                                label = { Text("Height", fontSize = 11.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
                         }
                     }
                 }
@@ -427,12 +694,24 @@ fun WorkspaceSandboxEditor(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
+                                                val comp = context.packageManager.getLaunchIntentForPackage(appInfo.packageName)?.component?.flattenToShortString()
                                                 if (selectedIndex != -1 && selectedIndex < apps.size) {
-                                                    apps[selectedIndex] = apps[selectedIndex].copy(
+                                                    apps = apps.mapIndexed { i, a ->
+                                                        if (i == selectedIndex) a.copy(packageName = appInfo.packageName, component = comp) else a
+                                                    }.toMutableList()
+                                                } else {
+                                                    val w = screenWidth / 2
+                                                    val h = screenHeight / 2
+                                                    val left = (screenWidth - w) / 2
+                                                    val top = (screenHeight - h) / 2
+                                                    val newApp = WorkspaceApp(
                                                         packageName = appInfo.packageName,
-                                                        component = null
+                                                        component = comp,
+                                                        bounds = Rect(left, top, left + w, top + h),
+                                                        isSnapped = false
                                                     )
-                                                    apps = apps.toMutableList()
+                                                    apps = (apps + newApp).toMutableList()
+                                                    selectedIndex = apps.size - 1
                                                 }
                                                 showAppPicker = false
                                             }

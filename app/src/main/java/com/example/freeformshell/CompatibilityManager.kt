@@ -24,6 +24,7 @@ object CompatibilityManager {
     const val COMPAT_RESOLUTION_OVERRIDE = "compat_resolution_override"
     const val COMPAT_REFRESH_RATE_OVERRIDE = "compat_refresh_rate_override"
     const val COMPAT_HYBRID_FRAME_PACING = "compat_android13_14_hybrid_pacing"
+    const val COMPAT_MINIMIZE_BUTTON = "compat_minimize_button"
 
     // ── Fix Definitions ────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ object CompatibilityManager {
             label = "Android 14: Precise Touch Region Cutout",
             description = "Carves out the center application area from our full-frame overlay's touchable region. Allows touches to pass through directly to underlying application windows while keeping borders/titlebars touchable.",
             affectsVersionLabel = "Android 13+ (API ≥ 33)",
-            smartDefault = { Build.VERSION.SDK_INT >= 33 }
+            smartDefault = { true }
         ),
 
         FixDef(
@@ -141,6 +142,22 @@ object CompatibilityManager {
             description = "Tightens the synchronization between the overlay and the system's Window Manager. Reduces 'bounce' and 'rubber-banding' effects at the end of resize/drag gestures.",
             affectsVersionLabel = "All Versions",
             smartDefault = { true }
+        ),
+
+        FixDef(
+            id = COMPAT_MINIMIZE_BUTTON,
+            label = "Minimize: Enable Window Minimization Button",
+            description = "Shows the minimize button in overlay titlebars. Minimizing uses Compositor Leashes and moving tasks to back, which can cause system rendering issues or crashes on Android 14+; hence it is disabled by default on Android 14.",
+            affectsVersionLabel = "All Versions (Recommended: ≤ Android 13)",
+            smartDefault = { Build.VERSION.SDK_INT < 34 }
+        ),
+
+        FixDef(
+            id = "hide_overlays_on_launcher_focused",
+            label = "Launcher Focus: Hide Titlebars when Launcher/Taskbar is Active",
+            description = "Automatically hides window titlebars when a home launcher or taskbar menu is focused. Turn OFF to keep titlebars visible when opening Taskbar or Launcher menus.",
+            affectsVersionLabel = "All Versions",
+            smartDefault = { false }
         )
     )
 
@@ -194,6 +211,12 @@ object CompatibilityManager {
 
     fun isHybridFramePacingEnabled(context: Context): Boolean =
         isFixEnabled(context, COMPAT_HYBRID_FRAME_PACING)
+
+    fun isMinimizeButtonEnabled(context: Context): Boolean =
+        isFixEnabled(context, COMPAT_MINIMIZE_BUTTON)
+
+    fun isHideOverlaysOnLauncherFocusedEnabled(context: Context): Boolean =
+        isFixEnabled(context, "hide_overlays_on_launcher_focused")
 
     fun getActiveResizeStyle(context: Context): ResizeStyle {
         val prefs = context.getSharedPreferences("freeform_settings", Context.MODE_PRIVATE)

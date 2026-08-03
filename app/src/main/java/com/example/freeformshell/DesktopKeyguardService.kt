@@ -110,6 +110,11 @@ class DesktopKeyguardService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!ThemeManager.isDesktopLockEnabled(this)) {
+            Log.w(TAG, "Desktop Lock is disabled in settings. Force-stopping Keyguard service to release overhead.")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val displayId = intent?.getIntExtra("EXTRA_DISPLAY_ID", -1) ?: -1
         Log.d(TAG, "onStartCommand: displayId=$displayId")
         if (!isShowing) {
@@ -173,7 +178,7 @@ class DesktopKeyguardService : Service() {
                         onSurface = Color.White
                     )
                 ) {
-                    DesktopLockScreenContent(
+                    DesktopKeyguardServiceContent(
                         onUnlockCompleted = { stopSelf() }
                     )
                 }
@@ -268,7 +273,7 @@ class KeyguardServiceLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, Saved
 }
 
 @Composable
-fun DesktopLockScreenContent(
+fun DesktopKeyguardServiceContent(
     onUnlockCompleted: () -> Unit
 ) {
     val context = LocalContext.current
@@ -587,17 +592,20 @@ fun DesktopLockScreenContent(
                                                 if (enteredPin.length < 4) {
                                                     enteredPin += num
                                                     if (enteredPin.length == 4) {
-                                                        // Secure numerical PIN Shizuku injection trigger
                                                         scope.launch(Dispatchers.Main) {
                                                             isCheckingPin = true
-                                                            injectPinToHost(context, enteredPin) { success ->
-                                                                isCheckingPin = false
-                                                                if (success) {
-                                                                    onUnlockCompleted()
-                                                                } else {
-                                                                    enteredPin = ""
-                                                                    unlockStatusMessage = "Unlock failed. Please retry."
+                                                            delay(150)
+                                                            val savedPin = ThemeManager.getDesktopLockPin(context)
+                                                            isCheckingPin = false
+                                                            if (enteredPin == savedPin) {
+                                                                onUnlockCompleted()
+                                                                val intent = Intent("com.example.freeformshell.ACTION_DESKTOP_UNLOCKED").apply {
+                                                                    setPackage(context.packageName)
                                                                 }
+                                                                context.sendBroadcast(intent)
+                                                            } else {
+                                                                enteredPin = ""
+                                                                unlockStatusMessage = "Incorrect PIN. Please retry."
                                                             }
                                                         }
                                                     }
@@ -627,14 +635,18 @@ fun DesktopLockScreenContent(
                                             if (enteredPin.length == 4) {
                                                 scope.launch(Dispatchers.Main) {
                                                     isCheckingPin = true
-                                                    injectPinToHost(context, enteredPin) { success ->
-                                                        isCheckingPin = false
-                                                        if (success) {
-                                                            onUnlockCompleted()
-                                                        } else {
-                                                            enteredPin = ""
-                                                            unlockStatusMessage = "Unlock failed. Please retry."
+                                                    delay(150)
+                                                    val savedPin = ThemeManager.getDesktopLockPin(context)
+                                                    isCheckingPin = false
+                                                    if (enteredPin == savedPin) {
+                                                        onUnlockCompleted()
+                                                        val intent = Intent("com.example.freeformshell.ACTION_DESKTOP_UNLOCKED").apply {
+                                                            setPackage(context.packageName)
                                                         }
+                                                        context.sendBroadcast(intent)
+                                                    } else {
+                                                        enteredPin = ""
+                                                        unlockStatusMessage = "Incorrect PIN. Please retry."
                                                     }
                                                 }
                                             }

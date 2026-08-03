@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.65"
+        android:scaleY="0.65">
+        <!-- Shield background outline for premium security look -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,12 L24,25 L24,55 C24,74 37,91 54,96 C71,91 84,74 84,55 L84,25 L54,12 Z M54,20 C64,28.5 73,31.5 76,32.2 L76,55 C76,70 66.5,83.5 54,87.8 C41.5,83.5 32,70 32,55 L32,32.2 C35,31.5 44,28.5 54,20 Z" />
+        <!-- Secure Lock in the center -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,34 C48.5,34 44,38.5 44,44 L44,48 L41,48 C39.3,48 38,49.3 38,51 L38,71 C38,72.7 39.3,74 41,74 L67,74 C68.7,74 70,72.7 70,71 L70,51 C70,49.3 68.7,48 67,48 L64,48 L64,44 C64,38.5 59.5,34 54,34 Z M54,38 C57.3,38 60,40.7 60,44 L60,48 L48,48 L48,44 C48,40.7 50.7,38 54,38 Z M54,56 C56.2,56 58,57.8 58,60 C58,61.8 56.8,63.3 55,63.8 L55,68 C55,68.6 54.6,69 54,69 C53.4,69 53,68.6 53,68 L53,63.8 C51.2,63.3 50,61.8 50,60 C50,57.8 51.8,56 54,56 Z" />
+    </group>
+</vector>

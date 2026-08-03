@@ -117,6 +117,262 @@ object ShellExecutor {
         }
     }
 
+    private var cachedWifiManager: Any? = null
+
+    private fun getWifiManager(): Any? {
+        synchronized(lock) {
+            if (cachedWifiManager != null) return cachedWifiManager
+            try {
+                if (Shizuku.pingBinder()) {
+                    val wifiBinder = rikka.shizuku.SystemServiceHelper.getSystemService("wifi")
+                    val shizukuBinder = rikka.shizuku.ShizukuBinderWrapper(wifiBinder)
+                    val stubClass = Class.forName("android.net.wifi.IWifiManager\$Stub")
+                    val asInterfaceMethod = stubClass.getMethod("asInterface", android.os.IBinder::class.java)
+                    cachedWifiManager = asInterfaceMethod.invoke(null, shizukuBinder)
+                    Log.d(TAG, "Successfully resolved IWifiManager proxy via Shizuku")
+                    return cachedWifiManager
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resolve IWifiManager binder proxy", e)
+            }
+            return null
+        }
+    }
+
+    data class WifiCredential(
+        val ssid: String,
+        val securityType: String,
+        val preSharedKey: String,
+        val netId: Int = -1
+    )
+
+    fun getSavedWifiCredentials(): Map<String, WifiCredential> {
+        val credentialsMap = mutableMapOf<String, WifiCredential>()
+        try {
+            val iWifiManager = getWifiManager() ?: return emptyMap()
+            var configsList: List<*>? = null
+
+            for (m in iWifiManager.javaClass.methods) {
+                if (m.name == "getPrivilegedConfiguredNetworks") {
+                    try {
+                        val paramsCount = m.parameterTypes.size
+                        val result = when (paramsCount) {
+                            3 -> m.invoke(iWifiManager, "com.android.shell", null, null)
+                            2 -> m.invoke(iWifiManager, "com.android.shell", null)
+                            1 -> m.invoke(iWifiManager, "com.android.shell")
+                            0 -> m.invoke(iWifiManager)
+                            else -> null
+                        }
+                        if (result != null) {
+                            configsList = extractListFromParceledOrList(result)
+                            if (!configsList.isNullOrEmpty()) break
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed getPrivilegedConfiguredNetworks variant: ${e.message}")
+                    }
+                }
+            }
+
+            if (configsList.isNullOrEmpty()) {
+                for (m in iWifiManager.javaClass.methods) {
+                    if (m.name == "getConfiguredNetworks") {
+                        try {
+                            val paramsCount = m.parameterTypes.size
+                            val result = when (paramsCount) {
+                                3 -> m.invoke(iWifiManager, "com.android.shell", null, true)
+                                2 -> m.invoke(iWifiManager, "com.android.shell", null)
+                                1 -> m.invoke(iWifiManager, "com.android.shell")
+                                0 -> m.invoke(iWifiManager)
+                                else -> null
+                            }
+                            if (result != null) {
+                                configsList = extractListFromParceledOrList(result)
+                                if (!configsList.isNullOrEmpty()) break
+                            }
+                        } catch (e: Exception) {
+                            Log.d(TAG, "Failed getConfiguredNetworks variant: ${e.message}")
+                        }
+                    }
+                }
+            }
+
+            configsList?.forEach { configObj ->
+                if (configObj != null) {
+                    try {
+                        val ssidField = configObj.javaClass.getField("SSID")
+                        val rawSsid = (ssidField.get(configObj) as? String)?.trim('"')?.trim() ?: ""
+
+                        val pskField = try { configObj.javaClass.getField("preSharedKey") } catch (e: Exception) { null }
+                        val rawPsk = (pskField?.get(configObj) as? String)?.trim('"')?.trim() ?: ""
+
+                        val netIdField = try { configObj.javaClass.getField("networkId") } catch (e: Exception) { null }
+                        val netId = (netIdField?.get(configObj) as? Int) ?: -1
+
+                        val secType = parseSecurityTypeFromConfig(configObj)
+
+                        if (rawSsid.isNotEmpty() && rawSsid != "<unknown ssid>") {
+                            credentialsMap[rawSsid] = WifiCredential(
+                                ssid = rawSsid,
+                                securityType = secType,
+                                preSharedKey = rawPsk,
+                                netId = netId
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing WifiConfiguration item", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch saved Wi-Fi credentials via Binder", e)
+        }
+        return credentialsMap
+    }
+
+    private fun extractListFromParceledOrList(obj: Any): List<*> {
+        if (obj is List<*>) return obj
+        try {
+            val getListMethod = obj.javaClass.getMethod("getList")
+            val list = getListMethod.invoke(obj) as? List<*>
+            if (list != null) return list
+        } catch (e: Exception) {}
+        return emptyList<Any>()
+    }
+
+    private fun parseSecurityTypeFromConfig(configObj: Any): String {
+        try {
+            val allowedKeyManagementField = configObj.javaClass.getField("allowedKeyManagement")
+            val bitSet = allowedKeyManagementField.get(configObj) as? java.util.BitSet
+            if (bitSet != null) {
+                if (bitSet.get(8) || bitSet.get(13)) return "wpa3"
+                if (bitSet.get(1) || bitSet.get(2)) return "wpa2"
+                if (bitSet.get(0)) return "open"
+            }
+        } catch (e: Exception) {}
+        return "wpa2"
+    }
+
+    fun enableSavedNetwork(netId: Int): Boolean {
+        if (netId < 0) return false
+        try {
+            val iWifiManager = getWifiManager() ?: return false
+            for (m in iWifiManager.javaClass.methods) {
+                if (m.name == "enableNetwork") {
+                    try {
+                        val paramsCount = m.parameterTypes.size
+                        val res = when (paramsCount) {
+                            3 -> m.invoke(iWifiManager, netId, true, "com.android.shell")
+                            2 -> m.invoke(iWifiManager, netId, true)
+                            else -> null
+                        }
+                        if (res is Boolean && res) {
+                            Log.d(TAG, "Successfully enabled saved network $netId via IWifiManager.enableNetwork")
+                            return true
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed enableNetwork variant: ${e.message}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in enableSavedNetwork", e)
+        }
+        return false
+    }
+
+    fun executeBtCommand(cmd: String): String {
+        return executeWifiCommand(cmd)
+    }
+
+    fun getBluetoothAdapterState(): Int {
+        try {
+            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            if (adapter != null) {
+                return adapter.state
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying BluetoothAdapter.getDefaultAdapter().state", e)
+        }
+        try {
+            val dumpsys = executeBtCommand("dumpsys bluetooth_manager | grep -i 'state:'")
+            if (dumpsys.contains("STATE_ON", ignoreCase = true) || dumpsys.contains("ON", ignoreCase = true)) {
+                return android.bluetooth.BluetoothAdapter.STATE_ON
+            }
+        } catch (e: Exception) {}
+        return android.bluetooth.BluetoothAdapter.STATE_OFF
+    }
+
+    fun getPairedBluetoothDevices(context: Context): List<BluetoothDeviceModel> {
+        val resultList = mutableListOf<BluetoothDeviceModel>()
+        try {
+            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
+            val bondedDevices = adapter.bondedDevices ?: emptySet()
+
+            val dumpsysOut = try {
+                executeBtCommand("dumpsys bluetooth_manager | grep -E 'STATE_CONNECTED|Bonded devices'")
+            } catch (e: Exception) { "" }
+
+            for (device in bondedDevices) {
+                val address = device.address ?: ""
+                val name = try { device.name ?: address } catch (e: Exception) { address }
+
+                var isConnected = false
+                if (dumpsysOut.contains(address, ignoreCase = true) && dumpsysOut.contains("STATE_CONNECTED", ignoreCase = true)) {
+                    isConnected = true
+                }
+                if (!isConnected) {
+                    try {
+                        val isConnectedMethod = device.javaClass.getMethod("isConnected")
+                        val res = isConnectedMethod.invoke(device) as? Boolean
+                        if (res == true) isConnected = true
+                    } catch (e: Exception) {}
+                }
+
+                resultList.add(
+                    BluetoothDeviceModel(
+                        name = name,
+                        address = address,
+                        isConnected = isConnected,
+                        device = device
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching paired bluetooth devices", e)
+        }
+        return resultList
+    }
+
+    fun toggleDeviceConnection(deviceAddress: String, connect: Boolean): Boolean {
+        try {
+            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return false
+            val device = adapter.getRemoteDevice(deviceAddress) ?: return false
+            val methodName = if (connect) "connect" else "disconnect"
+
+            var success = false
+            try {
+                val method = device.javaClass.getMethod(methodName)
+                val res = method.invoke(device) as? Boolean
+                if (res == true) success = true
+            } catch (e: Exception) {
+                Log.d(TAG, "Reflective device.$methodName() failed: ${e.message}")
+            }
+
+            if (!success) {
+                val cmd = if (connect) "cmd bluetooth_manager connect $deviceAddress"
+                          else "cmd bluetooth_manager disconnect $deviceAddress"
+                val out = executeBtCommand(cmd)
+                if (!out.contains("Error", ignoreCase = true) && !out.contains("Exception", ignoreCase = true)) {
+                    success = true
+                }
+            }
+            return success
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling bluetooth connection for $deviceAddress", e)
+        }
+        return false
+    }
+
     private fun clearAtmCache() {
         synchronized(lock) {
             cachedActivityTaskManager = null
@@ -315,6 +571,12 @@ object ShellExecutor {
 
     fun executeCommand(command: String) = exec(command)
 
+    fun executeWifiCommand(command: String): String {
+        val res = executeCommandWithResult(command)
+        Log.d(TAG, "executeWifiCommand [$command] -> exit: ${res.third}, out: ${res.first}, err: ${res.second}")
+        return if (res.first.isNotBlank()) res.first else res.second
+    }
+
     fun resizeTask(taskId: Int, left: Int, top: Int, right: Int, bottom: Int, resizeMode: Int = 2) {
         try {
             val manager = getActivityTaskManager()
@@ -486,48 +748,52 @@ object ShellExecutor {
     }
 
     fun relaunchFreeformTask(taskId: Int, component: String, displayId: Int = -1) {
-        try {
-            val manager = getActivityTaskManager()
-            if (manager != null) {
-                val options = android.app.ActivityOptions.makeBasic()
-                try {
-                    val setLaunchWindowingModeMethod = options.javaClass.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
-                    setLaunchWindowingModeMethod.invoke(options, 5) // 5 = WINDOWING_MODE_FREEFORM
-                } catch (e: Exception) {}
-                if (displayId != -1) {
+        if (taskId != -1) {
+            try {
+                val manager = getActivityTaskManager()
+                if (manager != null) {
+                    val options = android.app.ActivityOptions.makeBasic()
                     try {
-                        val setLaunchDisplayIdMethod = options.javaClass.getMethod("setLaunchDisplayId", Int::class.javaPrimitiveType)
-                        setLaunchDisplayIdMethod.invoke(options, displayId)
+                        val setLaunchWindowingModeMethod = options.javaClass.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
+                        setLaunchWindowingModeMethod.invoke(options, 5) // 5 = WINDOWING_MODE_FREEFORM
                     } catch (e: Exception) {}
-                }
-
-                val method = synchronized(lock) {
-                    if (cachedStartActivityFromRecentsMethod == null) {
-                        cachedStartActivityFromRecentsMethod = manager.javaClass.getMethod(
-                            "startActivityFromRecents",
-                            Int::class.javaPrimitiveType,
-                            android.os.Bundle::class.java
-                        )
+                    if (displayId != -1) {
+                        try {
+                            val setLaunchDisplayIdMethod = options.javaClass.getMethod("setLaunchDisplayId", Int::class.javaPrimitiveType)
+                            setLaunchDisplayIdMethod.invoke(options, displayId)
+                        } catch (e: Exception) {}
                     }
-                    cachedStartActivityFromRecentsMethod!!
+
+                    val method = synchronized(lock) {
+                        if (cachedStartActivityFromRecentsMethod == null) {
+                            cachedStartActivityFromRecentsMethod = manager.javaClass.getMethod(
+                                "startActivityFromRecents",
+                                Int::class.javaPrimitiveType,
+                                android.os.Bundle::class.java
+                            )
+                        }
+                        cachedStartActivityFromRecentsMethod!!
+                    }
+                    method.invoke(manager, taskId, options.toBundle())
+                    
+                    // Ensure task gets immediate focus after launching
+                    setFocusedRootTaskWithManager(manager, taskId)
+                    return
                 }
-                method.invoke(manager, taskId, options.toBundle())
-                
-                // Ensure task gets immediate focus after launching
-                setFocusedRootTaskWithManager(manager, taskId)
-                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to relaunch task via direct Binder call, falling back to shell", e)
+                clearAtmCache()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to relaunch task via direct Binder call, falling back to shell", e)
-            clearAtmCache()
         }
 
         triggerShellInteraction()
         val writer = persistentWriter
         val displaySuffix = if (displayId != -1) " --display $displayId" else ""
+        val taskParam = if (taskId != -1) " --task $taskId" else ""
+        val cmd = "am start-activity$taskParam --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix\n"
         if (writer != null) {
             try {
-                writer.write("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix\n")
+                writer.write(cmd)
                 writer.flush()
                 return
             } catch (e: Exception) {
@@ -535,7 +801,7 @@ object ShellExecutor {
                 closePersistentShell()
             }
         }
-        exec("am start-activity --task $taskId --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix")
+        exec("am start-activity$taskParam --windowingMode 5 -n $component --activity-brought-to-front$displaySuffix")
     }
 
     fun setTaskWindowingMode(taskId: Int, windowingMode: Int, toTop: Boolean) {

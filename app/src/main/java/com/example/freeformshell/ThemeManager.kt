@@ -2,6 +2,10 @@ package com.example.freeformshell
 
 import android.content.Context
 import android.graphics.Color
+import android.hardware.display.DisplayManager
+import android.view.Display
+import android.util.DisplayMetrics
+import android.util.Log
 
 object ThemeManager {
     private const val PREFS_NAME = "freeform_theme_prefs"
@@ -31,7 +35,154 @@ object ThemeManager {
     private const val KEY_SHOW_SHADOWS = "show_shadows"
     private const val KEY_APP_UI_SCALE = "app_ui_scale_v2" // Float value, default 1.0f
     private const val KEY_AUTO_UI_SCALING = "auto_ui_scaling_v2" // Boolean value, default true
+    private const val KEY_DESKTOP_THEME_STYLE = "desktop_theme_style" // 0: Classic, 1: Aluminum OS
+    private const val KEY_SHOW_STATUS_BAR = "show_status_bar" // Boolean value, default true
+    private const val KEY_CUSTOM_AI_APP_PACKAGE = "custom_ai_app_package"
+    private const val KEY_SHOW_BATTERY_PERCENT = "show_battery_percent"
+    private const val KEY_ENABLE_QUICK_SETTINGS = "enable_quick_settings"
+    private const val KEY_STATUS_BAR_HEIGHT = "status_bar_height"
+    private const val KEY_SPLIT_CLICK_BENTO = "split_click_bento"
+    private const val KEY_SCROLL_PAGE_SWITCHING = "scroll_page_switching"
+    private const val KEY_NOTIF_PANEL_SCALE = "notif_panel_scale"
+    private const val KEY_CLOCK_FORMAT = "clock_format"
+    private const val KEY_CLOCK_DATE_STYLE = "clock_date_style"
+    private const val KEY_CLOCK_SHOW_AM_PM = "clock_show_am_pm"
+    private const val KEY_WINDOWS_NOTIFS_ENABLED = "windows_notifs_enabled"
+    private const val KEY_WINDOWS_NOTIFS_POSITION = "windows_notifs_position"
+    private const val KEY_SETUP_COMPLETE = "setup_complete_v3"
+    private const val KEY_ENHANCED_MULTIWINDOW = "enhanced_multiwindow"
+    private const val KEY_NOTIF_PANEL_HEIGHT = "notif_panel_height"
+    private const val KEY_NOTIF_PANEL_ANIM_DURATION = "notif_panel_anim_duration"
+    private const val KEY_NOTIF_GROUPING_ENABLED = "notif_grouping_enabled"
+    private const val KEY_MULTIWINDOW_WHITELIST = "multiwindow_whitelist"
+    private const val KEY_REFRESH_RATE = "perf_refresh_rate" // 0: Auto, 1: 1Hz, 2: 2Hz, 3: 5Hz, 4: 10Hz
     
+    // Hardware Overrides
+    private const val KEY_USE_AUTO_HW = "use_auto_hw_detection"
+    private const val KEY_HW_CPU_NAME = "hw_cpu_name"
+    private const val KEY_HW_CPU_CODE = "hw_cpu_codename"
+    private const val KEY_HW_CPU_VENDOR = "hw_cpu_vendor"
+    private const val KEY_HW_GPU_NAME = "hw_gpu_name"
+    private const val KEY_HW_GPU_VENDOR = "hw_gpu_vendor"
+    private const val KEY_HW_DEVICE_NAME = "hw_device_name"
+    private const val KEY_HW_DEVICE_MODEL = "hw_device_model"
+    private const val KEY_HW_STORAGE_NAME = "hw_storage_name"
+    private const val KEY_PERF_HISTORY_LENGTH = "perf_history_length" // 30, 60, 90, 120, 180, 300
+    private const val KEY_PERF_TOOLTIP_ENABLED = "perf_tooltip_enabled"
+    private const val KEY_PERF_USE_BITS = "perf_use_bits"
+
+    fun getPerformanceHistoryLength(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_PERF_HISTORY_LENGTH, 60)
+
+    fun setPerformanceHistoryLength(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_PERF_HISTORY_LENGTH, value).apply()
+
+    fun getPerformanceRefreshRate(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_REFRESH_RATE, 0)
+
+    fun setPerformanceRefreshRate(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_REFRESH_RATE, value).apply()
+
+    fun isPerformanceTooltipEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PERF_TOOLTIP_ENABLED, true)
+
+    fun setPerformanceTooltipEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_PERF_TOOLTIP_ENABLED, enabled).apply()
+
+    fun useBitsForNetwork(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PERF_USE_BITS, true)
+
+    fun setUseBitsForNetwork(context: Context, useBits: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_PERF_USE_BITS, useBits).apply()
+
+    fun useAutoHardwareDetection(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_USE_AUTO_HW, true)
+
+    fun setUseAutoHardwareDetection(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_USE_AUTO_HW, value).apply()
+
+    fun getHardwareOverride(context: Context, key: String): String =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("hw_ov_$key", "") ?: ""
+
+    fun setHardwareOverride(context: Context, key: String, value: String) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("hw_ov_$key", value).apply()
+
+    fun isEnhancedMultiWindowEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ENHANCED_MULTIWINDOW, true)
+
+    fun setEnhancedMultiWindowEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENHANCED_MULTIWINDOW, enabled).apply()
+
+    fun getNotifPanelHeight(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_NOTIF_PANEL_HEIGHT, 420)
+
+    fun setNotifPanelHeight(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_NOTIF_PANEL_HEIGHT, value).apply()
+
+    fun getNotifPanelAnimDuration(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_NOTIF_PANEL_ANIM_DURATION, 450)
+
+    fun setNotifPanelAnimDuration(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_NOTIF_PANEL_ANIM_DURATION, value).apply()
+
+    fun isNotifGroupingEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_NOTIF_GROUPING_ENABLED, true)
+
+    fun setNotifGroupingEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_NOTIF_GROUPING_ENABLED, enabled).apply()
+
+    fun getMultiWindowWhitelist(context: Context): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet(KEY_MULTIWINDOW_WHITELIST, null)
+        if (set == null) {
+            // Smart Defaults: Chrome and our own app
+            val defaults = setOf("com.android.chrome", "com.example.freeformshell")
+            prefs.edit().putStringSet(KEY_MULTIWINDOW_WHITELIST, defaults).apply()
+            return defaults
+        }
+        return set
+    }
+
+    fun toggleMultiWindowWhitelist(context: Context, packageName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = getMultiWindowWhitelist(context).toMutableSet()
+        if (current.contains(packageName)) {
+            current.remove(packageName)
+        } else {
+            current.add(packageName)
+        }
+        prefs.edit().putStringSet(KEY_MULTIWINDOW_WHITELIST, current).apply()
+    }
+
+    fun isMultiWindowSupported(context: Context, packageName: String): Boolean {
+        if (!isEnhancedMultiWindowEnabled(context)) return false
+        return getMultiWindowWhitelist(context).contains(packageName)
+    }
+
+    fun isSetupComplete(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SETUP_COMPLETE, false)
+
+    fun setSetupComplete(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SETUP_COMPLETE, value).apply()
+
+    fun isNotificationServiceEnabled(context: Context): Boolean {
+        val cn = android.content.ComponentName(context, LockScreenNotificationListener::class.java)
+        val flat = android.provider.Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+        return flat != null && flat.contains(cn.flattenToString())
+    }
+
+    fun getCustomAiAppPackage(context: Context): String =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_CUSTOM_AI_APP_PACKAGE, "") ?: ""
+
+    fun setCustomAiAppPackage(context: Context, value: String) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(KEY_CUSTOM_AI_APP_PACKAGE, value).apply()
+
+    fun isScrollPageSwitchingEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SCROLL_PAGE_SWITCHING, false)
+
+    fun setScrollPageSwitchingEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SCROLL_PAGE_SWITCHING, enabled).apply()
+
     fun showShadows(context: Context): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SHOW_SHADOWS, false)
 
@@ -45,7 +196,7 @@ object ThemeManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_WINDOW_THEME, theme).apply()
 
     fun getAppUiStyle(context: Context): Int =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_APP_UI_STYLE, 0)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_APP_UI_STYLE, 1)
 
     fun setAppUiStyle(context: Context, style: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_APP_UI_STYLE, style).apply()
@@ -100,8 +251,12 @@ object ThemeManager {
     fun getThemeMode(context: Context): Int = 
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_MODE, 0)
 
-    fun setThemeMode(context: Context, mode: Int) = 
+    fun setThemeMode(context: Context, mode: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_MODE, mode).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
 
     fun getAccentColor(context: Context, systemAccent: Int): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_ACCENT_COLOR, systemAccent)
@@ -170,26 +325,172 @@ object ThemeManager {
     fun getDockPosition(context: Context, displayId: Int): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_DOCK_POS_PREFIX + displayId, 0)
 
-    fun setDockPosition(context: Context, displayId: Int, value: Int) =
+    fun setDockPosition(context: Context, displayId: Int, value: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_DOCK_POS_PREFIX + displayId, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
 
     fun getDockSize(context: Context, displayId: Int): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_DOCK_SIZE_PREFIX + displayId, 0)
 
-    fun setDockSize(context: Context, displayId: Int, value: Int) =
+    fun setDockSize(context: Context, displayId: Int, value: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_DOCK_SIZE_PREFIX + displayId, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    data class DetectionResult(val position: Int, val size: Int, val description: String)
+
+    @JvmStatic
+    fun autoDetectTaskbar(context: Context, targetDisplayId: Int): DetectionResult {
+        try {
+            val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            val display = displayManager.getDisplay(targetDisplayId) ?: return DetectionResult(0, 0, "Display $targetDisplayId not found")
+            
+            val realMetrics = DisplayMetrics()
+            display.getRealMetrics(realMetrics)
+            val displayW = realMetrics.widthPixels
+            val displayH = realMetrics.heightPixels
+            val density = realMetrics.density
+            
+            val dumpsys = ShellExecutor.exec("dumpsys window windows")
+            if (dumpsys.isEmpty() || dumpsys.contains("Error")) {
+                return DetectionResult(0, 0, "Failed to execute dumpsys command")
+            }
+
+            var currentDisplayId = 0
+            var inTargetWindow = false
+            var matchedWindowName = ""
+            
+            val lines = dumpsys.split("\n")
+            val frameRegex = Regex("""(?:mFrame|Frame)=\[([-\d]+),([-\d]+)\]\[([-\d]+),([-\d]+)\]""")
+            val displayIdRegex1 = Regex("""mDisplayId=(\d+)""")
+            val displayIdRegex2 = Regex("""DisplayId=(\d+)""")
+            val displayIdRegex3 = Regex("""Display\s+#?(\d+)""")
+            
+            val targetKeys = listOf("navigationbar", "taskbar", "navbar", "com.farmerbb.taskbar", "dock")
+            val tolerance = (8 * density).toInt().coerceAtLeast(8)
+
+            for (line in lines) {
+                // 1. Detect display change
+                displayIdRegex1.find(line)?.groupValues?.get(1)?.toIntOrNull()?.let {
+                    currentDisplayId = it
+                } ?: displayIdRegex2.find(line)?.groupValues?.get(1)?.toIntOrNull()?.let {
+                    currentDisplayId = it
+                } ?: displayIdRegex3.find(line)?.groupValues?.get(1)?.toIntOrNull()?.let {
+                    currentDisplayId = it
+                }
+
+                // 2. Check if we enter a target window block
+                if (line.contains("Window #") || line.contains("Window{")) {
+                    val lowerLine = line.lowercase()
+                    val isTarget = targetKeys.any { lowerLine.contains(it) }
+                    if (isTarget) {
+                        inTargetWindow = true
+                        matchedWindowName = line.substringAfter("Window{").substringBefore("}").trim()
+                        if (matchedWindowName.isEmpty()) {
+                            matchedWindowName = line.trim()
+                        }
+                    } else {
+                        inTargetWindow = false
+                    }
+                }
+
+                // 3. Extract frames inside the target window block
+                if (inTargetWindow && currentDisplayId == targetDisplayId) {
+                    val match = frameRegex.find(line)
+                    if (match != null) {
+                        val left = match.groupValues[1].toIntOrNull() ?: 0
+                        val top = match.groupValues[2].toIntOrNull() ?: 0
+                        val right = match.groupValues[3].toIntOrNull() ?: 0
+                        val bottom = match.groupValues[4].toIntOrNull() ?: 0
+                        
+                        val w = right - left
+                        val h = bottom - top
+                        
+                        if (w > 0 && h > 0 && (w < displayW || h < displayH)) {
+                            // Bottom Edge: Sitting near the display bottom edge
+                            if (Math.abs(bottom - displayH) <= tolerance && h < displayH / 4) {
+                                val size = displayH - top
+                                return DetectionResult(2, size, "Bottom Dock detected: $matchedWindowName (${size}px)")
+                            }
+                            // Top Edge: Sitting near the display top edge
+                            if (Math.abs(top) <= tolerance && h < displayH / 4) {
+                                return DetectionResult(1, bottom, "Top Dock detected: $matchedWindowName (${bottom}px)")
+                            }
+                            // Left Edge: Sitting near the display left edge
+                            if (Math.abs(left) <= tolerance && w < displayW / 4) {
+                                return DetectionResult(3, right, "Left Dock detected: $matchedWindowName (${right}px)")
+                            }
+                            // Right Edge: Sitting near the display right edge
+                            if (Math.abs(right - displayW) <= tolerance && w < displayW / 4) {
+                                val size = displayW - left
+                                return DetectionResult(4, size, "Right Dock detected: $matchedWindowName (${size}px)")
+                            }
+                        }
+                        inTargetWindow = false // Reset block once frame is parsed
+                    }
+                }
+            }
+            return DetectionResult(0, 0, "No active system taskbar/dock found on Display $targetDisplayId")
+        } catch (e: Exception) {
+            Log.e("ThemeManager", "Error auto-detecting taskbar", e)
+            return DetectionResult(0, 0, "Auto-detection error: ${e.message}")
+        }
+    }
 
     fun getSnapSensitivity(context: Context, displayId: Int): Int =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("snap_sensitivity_" + displayId, 100) // Default to 100dp
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("snap_sensitivity_" + displayId, 15) // Default to 15dp
 
     fun setSnapSensitivity(context: Context, displayId: Int, value: Int) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("snap_sensitivity_" + displayId, value).apply()
 
     fun usePillForSnapped(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PILL_FOR_SNAPPED, true)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_PILL_FOR_SNAPPED, false)
 
-    fun setPillForSnapped(context: Context, value: Boolean) =
+    fun setPillForSnapped(context: Context, value: Boolean) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_PILL_FOR_SNAPPED, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+            FreeformOverlayService.requestRefresh()
+        } catch (e: Exception) {}
+    }
+
+    fun getAnimationSpeedScale(context: Context): Float =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat("animation_speed_scale", 1.0f)
+
+    fun setAnimationSpeedScale(context: Context, scale: Float) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat("animation_speed_scale", scale).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+            FreeformOverlayService.requestRefresh()
+        } catch (e: Exception) {}
+    }
+
+    fun autoHideTitleBar(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("auto_hide_title_bar", true)
+
+    fun setAutoHideTitleBar(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("auto_hide_title_bar", value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+            FreeformOverlayService.requestRefresh()
+        } catch (e: Exception) {}
+    }
+
+    fun getAutoHideTriggerMode(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("auto_hide_trigger_mode", 0)
+
+    fun setAutoHideTriggerMode(context: Context, mode: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("auto_hide_trigger_mode", mode).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+            FreeformOverlayService.requestRefresh()
+        } catch (e: Exception) {}
+    }
 
     fun getAppLaunchDisplay(context: Context): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_APP_LAUNCH_DISPLAY, 2)
@@ -331,6 +632,24 @@ object ThemeManager {
     fun isDisplayShellEnabled(context: Context, displayId: Int): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("display_shell_enabled_$displayId", true)
 
+    fun isNotificationCooldownEnabled(context: Context, packageName: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet("notification_cooldown_apps", emptySet()) ?: emptySet()
+        return set.contains(packageName.lowercase())
+    }
+
+    fun toggleNotificationCooldown(context: Context, packageName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet("notification_cooldown_apps", emptySet())?.toMutableSet() ?: mutableSetOf()
+        val lower = packageName.lowercase()
+        if (set.contains(lower)) {
+            set.remove(lower)
+        } else {
+            set.add(lower)
+        }
+        prefs.edit().putStringSet("notification_cooldown_apps", set).apply()
+    }
+
     fun setDisplayShellEnabled(context: Context, displayId: Int, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("display_shell_enabled_$displayId", enabled).apply()
 
@@ -345,6 +664,24 @@ object ThemeManager {
 
     fun setVisualCornerHandles(context: Context, displayId: Int, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("visual_corner_handles_d$displayId", enabled).apply()
+
+    // ── Frequent Settings Tracker ──────────────────────────────────────────────
+    fun recordSettingUsed(context: Context, settingKey: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val count = prefs.getInt("freq_$settingKey", 0) + 1
+        prefs.edit().putInt("freq_$settingKey", count).apply()
+    }
+
+    fun getTopFrequentSettings(context: Context, fallbackDefaults: List<String>): List<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val keys = listOf("theme_mode", "auto_hide", "desktop_mode", "pill_mode", "drag_tint", "auto_scale")
+        val sorted = keys.map { key -> key to prefs.getInt("freq_$key", 0) }
+            .sortedByDescending { it.second }
+            .filter { it.second > 0 }
+            .map { it.first }
+        
+        return (sorted + fallbackDefaults).distinct().take(4)
+    }
 
     // ── Compatibility Fix Helpers ───────────────────────────────────────────
     // Each fix is stored as "compat_<fixId>" in the main prefs file.
@@ -383,6 +720,159 @@ object ThemeManager {
 
     fun setAutoUiScalingEnabled(context: Context, enabled: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO_UI_SCALING, enabled).apply()
+
+    fun getDesktopThemeStyle(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_DESKTOP_THEME_STYLE, 1)
+
+    fun setDesktopThemeStyle(context: Context, style: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_DESKTOP_THEME_STYLE, style).apply()
+
+    fun showStatusBar(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SHOW_STATUS_BAR, true)
+
+    fun setShowStatusBar(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SHOW_STATUS_BAR, value).apply()
+
+    fun showBatteryPercent(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SHOW_BATTERY_PERCENT, true)
+
+    fun setShowBatteryPercent(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SHOW_BATTERY_PERCENT, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    fun isQuickSettingsEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ENABLE_QUICK_SETTINGS, true)
+
+    fun setQuickSettingsEnabled(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLE_QUICK_SETTINGS, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    fun getStatusBarHeight(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_STATUS_BAR_HEIGHT, 36)
+
+    fun setStatusBarHeight(context: Context, value: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_STATUS_BAR_HEIGHT, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    fun isSplitClickBentoEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_SPLIT_CLICK_BENTO, true)
+
+    fun setSplitClickBentoEnabled(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_SPLIT_CLICK_BENTO, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    private const val KEY_ACTIVE_TILES = "active_tiles"
+    private const val KEY_TILE_LAYOUTS_JSON = "qs_tile_layouts_json"
+
+    val DEFAULT_TILE_LAYOUTS = listOf(
+        TileLayout("wifi", 0, 0, 2, 1),
+        TileLayout("bluetooth", 2, 0, 2, 1),
+        TileLayout("modes", 0, 1, 2, 1),
+        TileLayout("screenrecord", 2, 1, 2, 1),
+        TileLayout("screenshot", 0, 2, 2, 1)
+    )
+
+    fun getTileLayouts(context: Context): List<TileLayout> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString(KEY_TILE_LAYOUTS_JSON, null)
+        if (jsonStr.isNullOrEmpty()) {
+            return DEFAULT_TILE_LAYOUTS
+        }
+        try {
+            val list = mutableListOf<TileLayout>()
+            val array = org.json.JSONArray(jsonStr)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    TileLayout(
+                        key = obj.getString("key"),
+                        col = obj.getInt("col"),
+                        row = obj.getInt("row"),
+                        w = obj.getInt("w"),
+                        h = obj.getInt("h"),
+                        page = obj.optInt("page", 0)
+                    )
+                )
+            }
+            return list
+        } catch (e: Exception) {
+            Log.e("ThemeManager", "Error parsing tile layouts JSON", e)
+            return DEFAULT_TILE_LAYOUTS
+        }
+    }
+
+    fun setTileLayouts(context: Context, layouts: List<TileLayout>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        try {
+            val array = org.json.JSONArray()
+            for (layout in layouts) {
+                val obj = org.json.JSONObject()
+                obj.put("key", layout.key)
+                obj.put("col", layout.col)
+                obj.put("row", layout.row)
+                obj.put("w", layout.w)
+                obj.put("h", layout.h)
+                obj.put("page", layout.page)
+                array.put(obj)
+            }
+            prefs.edit().putString(KEY_TILE_LAYOUTS_JSON, array.toString()).apply()
+            
+            // Sync traditional active_tiles key for compatibility
+            val activeKeys = layouts.map { it.key }
+            prefs.edit().putString(KEY_ACTIVE_TILES, activeKeys.joinToString(",")).apply()
+            
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {
+            Log.e("ThemeManager", "Error saving tile layouts JSON", e)
+        }
+    }
+
+    fun getActiveTiles(context: Context): List<String> {
+        return getTileLayouts(context).map { it.key }
+    }
+
+    fun setActiveTiles(context: Context, tiles: List<String>) {
+        val currentLayouts = getTileLayouts(context)
+        val newLayouts = mutableListOf<TileLayout>()
+        
+        // Arrange new tiles neatly
+        var nextRow = 0
+        var nextCol = 0
+        for (key in tiles) {
+            val existing = currentLayouts.firstOrNull { it.key == key }
+            if (existing != null) {
+                newLayouts.add(existing)
+            } else {
+                val w = if (key == "music") 4 else 2
+                val h = 1
+                
+                // Align to 4-column boundary
+                if (nextCol + w > 4) {
+                    nextCol = 0
+                    nextRow++
+                }
+                newLayouts.add(TileLayout(key, nextCol, nextRow, w, h, 0))
+                nextCol += w
+                if (nextCol >= 4) {
+                    nextCol = 0
+                    nextRow++
+                }
+            }
+        }
+        setTileLayouts(context, newLayouts)
+    }
 
     fun isForceDesktopModeEnabled(context: Context): Boolean =
         android.provider.Settings.Global.getInt(context.contentResolver, "force_desktop_mode_on_external_displays", 0) == 1
@@ -468,6 +958,152 @@ object ThemeManager {
 
     fun setLockCalendarWidgetEnabled(context: Context, value: Boolean) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_calendar_widget", value).apply()
+
+    // Desktop Custom Lock Security
+    fun isDesktopLockEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("desktop_lock_enabled", false)
+
+    fun setDesktopLockEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("desktop_lock_enabled", value).apply()
+
+    fun getDesktopLockPin(context: Context): String =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("desktop_lock_pin", "1234") ?: "1234"
+
+    fun setDesktopLockPin(context: Context, value: String) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("desktop_lock_pin", value).apply()
+
+    fun getLockMusicControlStyle(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("lock_music_control_style", 0)
+
+    fun setLockMusicControlStyle(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("lock_music_control_style", value).apply()
+
+    fun isLockKeyboardAllowed(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_keyboard_allowed", true)
+
+    fun setLockKeyboardAllowed(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_keyboard_allowed", value).apply()
+
+    fun getLockScreenDisplayTarget(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt("lock_screen_display_target", 1) // default: Both displays (1)
+
+    fun setLockScreenDisplayTarget(context: Context, value: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt("lock_screen_display_target", value).apply()
+
+    // ── Performance & Optimization Keys ───────────────────────────────────────
+    fun isLockAutoDetectEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("lock_auto_detect", true)
+
+    fun setLockAutoDetectEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("lock_auto_detect", value).apply()
+
+    fun isDeepSleepOptimizationEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("deep_sleep_optimization", true)
+
+    fun setDeepSleepOptimizationEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("deep_sleep_optimization", value).apply()
+
+    fun isWidgetRefreshDeduplicated(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("widget_refresh_deduplicated", true)
+
+    fun setWidgetRefreshDeduplicated(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("widget_refresh_deduplicated", value).apply()
+
+    fun isShellDisplayRequired(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("shell_display_required", true)
+
+    fun setShellDisplayRequired(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("shell_display_required", value).apply()
+
+    // ── System Modules Toggles ───────────────────────────────────────────────
+    fun isModuleLockEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("module_lock_enabled", true)
+
+    fun setModuleLockEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("module_lock_enabled", value).apply()
+
+    fun isModuleWidgetEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("module_widget_enabled", true)
+
+    fun setModuleWidgetEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("module_widget_enabled", value).apply()
+
+    fun isModuleCaptureEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("module_capture_enabled", true)
+
+    fun setModuleCaptureEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("module_capture_enabled", value).apply()
+
+    fun isModuleMirrorEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean("module_mirror_enabled", true)
+
+    fun setModuleMirrorEnabled(context: Context, value: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean("module_mirror_enabled", value).apply()
+
+    // Notification & Settings Panel Scale
+    fun getNotifPanelScale(context: Context): Float =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat(KEY_NOTIF_PANEL_SCALE, 1.0f)
+
+    fun setNotifPanelScale(context: Context, value: Float) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_NOTIF_PANEL_SCALE, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    // Top Bar Clock settings (0: 12h, 1: 24h, 2: System Default)
+    fun getClockFormat(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_CLOCK_FORMAT, 2)
+
+    fun setClockFormat(context: Context, value: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_CLOCK_FORMAT, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    // Clock Date Style (0: Hide, 1: Numeric, 2: Medium, 3: Long, 4: Full)
+    fun getClockDateStyle(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_CLOCK_DATE_STYLE, 3)
+
+    fun setClockDateStyle(context: Context, value: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_CLOCK_DATE_STYLE, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    // Show AM/PM suffix for 12h clock
+    fun getClockShowAmPm(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_CLOCK_SHOW_AM_PM, true)
+
+    fun setClockShowAmPm(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_CLOCK_SHOW_AM_PM, value).apply()
+        try {
+            context.sendBroadcast(android.content.Intent("com.example.freeformshell.THEME_CHANGED"))
+        } catch (e: Exception) {}
+    }
+
+    fun isWindowsNotifsEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_WINDOWS_NOTIFS_ENABLED, true)
+
+    fun setWindowsNotifsEnabled(context: Context, enabled: Boolean) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_WINDOWS_NOTIFS_ENABLED, enabled).apply()
+
+    fun getWindowsNotifsPosition(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_WINDOWS_NOTIFS_POSITION, 0)
+
+    fun setWindowsNotifsPosition(context: Context, position: Int) =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_WINDOWS_NOTIFS_POSITION, position).apply()
 }
+
+data class TileLayout(
+    val key: String,
+    val col: Int,
+    val row: Int,
+    val w: Int,
+    val h: Int,
+    val page: Int = 0
+)
 
 

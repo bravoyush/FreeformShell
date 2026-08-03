@@ -366,6 +366,15 @@ object TaskManager {
     fun getRecentTasks(): List<AppTask> = getCombinedTaskState().tasks
     fun getAllTaskBounds(): Map<Int, TaskBounds> = getCombinedTaskState().boundsMap
 
+    fun getTaskWindowingMode(packageName: String): Int {
+        val state = getCombinedTaskState()
+        return state.tasks.find { it.packageName == packageName }?.let { task ->
+            state.boundsMap[task.taskId]?.windowingMode
+        } ?: 1 // Default to Fullscreen if not found
+    }
+
+    fun getMyWindowingMode(): Int = getTaskWindowingMode("com.example.freeformshell")
+
     fun minimizeTaskSurface(taskId: Int): Boolean {
         try {
             val leash = getTaskLeash(taskId)
@@ -419,8 +428,16 @@ object TaskManager {
     fun getFocusedPackage(): String {
         try {
             val state = getCombinedTaskState()
+            // 1. Prioritize the absolute top task.
+            // We no longer exclude our own package to ensure the stack logic remains "Honest."
+            val topTask = state.tasks.firstOrNull()
+            if (topTask != null && topTask.packageName.isNotEmpty()) {
+                return topTask.packageName
+            }
+            
+            // 2. Fallback to standard visibility check for other tasks
             for (task in state.tasks) {
-                if (task.isVisible && task.packageName.isNotEmpty() && task.packageName != "com.example.freeformshell") {
+                if (task.isVisible && task.packageName.isNotEmpty()) {
                     return task.packageName
                 }
             }

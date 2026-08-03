@@ -67,6 +67,8 @@ fun DesktopSettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedIdx by remember { mutableStateOf(0) }
+    var desktopThemeStyle by remember { mutableStateOf(ThemeManager.getDesktopThemeStyle(context)) }
+    var showStatusBar by remember { mutableStateOf(ThemeManager.showStatusBar(context)) }
 
     // --- State & Callbacks for Live Mirroring ---
     var isMirroring by remember { mutableStateOf(PhoneMirrorManager.isMirroring) }
@@ -95,7 +97,7 @@ fun DesktopSettingsScreen(
     ) {
         // --- Sleek Premium Header ---
         Text(
-            text = "Desktop Environment Hub",
+            text = "Desktop Settings",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.primary
@@ -248,6 +250,8 @@ fun DesktopSettingsScreen(
             }
         }
 
+
+
         // --- Active Display Select tab row ---
         if (displays.size > 1) {
             Text(
@@ -310,7 +314,9 @@ fun DesktopSettingsScreen(
                 display = display,
                 snapSensitivity = snapSensitivity,
                 dockPosition = dockPosition,
-                dockSize = dockSize
+                dockSize = dockSize,
+                desktopThemeStyle = desktopThemeStyle,
+                showStatusBar = showStatusBar
             )
 
             Spacer(Modifier.height(24.dp))
@@ -328,13 +334,7 @@ fun DesktopSettingsScreen(
             LaunchedEffect(display.id) {
                 withContext(Dispatchers.IO) {
                     val dumpsys = ShellExecutor.exec("dumpsys display")
-                    val regex = "logicalId=${display.id}.*?physicalPort=(\\d+)".toRegex(RegexOption.IGNORE_CASE)
-                    val match = regex.find(dumpsys.replace("\n", " "))
-                    val port = match?.groupValues?.get(1) ?: run {
-                        val regex2 = "displayId=${display.id}.*?port=(\\d+)".toRegex(RegexOption.IGNORE_CASE)
-                        val match2 = regex2.find(dumpsys.replace("\n", " "))
-                        match2?.groupValues?.get(1)
-                    }
+                    val port = parsePhysicalPort(dumpsys, display.id)
 
                     physicalPort = if (port != null) {
                         "SF Port $port"
@@ -542,6 +542,67 @@ fun DesktopSettingsScreen(
                         Text("0 px (Compact)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         Text("1000 px (Prominent)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val coroutineScope = rememberCoroutineScope()
+                    var isDetecting by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = {
+                            isDetecting = true
+                            coroutineScope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    ThemeManager.autoDetectTaskbar(context, display.id)
+                                }
+                                isDetecting = false
+                                if (result.position != 0) {
+                                    dockPosition = result.position
+                                    dockSize = result.size.toFloat()
+                                    ThemeManager.setDockPosition(context, display.id, result.position)
+                                    ThemeManager.setDockSize(context, display.id, result.size)
+                                    Toast.makeText(context, result.description, Toast.LENGTH_LONG).show()
+                                    
+                                    // Visual flash guide
+                                    try {
+                                        FreeformOverlayService.showDockGuide(display.id, result.position, result.size)
+                                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                            FreeformOverlayService.hideDockGuide()
+                                        }, 2000)
+                                    } catch (e: Exception) {
+                                        Log.e("DesktopSettingsScreen", "Failed to show dock guide", e)
+                                    }
+                                } else {
+                                    Toast.makeText(context, result.description, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isDetecting,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    ) {
+                        if (isDetecting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scanning display windows...", style = MaterialTheme.typography.bodyMedium)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Auto Detect",
+                                modifier = Modifier.size(18.dp)
+                            )
+                           Spacer(modifier = Modifier.width(8.dp))
+                            Text("Auto-Detect Active Taskbar", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
@@ -555,11 +616,83 @@ enum class WallpaperLoadStatus {
 }
 
 @Composable
+fun MockStatusBar(isPhone: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (isPhone) 12.dp else 10.dp)
+            .background(Color.Black.copy(alpha = 0.5f))
+            .padding(horizontal = if (isPhone) 6.dp else 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "10:49",
+            color = Color.White,
+            fontSize = if (isPhone) 7.sp else 6.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.size(if (isPhone) 7.dp else 6.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color(0xFF34C759))
+                    .padding(horizontal = 2.dp, vertical = 0.5.dp)
+            ) {
+                Text(
+                    text = "85%",
+                    color = Color.White,
+                    fontSize = if (isPhone) 5.5.sp else 4.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+private fun decodeFileSafely(path: String, maxDimension: Int = 1024): Bitmap? {
+    try {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeFile(path, options)
+        val width = options.outWidth
+        val height = options.outHeight
+        if (width <= 0 || height <= 0) return null
+        
+        var sampleSize = 1
+        while (width / sampleSize > maxDimension || height / sampleSize > maxDimension) {
+            sampleSize *= 2
+        }
+        
+        options.inJustDecodeBounds = false
+        options.inSampleSize = sampleSize
+        return BitmapFactory.decodeFile(path, options)
+    } catch (t: Throwable) {
+        Log.e("DesktopSettingsScreen", "Failed to decode bitmap safely from $path", t)
+        return null
+    }
+}
+
+@Composable
 fun MonitorView(
     display: DisplayInfo,
     snapSensitivity: Float,
     dockPosition: Int,
-    dockSize: Float
+    dockSize: Float,
+    desktopThemeStyle: Int,
+    showStatusBar: Boolean
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -608,12 +741,12 @@ fun MonitorView(
                                             input.copyTo(output)
                                         }
                                         
-                                        val bmp = BitmapFactory.decodeFile(targetFile.absolutePath)
+                                        val bmp = decodeFileSafely(targetFile.absolutePath)
                                         if (bmp != null) {
                                             try {
                                                 val wm = WallpaperManager.getInstance(context)
                                                 wm.setBitmap(bmp)
-                                            } catch (se: Exception) {
+                                            } catch (se: Throwable) {
                                                 Log.e("DesktopSettingsScreen", "Failed to apply system wallpaper", se)
                                                 withContext(Dispatchers.Main) {
                                                     Toast.makeText(context, "System block: Applied only to visualizer", Toast.LENGTH_LONG).show()
@@ -629,7 +762,7 @@ fun MonitorView(
                                             }
                                         }
                                     }
-                                } catch (e: Exception) {
+                                } catch (e: Throwable) {
                                     Log.e("DesktopSettingsScreen", "Failed to process wallpaper", e)
                                 }
                             }
@@ -660,7 +793,7 @@ fun MonitorView(
                                             input.copyTo(output)
                                         }
                                         
-                                        val bmp = BitmapFactory.decodeFile(targetFile.absolutePath)
+                                        val bmp = decodeFileSafely(targetFile.absolutePath)
                                         if (bmp != null) {
                                             withContext(Dispatchers.Main) {
                                                 previewBitmap = bmp.asImageBitmap()
@@ -671,7 +804,7 @@ fun MonitorView(
                                             }
                                         }
                                     }
-                                } catch (e: Exception) {
+                                } catch (e: Throwable) {
                                     Log.e("DesktopSettingsScreen", "Failed to process wallpaper", e)
                                 }
                             }
@@ -696,7 +829,7 @@ fun MonitorView(
             val customWallpaperFile = File(context.filesDir, "custom_visualizer_wallpaper.png")
             if (customWallpaperFile.exists() && customWallpaperFile.length() > 0) {
                 try {
-                    val bmp = BitmapFactory.decodeFile(customWallpaperFile.absolutePath)
+                    val bmp = decodeFileSafely(customWallpaperFile.absolutePath)
                     if (bmp != null) {
                         withContext(Dispatchers.Main) {
                             previewBitmap = bmp.asImageBitmap()
@@ -704,7 +837,7 @@ fun MonitorView(
                             wallpaperLoadStatus = WallpaperLoadStatus.SUCCESS
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e("DesktopSettingsScreen", "Failed to decode custom wallpaper file", e)
                 }
             }
@@ -717,7 +850,7 @@ fun MonitorView(
                 val shizukuRes = ShellExecutor.executeCommandWithResult("cp /data/system/users/0/wallpaper ${wallpaperCopyFile.absolutePath}")
                 if (shizukuRes.third == 0 && wallpaperCopyFile.exists() && wallpaperCopyFile.length() > 0) {
                     try {
-                        val bmp = BitmapFactory.decodeFile(wallpaperCopyFile.absolutePath)
+                        val bmp = decodeFileSafely(wallpaperCopyFile.absolutePath)
                         if (bmp != null) {
                             withContext(Dispatchers.Main) {
                                 previewBitmap = bmp.asImageBitmap()
@@ -725,7 +858,7 @@ fun MonitorView(
                                 wallpaperLoadStatus = WallpaperLoadStatus.SUCCESS
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Log.e("DesktopSettingsScreen", "Failed to decode system wallpaper copy via Shizuku", e)
                     }
                 }
@@ -744,7 +877,7 @@ fun MonitorView(
                             wallpaperLoadStatus = WallpaperLoadStatus.SUCCESS
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e("DesktopSettingsScreen", "Failed to retrieve wallpaper fallback via WallpaperManager", e)
                 }
             }
@@ -757,7 +890,7 @@ fun MonitorView(
                 val res = ShellExecutor.executeCommandWithResult("screencap -d ${display.id} ${cacheFile.absolutePath}")
                 if (res.third == 0 && cacheFile.exists() && cacheFile.length() > 0) {
                     try {
-                        val bmp = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                        val bmp = decodeFileSafely(cacheFile.absolutePath)
                         if (bmp != null) {
                             withContext(Dispatchers.Main) {
                                 previewBitmap = bmp.asImageBitmap()
@@ -765,7 +898,7 @@ fun MonitorView(
                                 wallpaperLoadStatus = WallpaperLoadStatus.SUCCESS
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Log.e("DesktopSettingsScreen", "Failed to decode screenshot bitmap", e)
                     }
                 }
@@ -910,6 +1043,10 @@ fun MonitorView(
                 // Snapping Visualizer Overlay
                 SnappingOverlayView(snapSensitivity = snapSensitivity, isPhone = true)
 
+                if (desktopThemeStyle == 1 && showStatusBar) {
+                    MockStatusBar(isPhone = true)
+                }
+
                 // Bottom Home Gesture Bar Mockup
                 Box(
                     modifier = Modifier
@@ -993,6 +1130,10 @@ fun MonitorView(
 
                 // Snapping Visualizer Overlay
                 SnappingOverlayView(snapSensitivity = snapSensitivity, isPhone = false)
+
+                if (desktopThemeStyle == 1 && showStatusBar) {
+                    MockStatusBar(isPhone = false)
+                }
             }
 
             // --- Monitor Stand Bevel ---
@@ -1347,4 +1488,59 @@ fun DiagnosticItem(
             )
         }
     }
+}
+
+private fun parsePhysicalPort(dumpsys: String, displayId: Int): String? {
+    val lines = dumpsys.split('\n')
+    // Find the line that mentions displayId or logicalId for our display.
+    // We can look for lines that contain "logicalId=$displayId" or "displayId=$displayId"
+    for (line in lines) {
+        if (line.contains("logicalId=$displayId", ignoreCase = true) || 
+            line.contains("displayId=$displayId", ignoreCase = true)) {
+            val portValue = extractPortFromLine(line)
+            if (portValue != null) return portValue
+        }
+    }
+    // If not found in the same line, check neighboring lines (5 lines up and down)
+    for (i in lines.indices) {
+        val line = lines[i]
+        if (line.contains("logicalId=$displayId", ignoreCase = true) || 
+            line.contains("displayId=$displayId", ignoreCase = true)) {
+            val start = (i - 5).coerceAtLeast(0)
+            val end = (i + 5).coerceAtMost(lines.size - 1)
+            for (j in start..end) {
+                val portValue = extractPortFromLine(lines[j])
+                if (portValue != null) return portValue
+            }
+        }
+    }
+    return null
+}
+
+private fun extractPortFromLine(line: String): String? {
+    val physicalPortIdx = line.indexOf("physicalPort=", ignoreCase = true)
+    if (physicalPortIdx != -1) {
+        val start = physicalPortIdx + "physicalPort=".length
+        return extractDigits(line, start)
+    }
+    val portIdx = line.indexOf("port=", ignoreCase = true)
+    if (portIdx != -1) {
+        val start = portIdx + "port=".length
+        return extractDigits(line, start)
+    }
+    return null
+}
+
+private fun extractDigits(s: String, startIndex: Int): String? {
+    if (startIndex >= s.length) return null
+    val sb = java.lang.StringBuilder()
+    var i = startIndex
+    while (i < s.length && (s[i].isWhitespace() || s[i] == '=')) {
+        i++
+    }
+    while (i < s.length && s[i].isDigit()) {
+        sb.append(s[i])
+        i++
+    }
+    return if (sb.isNotEmpty()) sb.toString() else null
 }

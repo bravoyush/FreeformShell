@@ -22,6 +22,15 @@ class FreeformQuickToolboxWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_quick_toolbox)
+            
+            val widgetEnabled = ThemeManager.isModuleWidgetEnabled(context)
+            if (widgetEnabled) {
+                views.setViewVisibility(R.id.widget_bento_container, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widget_toolbox_disabled_text, android.view.View.GONE)
+            } else {
+                views.setViewVisibility(R.id.widget_bento_container, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_toolbox_disabled_text, android.view.View.VISIBLE)
+            }
             val pm = context.packageManager
 
             // 1. Setup Active App Tracker Card with Premium Dynamic Background Tinting

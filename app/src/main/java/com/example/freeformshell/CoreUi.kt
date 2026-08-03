@@ -23,6 +23,8 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import androidx.compose.ui.res.painterResource
+
 data class AppInfo(val label: String, val packageName: String, val icon: ImageBitmap? = null, val isSystem: Boolean = false)
 data class DisplayInfo(val id: Int, val name: String, val width: Int, val height: Int, val dpi: Int = 420, val activeDpi: Int = 420, val activeWidth: Int = width, val activeHeight: Int = height, val isRounded: Boolean = true)
 
@@ -46,6 +48,7 @@ fun StatusChip(label: String, color: Color) {
 fun AppIcon(packageName: String, modifier: Modifier = Modifier.size(40.dp)) {
     val context = LocalContext.current
     var icon by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
+    var fallbackResId by remember(packageName) { mutableIntStateOf(0) }
     
     LaunchedEffect(packageName) {
         withContext(Dispatchers.IO) {
@@ -57,13 +60,29 @@ fun AppIcon(packageName: String, modifier: Modifier = Modifier.size(40.dp)) {
                 ).asImageBitmap()
                 withContext(Dispatchers.Main) { icon = bitmap }
             } catch (e: Exception) {
-                Log.e("AppIcon", "Failed to load icon for $packageName: ${e.message}")
+                val cleanName = "ic_app_" + packageName.replace(".", "_")
+                var res = context.resources.getIdentifier(cleanName, "drawable", context.packageName)
+                if (res == 0) {
+                    val altName = when (packageName) {
+                        "com.farmerbb.taskbar" -> "ic_app_taskbar"
+                        "cu.axel.smartdock" -> "ic_app_smartdock"
+                        "com.youki.dex" -> "ic_app_youkidex"
+                        "moe.shizuku.privileged.api" -> "ic_app_shizuku"
+                        else -> ""
+                    }
+                    if (altName.isNotEmpty()) {
+                        res = context.resources.getIdentifier(altName, "drawable", context.packageName)
+                    }
+                }
+                withContext(Dispatchers.Main) { fallbackResId = res }
             }
         }
     }
     
     if (icon != null) {
         Image(bitmap = icon!!, contentDescription = null, modifier = modifier)
+    } else if (fallbackResId != 0) {
+        Image(painter = painterResource(id = fallbackResId), contentDescription = null, modifier = modifier)
     } else {
         Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape))
     }
