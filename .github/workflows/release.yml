@@ -60,7 +60,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: changelog.md
-          draft: false # Automatically publishes the release publicly with compiled APK attached
+          draft: true # Creates it as a Draft so you can review the changelog before hitting publish
           prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-exp') || contains(github.ref, '-alpha') }}
           files: |
             release-artifacts/*.apk
